@@ -60,6 +60,23 @@ def test_units_mole_conversion_prose():
     assert per_formula_unit > 30.0, "the mole-basis figure exceeds the mass-basis figure"
 
 
+def test_capacity_ratio_inversion_prose():
+    """capacity.assess_line prose: a feed-to-product ratio of 1.25 is the same
+    statement as a 20 percent downstream loss, since 1/1.25 = 0.80. Recomputed
+    against the module's own capacity calculation, not just the arithmetic."""
+    from ae.core.units import Q_
+    from ae.plant.capacity import OEE, UnitCapacity, assess_line
+    assert round(1.0 / 1.25, 4) == 0.80
+    o = OEE(0.90, 0.95, 0.99)
+    mill = UnitCapacity("mill", Q_(10.0, "tonne/hour"), 7000.0, o, 1.25)
+    # Product capacity is feed capacity divided by the ratio, so a ratio of
+    # 1.25 must give exactly 80 percent of what a ratio of 1.0 would.
+    same_rate_no_loss = UnitCapacity("ideal", Q_(10.0, "tonne/hour"), 7000.0, o, 1.0)
+    a = assess_line([mill]).line_rate.to("tonne").magnitude
+    b = assess_line([same_rate_no_loss]).line_rate.to("tonne").magnitude
+    assert a / b == pytest.approx(0.80, abs=1e-12)
+
+
 def test_capacity_module_prose_arithmetic():
     """capacity.py assess_line: mill 10 x 7000 x 0.84645 / 1.25 = 47401.20 and
     leach 9 x 7000 x 0.84645 / 1.00 = 53326.35, and the mill is the constraint
@@ -134,13 +151,16 @@ def test_scheduling_prose_arithmetic():
 COVERED: dict[tuple[str, str], str] = {
     ("ae/core/units.py", "ratio_basis"): "test_units_mole_conversion_prose",
     ("ae/econ/capex.py", "scale_cost"): "test_capex_scaling_prose",
-    ("ae/plant/capacity.py", "assess_line"): "test_capacity_module_prose_arithmetic",
+    ("ae/plant/capacity.py", "assess_line"):
+        "test_capacity_module_prose_arithmetic + test_capacity_ratio_inversion_prose",
     ("ae/plant/scheduling.py", "mm1_waiting_time"): "test_scheduling_prose_arithmetic",
     ("ae/plant/yield_cascade.py", "<module>"): "test_spc_prose_arithmetic",
     ("ae/plant/yield_cascade.py", "stage_throughput_factors"):
         "test_yield_cascade_prose_arithmetic",
     ("ae/econ/capex.py", "assumed_share"): "test_capex_assumed_share_prose",
     ("ae/econ/valuation.py", "npv"): "test_valuation_npv_prose",
+    ("ae/plant/streams.py", "max_feasible_feed_fraction"):
+        "test_streams_feasibility_bound_prose",
 }
 
 #: Fragments that match the ``= <number>`` pattern but are NOT arithmetic
@@ -310,3 +330,43 @@ def test_valuation_npv_prose():
     assert round(60 / 1.21, 4) == 49.5868
     assert round(-100 + 60 / 1.1 + 60 / 1.21, 4) == 4.1322
     assert round(_npv(0.10, [-100.0, 60.0, 60.0]), 4) == 4.1322
+
+
+def test_streams_feasibility_bound_prose():
+    """streams.max_feasible_feed_fraction prose: a unit keeping 99 percent of
+    the mass and removing 99 percent of an element can only do so for feeds
+    below 0.01/0.99 = 1.01 percent. Recomputed by calling the method."""
+    from ae.plant.streams import UnitOp
+    assert round((1 - 0.99) / 0.99 * 100, 2) == 1.01
+    u = UnitOp(name="u", mass_yield=0.99, element_removal={"Al": 0.99})
+    assert u.max_feasible_feed_fraction("Al") * 100 == pytest.approx(1.01, abs=5e-3)
+
+
+def test_covered_has_no_duplicate_keys():
+    """A duplicated key in COVERED silently overwrites the earlier mapping, so
+    a site can appear covered while its first test is forgotten. Detected by
+    re-parsing the source, since the dict literal has already collapsed by the
+    time it is importable."""
+    import ast
+    import pathlib
+    src = pathlib.Path(__file__).read_text()
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        # COVERED carries a type annotation, so it parses as AnnAssign, not
+        # Assign. Matching only Assign found nothing and the loop fell through
+        # to the "not found" raise, which looked like a duplicate-key failure.
+        is_covered = (
+            (isinstance(node, ast.AnnAssign)
+             and getattr(node.target, "id", None) == "COVERED")
+            or (isinstance(node, ast.Assign)
+                and any(getattr(t, "id", None) == "COVERED" for t in node.targets))
+        )
+        if is_covered and isinstance(node.value, ast.Dict):
+            keys = []
+            for k in node.value.keys:
+                if isinstance(k, ast.Tuple):
+                    keys.append(tuple(getattr(e, "value", None) for e in k.elts))
+            dupes = {k for k in keys if keys.count(k) > 1}
+            assert not dupes, f"duplicate COVERED keys: {sorted(dupes)}"
+            return
+    raise AssertionError("COVERED assignment not found")

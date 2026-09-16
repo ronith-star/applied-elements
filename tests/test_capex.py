@@ -1,5 +1,6 @@
 """Factored capex: scaling, escalation vs location, reconciliation, accuracy band."""
 import datetime as dt
+import dataclasses as dc
 import pytest
 from ae.core.units import Q_, DimensionalityError
 from ae.core.provenance import Tag, Tier, Source, Value
@@ -136,16 +137,53 @@ def test_factored_estimate_worked_example():
     assert est.reconciles()
 
 
-def test_accuracy_band_is_reported_not_optional():
-    """A factored estimate is AACE Class 4-5, minus 30 to plus 50 percent. The
-    point estimate alone is not a usable answer."""
+def test_accuracy_band_defaults_to_class_5_not_class_4():
+    """A factored estimate from an equipment list with no flowsheet engineering
+    is AACE CLASS 5, minus 50 to plus 100 percent.
+
+    The previous default was the Class 4 band (minus 30 to plus 50) while the
+    docstring described the estimate as "Class 4 to 5", which quoted the
+    narrower band for work at the wider class. Class 4 presumes preliminary
+    flowsheets and some vendor pricing; at concept stage neither exists, and
+    claiming it understates the upside by a factor of two.
+    """
     est = estimate_capex(kit(), site(), 0.30, 0.15)
+    assert est.estimate_class == 5
     lo, hi = est.accuracy_band()
     t = est.total_project_cost.magnitude
-    assert lo.magnitude == pytest.approx(0.70 * t)
-    assert hi.magnitude == pytest.approx(1.50 * t)
-    # The band spans more than 2x, which is the honest statement of precision.
-    assert hi.magnitude / lo.magnitude > 2.0
+    assert lo.magnitude == pytest.approx(0.50 * t)
+    assert hi.magnitude == pytest.approx(2.00 * t)
+    # A 4x span is the honest statement of concept-stage precision.
+    assert hi.magnitude / lo.magnitude == pytest.approx(4.0)
+    # Class 4 would have claimed roughly half that span.
+    c4 = dc.replace(est, estimate_class=4)
+    lo4, hi4 = c4.accuracy_band()
+    assert (hi4 / lo4).magnitude == pytest.approx(1.50 / 0.70)
+    assert hi.magnitude > hi4.magnitude
+
+
+def test_declaring_a_tighter_class_requires_declaring_it():
+    """The class is a statement about engineering maturity, so it must be set
+    explicitly and the band follows from it."""
+    est = estimate_capex(kit(), site(), 0.30, 0.15)
+    spans = {}
+    for cls in (5, 4, 3, 2, 1):
+        e = dc.replace(est, estimate_class=cls)
+        lo, hi = e.accuracy_band()
+        spans[cls] = hi.magnitude / lo.magnitude
+    # Bands must tighten monotonically as definition maturity rises.
+    assert spans[5] > spans[4] > spans[3] > spans[2] > spans[1]
+    assert spans[1] == pytest.approx(1.15 / 0.90)
+
+
+def test_accuracy_note_states_what_the_class_presumes():
+    est = estimate_capex(kit(), site(), 0.30, 0.15)
+    note = est.accuracy_note()
+    assert "Class 5" in note
+    assert "-50" in note and "+100" in note
+    assert "no flowsheet engineering" in note
+    c3 = dc.replace(est, estimate_class=3).accuracy_note()
+    assert "P&IDs" in c3 and "Class 3" in c3
 
 
 def test_capex_per_annual_tonne():

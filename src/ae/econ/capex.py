@@ -78,12 +78,16 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
+from typing import Literal
 
 from ae.core.provenance import Tag, Value
 from ae.core.site import Site
 from ae.core.units import Q_, Quantity
 
 __all__ = [
+    "AACEClass",
+    "AACE_ACCURACY",
+    "AACE_BASIS",
     "Equipment",
     "exponent_provenance",
     "CapexEstimate",
@@ -275,6 +279,35 @@ def escalate_cost(
     return cost * (target_index / base_index)
 
 
+#: AACE International Recommended Practice 18R-97 estimate classes, as the
+#: (low, high) multiplier on the point estimate. The ranges are the commonly
+#: cited expected-accuracy bands for a process industry project; the class is
+#: determined by PROJECT DEFINITION MATURITY, not by the estimating method.
+AACEClass = Literal[1, 2, 3, 4, 5]
+
+AACE_ACCURACY: dict[int, tuple[float, float]] = {
+    5: (0.50, 2.00),
+    4: (0.70, 1.50),
+    3: (0.80, 1.30),
+    2: (0.85, 1.20),
+    1: (0.90, 1.15),
+}
+
+#: What each class presumes has been done. Quoting a class without having done
+#: this work is the failure mode the default guards against.
+AACE_BASIS: dict[int, str] = {
+    5: "concept screening, 0 to 2 percent project definition: capacity and an "
+       "equipment list, no flowsheet engineering or quotes",
+    4: "study or feasibility, 1 to 15 percent definition: preliminary "
+       "flowsheets, equipment list with sizes, some vendor pricing",
+    3: "budget authorisation, 10 to 40 percent definition: P&IDs, plot plan, "
+       "major equipment quoted",
+    2: "control estimate, 30 to 70 percent definition: detailed take-offs",
+    1: "check estimate, 50 to 100 percent definition: near-complete "
+       "engineering",
+}
+
+
 @dataclass
 class CapexEstimate:
     """A factored capital estimate with its components and accuracy band."""
@@ -290,17 +323,41 @@ class CapexEstimate:
     currency: str
     lines: list[tuple[str, float]] = field(default_factory=list)
 
-    #: AACE Class 4-5 factored-estimate accuracy, as (low, high) multipliers.
-    accuracy: tuple[float, float] = (0.70, 1.50)
+    #: AACE estimate class, which SETS the accuracy band. Declared rather than
+    #: defaulted, because the class is a statement about how much engineering
+    #: has been done and only the caller knows that.
+    estimate_class: AACEClass = 5
+
+    @property
+    def accuracy(self) -> tuple[float, float]:
+        """(low, high) multipliers on the total, from the declared class."""
+        return AACE_ACCURACY[self.estimate_class]
 
     def accuracy_band(self) -> tuple[Quantity, Quantity]:
-        """Total project cost range implied by the estimate class.
+        """Total project cost range implied by the declared estimate class.
 
-        A factored estimate is AACE Class 4 to 5, nominal minus 30 to plus 50
-        percent. Returned so no caller can quote the point estimate alone.
+        The default is CLASS 5, minus 50 to plus 100 percent, because a
+        factored estimate built from an equipment list with no flowsheet
+        engineering, no equipment quotes and no plot plan is a concept estimate.
+        An earlier version of this module defaulted to the Class 4 band (minus
+        30 to plus 50 percent) and described a factored estimate as "AACE Class
+        4 to 5", which quoted the narrower of the two bands while doing the work
+        of the wider one. Class 4 presumes some engineering definition, so
+        claiming it at concept stage understates the range by a factor of two
+        on the upside.
+
+        Callers who have done the engineering may declare a tighter class; the
+        band then follows from the declaration and is auditable.
         """
         lo, hi = self.accuracy
         return self.total_project_cost * lo, self.total_project_cost * hi
+
+    def accuracy_note(self) -> str:
+        """One-line statement of the class and what it presumes."""
+        lo, hi = self.accuracy
+        return (f"AACE Class {self.estimate_class} estimate, "
+                f"{(lo - 1) * 100:+.0f} to {(hi - 1) * 100:+.0f} percent: "
+                f"{AACE_BASIS[self.estimate_class]}")
 
     @property
     def capex_per_annual_tonne(self) -> Quantity | None:

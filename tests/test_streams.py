@@ -70,10 +70,23 @@ def test_invalid_unit_specs_rejected():
 
 
 def test_full_yield_unit_with_removal_raises():
-    """A unit that rejects an element must have somewhere to put it."""
+    """A unit that rejects an element must have somewhere to put it.
+
+    The message changed when the feasibility bound was added: this case is now
+    caught BEFORE the split, as the degenerate point of the general bound
+    (mass_yield = 1 gives a maximum feasible feed fraction of zero), and the
+    error names the parameter pair rather than the zero-flow stream that would
+    have resulted. The older "zero reject flow" guard is still live for a
+    grade-dependent unit, whose removal has no fixed bound to check.
+    """
     u = UnitOp("u", mass_yield=1.0, element_removal={"Al": 0.5})
-    with pytest.raises(MassBalanceError, match="zero reject flow"):
+    assert u.max_feasible_feed_fraction("Al") == 0.0
+    with pytest.raises(MassBalanceError, match="exceeds the maximum"):
         u.apply(feed())
+    # Grade-dependent units bypass the static bound and hit the original guard.
+    gd = UnitOp("gd", mass_yield=1.0, grade_dependent=lambda el, ppm: 0.5)
+    with pytest.raises(MassBalanceError, match="zero reject flow"):
+        gd.apply(feed())
 
 
 def test_linear_chain_closes_and_compounds_yield():
@@ -198,3 +211,78 @@ def test_module_docstring_does_not_claim_an_unimplemented_solver():
         "a matrix solve now exists; update the module docstring to describe it"
     # The documented tolerance constant must be the one actually enforced.
     assert src.count("CLOSURE_TOL") >= 2, "CLOSURE_TOL must be used, not just defined"
+
+
+def test_mass_yield_and_element_removal_are_not_jointly_free():
+    """A fixed mass yield plus an independent per-element removal can specify a
+    physically impossible unit, and the pair must be rejected against the feed
+    it will actually see.
+
+    Removing fraction r of an element at feed fraction c concentrates it into a
+    reject of relative mass (1-Y), giving reject composition c*r/(1-Y). That
+    exceeds 1 whenever c > (1-Y)/r. The solver already caught the resulting
+    impossible stream, but only after a run and with a message about the
+    stream; this reports the parameter pair that caused it.
+    """
+    u = UnitOp(name="magic", mass_yield=0.99, element_removal={"Al": 0.99})
+    # Feasible ceiling: 0.01/0.99 = 1.0101 percent Al in the feed.
+    assert u.max_feasible_feed_fraction("Al") == pytest.approx(0.010101, abs=1e-6)
+    assert u.max_feasible_feed_fraction("Fe") == 1.0, "not acted on, no limit"
+
+    # Just inside the bound: the unit works.
+    ok = Stream(name="f", mass_flow=Q_(100.0, "tonne/hour"),
+                composition={"Al": 0.010})
+    prod, rej = u.apply(ok)
+    assert rej.composition["Al"] <= 1.0
+
+    # Outside it: rejected, naming the cause and the maximum.
+    bad = Stream(name="f", mass_flow=Q_(100.0, "tonne/hour"),
+                 composition={"Al": 0.20})
+    with pytest.raises(MassBalanceError, match="exceeds the maximum"):
+        u.apply(bad)
+    with pytest.raises(MassBalanceError, match="mass_yield=0.99"):
+        u.check_feasible({"Al": 0.20})
+
+
+def test_feasibility_bound_is_exact_at_the_boundary():
+    """At c = (1-Y)/r exactly, the reject is pure element and still legal."""
+    u = UnitOp(name="u", mass_yield=0.90, element_removal={"Al": 0.50})
+    cap = u.max_feasible_feed_fraction("Al")
+    assert cap == pytest.approx(0.10 / 0.50)
+    s = Stream(name="f", mass_flow=Q_(10.0, "tonne/hour"), composition={"Al": cap})
+    _, rej = u.apply(s)
+    assert rej.composition["Al"] == pytest.approx(1.0, abs=1e-9), \
+        "the boundary case is a pure-element reject"
+    # A hair beyond it must fail.
+    with pytest.raises(MassBalanceError):
+        u.apply(Stream(name="f", mass_flow=Q_(10.0, "tonne/hour"),
+                       composition={"Al": cap * 1.001}))
+
+
+def test_a_unit_with_no_reject_can_only_remove_nothing():
+    """mass_yield = 1 leaves no reject stream, so any removal is impossible."""
+    keeper = UnitOp(name="passthrough", mass_yield=1.0,
+                    element_removal={"Al": 0.10})
+    assert keeper.max_feasible_feed_fraction("Al") == 0.0
+    with pytest.raises(MassBalanceError, match="exceeds the maximum"):
+        keeper.apply(Stream(name="f", mass_flow=Q_(1.0, "tonne/hour"),
+                            composition={"Al": 1e-6}))
+    # The same unit removing nothing is fine.
+    inert = UnitOp(name="passthrough", mass_yield=1.0)
+    p, r = inert.apply(Stream(name="f", mass_flow=Q_(1.0, "tonne/hour"),
+                              composition={"Al": 1e-6}))
+    assert r.mass_flow.magnitude == pytest.approx(0.0)
+
+
+def test_realistic_units_are_unaffected_by_the_new_check():
+    """Regression guard: at real HPQ impurity levels (ppm, not percent) the
+    bound is never approached, so the check must not constrain normal use.
+    At 1164 ppm Al, a 90 percent-yield unit removing 80 percent needs a reject
+    composition of 0.00093, three orders of magnitude inside the limit."""
+    u = UnitOp(name="leach", mass_yield=0.90, element_removal={"Al": 0.80})
+    feed = Stream(name="f", mass_flow=Q_(10.0, "tonne/hour"),
+                  composition={"Al": 1164e-6, "Fe": 140e-6})
+    prod, rej = u.apply(feed)
+    assert rej.composition["Al"] == pytest.approx(1164e-6 * 0.80 / 0.10)
+    assert rej.composition["Al"] < 0.01
+    assert u.max_feasible_feed_fraction("Al") == pytest.approx(0.125)

@@ -245,8 +245,12 @@ def assess_line(units: Iterable[UnitCapacity]) -> LineCapacity:
     Examples
     --------
     Two units. The FIRST (the mill) sits upstream of yield loss and so must
-    process 1.25 t for every 1 t the plant ships; the second (the leach) is the
-    last stage and processes 1.0 t/t. On nameplate rate alone the mill looks
+    process 1.25 t OF FEED for every 1 t of product the plant ships, which is a
+    feed-to-product RATIO of 1.25 (equivalently a 20 percent loss downstream of
+    it, since 1/1.25 = 0.80). The second (the leach) is the last stage and
+    processes 1.0 t of feed per t of product. The ratio is never written as a
+    bare "1.25 t/t", which reads as a loss OF 1.25 t and inverts on a careless
+    reading. On nameplate rate alone the mill looks
     larger, 10 t/h against 9, but on a final-product basis it is the constraint:
 
       mill : 10 x 7000 x 0.84645 / 1.25 = 47401.20 t/yr of product
@@ -264,7 +268,8 @@ def assess_line(units: Iterable[UnitCapacity]) -> LineCapacity:
     >>> round(r.bottleneck_margin, 4)
     0.125
 
-    A 10 t/h mill at 1.25 t/t and an 8 t/h leach at 1.0 t/t would instead give
+    A 10 t/h mill at a feed-to-product ratio of 1.25 and an 8 t/h leach at 1.0
+    would instead give
     IDENTICAL product capacities. That is a tie, not a finding: the name
     returned is then merely first-in-declaration-order, and
     ``bottleneck_margin`` is 0.0 to say so.

@@ -216,6 +216,67 @@ class UnitOp:
                     f"unit {self.name!r} element_removal[{el}] = {r} is not a fraction"
                 )
 
+    def max_feasible_feed_fraction(self, element: str) -> float:
+        """Largest feed mass fraction of ``element`` this unit can act on.
+
+        A fixed ``mass_yield`` and an independent ``element_removal`` are not
+        jointly free. Removing fraction :math:`r` of an element from a feed of
+        mass fraction :math:`c` concentrates it into a reject of relative mass
+        :math:`1 - Y`, giving a reject composition of :math:`c r / (1 - Y)`.
+        That must not exceed 1, so the pair is feasible only while
+
+        .. math::  c \\le (1 - Y) / r
+
+        Worked: a unit keeping 99 percent of the mass (:math:`Y = 0.99`) and
+        removing 99 percent of an element can only do so for feeds below
+        :math:`0.01 / 0.99 = 1.01` percent of that element. At a 20 percent
+        feed it would need a reject 20 times its own mass, which the balance
+        rejects.
+
+        A unit that removes nothing (:math:`r = 0`) has no such limit, and a
+        unit with :math:`Y = 1` (no reject at all) can only remove nothing.
+
+        >>> u = UnitOp(name="leach", mass_yield=0.99, element_removal={"Al": 0.99})
+        >>> round(u.max_feasible_feed_fraction("Al"), 6)
+        0.010101
+        >>> u.max_feasible_feed_fraction("Fe")   # not acted on
+        1.0
+        """
+        r = self.element_removal.get(element, 0.0)
+        if r <= 0.0:
+            return 1.0
+        if self.mass_yield >= 1.0:
+            return 0.0
+        return min(1.0, (1.0 - self.mass_yield) / r)
+
+    def check_feasible(self, composition: dict[str, float]) -> None:
+        """Raise if this unit cannot act on ``composition`` as parameterised.
+
+        The solver already catches the resulting impossible reject composition,
+        but only AFTER a run, and with a message about the stream rather than
+        about the parameter pair that caused it. Checking against the feed the
+        unit will actually see reports the cause instead of the symptom, and
+        names the maximum feed the parameters allow.
+        """
+        bad = []
+        for el, c in composition.items():
+            cap = self.max_feasible_feed_fraction(el)
+            if c > cap:
+                r = self.element_removal.get(el, 0.0)
+                bad.append(
+                    f"{el}: feed fraction {c:.6g} exceeds the maximum "
+                    f"{cap:.6g} implied by mass_yield={self.mass_yield} and "
+                    f"element_removal={r} (reject composition would be "
+                    f"{c * r / max(1.0 - self.mass_yield, 1e-30):.4g})"
+                )
+        if bad:
+            raise MassBalanceError(
+                f"unit {self.name!r} is infeasible on this feed. "
+                + "; ".join(bad)
+                + ". Either lower the removal, lower the mass yield to give the "
+                  "reject more mass, or use a grade-dependent removal function."
+            )
+
     def apply(self, feed: Stream) -> tuple[Stream, Stream]:
         """Split ``feed`` into (product, reject), closing both balances exactly.
 
@@ -223,6 +284,13 @@ class UnitOp:
         is computed as the residual of the feed element flow minus the product
         element flow, so no element can be created or destroyed by rounding.
         """
+        # Checked BEFORE the split, so the error names the infeasible parameter
+        # pair rather than the impossible stream it would have produced. Skipped
+        # for grade-dependent units, whose removal is a function of feed grade
+        # and so has no fixed feasibility bound.
+        if self.grade_dependent is None:
+            self.check_feasible(feed.composition)
+
         m_in = feed.kg_s
         m_prod = m_in * self.mass_yield
         m_rej = m_in - m_prod
