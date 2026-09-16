@@ -122,7 +122,7 @@ def stage_throughput_factors(stage_yields: Sequence[float]) -> list[float]:
     --------
     Three stages at 0.98, 0.90, 0.95. The last stage handles 1/0.95 = 1.0526 t
     per t shipped, the middle 1/(0.90 x 0.95) = 1.1696, the first
-    1/(0.98 x 0.90 x 0.95) = 1.1934.
+    1/(0.98 x 0.90 x 0.95) = 1.1935.
 
     >>> [round(x, 4) for x in stage_throughput_factors([0.98, 0.90, 0.95])]
     [1.1935, 1.1696, 1.0526]

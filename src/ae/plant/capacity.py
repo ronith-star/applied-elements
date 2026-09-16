@@ -244,15 +244,30 @@ def assess_line(units: Iterable[UnitCapacity]) -> LineCapacity:
 
     Examples
     --------
-    Two units, the second needing 1.25 t of feed per t of product:
+    Two units. The FIRST (the mill) sits upstream of yield loss and so must
+    process 1.25 t for every 1 t the plant ships; the second (the leach) is the
+    last stage and processes 1.0 t/t. On nameplate rate alone the mill looks
+    larger, 10 t/h against 9, but on a final-product basis it is the constraint:
+
+      mill : 10 x 7000 x 0.84645 / 1.25 = 47401.20 t/yr of product
+      leach:  9 x 7000 x 0.84645 / 1.00 = 53326.35 t/yr of product
 
     >>> from ae.core.units import Q_
     >>> o = OEE(0.90, 0.95, 0.99)
     >>> a = UnitCapacity("mill", Q_(10.0, "tonne/hour"), 7000.0, o, 1.25)
-    >>> b = UnitCapacity("leach", Q_(8.0, "tonne/hour"), 7000.0, o, 1.0)
+    >>> b = UnitCapacity("leach", Q_(9.0, "tonne/hour"), 7000.0, o, 1.0)
     >>> r = assess_line([a, b])
     >>> r.bottleneck
     'mill'
+    >>> round(r.line_rate.to("tonne").magnitude, 2)
+    47401.2
+    >>> round(r.bottleneck_margin, 4)
+    0.125
+
+    A 10 t/h mill at 1.25 t/t and an 8 t/h leach at 1.0 t/t would instead give
+    IDENTICAL product capacities. That is a tie, not a finding: the name
+    returned is then merely first-in-declaration-order, and
+    ``bottleneck_margin`` is 0.0 to say so.
     """
     units = list(units)
     if not units:
