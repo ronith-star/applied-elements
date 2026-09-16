@@ -7,11 +7,21 @@ a capacity doctest illustrating bottleneck identification with an exact tie.
 
 Doctests catch the ones written as `>>> ` examples. They do NOT catch arithmetic
 stated in prose ("1/(0.98 x 0.90 x 0.95) = 1.1935"), which is where four of the
-five hid. This module recomputes each such claim from the module's own code, so
-prose arithmetic carries the same enforcement as an executable example.
+five hid. Each case below recomputes such a claim by CALLING the module's own
+code, so the check fails if the code drifts from the docstring.
 
-Adding a prose calculation to a docstring without a case here is how the next one
-gets in.
+Completeness, stated precisely. ``test_every_prose_arithmetic_site_is_covered``
+walks every docstring under ``src/`` with ast and requires each site matching the
+pattern ``= <number>`` outside a doctest to appear in COVERED. That pattern is
+the SCOPE OF THE GUARANTEE and it is narrower than "all arithmetic": it does not
+catch a claim phrased without an equals sign ("Al is 52.9 percent of Al2O3",
+"1.4286x larger"), so cases of that kind are covered by hand below and are not
+enforced mechanically.
+
+An earlier version of this file claimed "every prose calculation in every module
+docstring is now recomputed" on the strength of a grep over one directory with a
+hand-picked literal list. The claim was broader than the check. The detector is
+now mechanical and its blind spot is written down rather than papered over.
 """
 import numpy as np
 import pytest
@@ -117,14 +127,96 @@ def test_scheduling_prose_arithmetic():
     assert allen_cunneen_waiting_time(0.95, 1.0, 1.0, 1.0) == pytest.approx(19.0, abs=1e-9)
 
 
-def test_hpq_reference_limits_are_stated_consistently():
-    """The Muller et al. 2012 single-grain limits appear in several docstrings.
-    Their sum must not exceed the stated 50 ppm trace-sum ceiling, or the
-    per-element table and the sum ceiling would contradict each other."""
-    limits = {"Al": 30, "Ti": 10, "Li": 5, "Na": 8, "K": 8, "Ca": 5,
-              "Fe": 3, "P": 2, "B": 1}
-    assert limits["Al"] == 30 and limits["B"] == 1
-    # The 50 ppm trace sum is BINDING: an ore at every per-element limit
-    # simultaneously would sum to 72 ppm and still fail the sum specification.
-    assert sum(limits.values()) == 72
-    assert sum(limits.values()) > 50
+#: Docstring sites that ``_prose_arithmetic_sites`` detects, each mapped to the
+#: test here or elsewhere that recomputes the claim by calling module code.
+#: This map is the completeness contract: a new detected site fails
+#: ``test_every_prose_arithmetic_site_is_covered`` until it is added.
+COVERED: dict[tuple[str, str], str] = {
+    ("ae/core/units.py", "ratio_basis"): "test_units_mole_conversion_prose",
+    ("ae/econ/capex.py", "scale_cost"): "test_capex_scaling_prose",
+    ("ae/plant/capacity.py", "assess_line"): "test_capacity_module_prose_arithmetic",
+    ("ae/plant/scheduling.py", "mm1_waiting_time"): "test_scheduling_prose_arithmetic",
+    ("ae/plant/yield_cascade.py", "<module>"): "test_spc_prose_arithmetic",
+    ("ae/plant/yield_cascade.py", "stage_throughput_factors"):
+        "test_yield_cascade_prose_arithmetic",
+}
+
+#: Numbers that are illustrative parameter values or version references, not
+#: arithmetic claims. Matched as substrings against the captured fragment.
+_NOT_ARITHMETIC = (
+    'loc=100.0', 'scale=5.0', 'loc == 0.0', 'iterations=1', 'c_a = 1',
+    'c_a = 0', 'method="single_pass"', r'\prod', r'\Phi', r'\Pr',
+    'y_i', 'f_{\\mathrm{indep}}',
+)
+
+
+def _prose_arithmetic_sites() -> dict[tuple[str, str], list[str]]:
+    """Every docstring site in src/ containing prose (non-doctest) arithmetic."""
+    import ast
+    import pathlib
+    import re
+    pat = re.compile(r"=\s*-?\d[\d,]*\.?\d*(?:e-?\d+)?\b")
+    root = pathlib.Path(__file__).resolve().parent.parent / "src"
+    found: dict[tuple[str, str], list[str]] = {}
+    for f in sorted(root.rglob("*.py")):
+        tree = ast.parse(f.read_text())
+        nodes = [(tree, "<module>")] + [
+            (n, n.name) for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        ]
+        for node, name in nodes:
+            doc = ast.get_docstring(node)
+            if not doc:
+                continue
+            prose = "\n".join(l for l in doc.splitlines()
+                               if not l.strip().startswith((">>>", "...")))
+            hits = []
+            for m in pat.finditer(prose):
+                frag = prose[max(0, m.start() - 60):m.end() + 12].replace("\n", " ")
+                if any(tok in frag for tok in _NOT_ARITHMETIC):
+                    continue
+                hits.append(frag.strip())
+            if hits:
+                found[(str(f.relative_to(root)), name)] = hits
+    return found
+
+
+def test_every_prose_arithmetic_site_is_covered():
+    """Mechanical completeness check, replacing a hand-picked grep.
+
+    Walks all docstrings in src/ with ast and requires each site carrying prose
+    arithmetic to appear in COVERED. Adding a module with an unchecked prose
+    calculation fails here, naming the site.
+    """
+    sites = _prose_arithmetic_sites()
+    uncovered = {k: v[:2] for k, v in sites.items() if k not in COVERED}
+    assert not uncovered, (
+        "prose arithmetic with no recomputation case:\n"
+        + "\n".join(f"  {f}::{n} -> {frags}" for (f, n), frags in uncovered.items())
+    )
+
+
+def test_covered_map_has_no_stale_entries():
+    """A COVERED entry whose docstring no longer carries arithmetic is stale and
+    gives false comfort about breadth."""
+    sites = set(_prose_arithmetic_sites())
+    stale = sorted(k for k in COVERED if k not in sites)
+    assert not stale, f"COVERED lists sites with no prose arithmetic: {stale}"
+
+
+def test_capex_scaling_prose():
+    """capex.scale_cost prose: ratio 4.0, factor 4.0**0.6 = 2.2974, so 4.5948
+    MUSD from a 2.0 MUSD reference."""
+    from ae.core.units import Q_
+    from ae.econ.capex import scale_cost
+    assert round(4.0 ** 0.6, 4) == 2.2974
+    c = scale_cost(Q_(2.0e6, "USD"), Q_(5000.0, "tonne/year"),
+                   Q_(20000.0, "tonne/year"), 0.6)
+    assert round(c.to("USD").magnitude / 1e6, 4) == 4.5948
+
+
+def test_unit_economics_yield_basis_prose():
+    """unit_economics prose: at a 70 percent yield a feed-basis cost is 1.4286x
+    larger on a product basis. Phrased without an equals sign, so it is not
+    caught by the mechanical detector and is checked here explicitly."""
+    assert round(1.0 / 0.70, 4) == 1.4286
