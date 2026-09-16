@@ -348,7 +348,21 @@ def test_permutation_importance_recovers_the_known_mechanism():
     # Analytic variance shares, recomputed here rather than quoted.
     coef = {"al_ppm": (0.0035, 5, 60), "ti_ppm": (0.004, 1, 25),
             "fe_ppm": (0.0002, 10, 300), "p80_um": (0.0003, 50, 400)}
+    # The SPANS quoted in the docstring, c*(hi-lo).
+    span = {k: c * (hi - lo) for k, (c, lo, hi) in coef.items()}
+    assert span["al_ppm"] == pytest.approx(0.1925, abs=1e-9)
+    assert span["p80_um"] == pytest.approx(0.1050, abs=1e-9)
+    assert span["ti_ppm"] == pytest.approx(0.0960, abs=1e-9)
+    assert span["fe_ppm"] == pytest.approx(0.0580, abs=1e-9)
+
     sd = {k: c * (hi - lo) / np.sqrt(12) for k, (c, lo, hi) in coef.items()}
+    # The VARIANCE SHARES quoted as percentages.
+    tot = sum(v ** 2 for v in sd.values())
+    share = {k: v ** 2 / tot * 100 for k, v in sd.items()}
+    assert share["al_ppm"] == pytest.approx(61.1, abs=0.05)
+    assert share["p80_um"] == pytest.approx(18.2, abs=0.05)
+    assert share["ti_ppm"] == pytest.approx(15.2, abs=0.05)
+    assert share["fe_ppm"] == pytest.approx(5.5, abs=0.05)
     analytic = sorted(sd, key=lambda k: -sd[k])
     assert analytic == ["al_ppm", "p80_um", "ti_ppm", "fe_ppm"]
     assert sd["ti_ppm"] < sd["p80_um"], "largest coefficient, narrowest range"

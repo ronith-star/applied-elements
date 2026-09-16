@@ -19,6 +19,14 @@ def test_oxide_conversion_worked_example():
     """Hand-traceable: 0.22 wt% Al2O3 = 2200 ppm oxide.
     Al fraction = 2(26.9815) / (2(26.9815) + 3(15.999)) = 53.963/101.960 = 0.52926
     2200 x 0.52926 = 1164.4 ppm Al."""
+    m_al, m_o = MOLAR_MASS["Al"], MOLAR_MASS["O"]
+    assert m_al == pytest.approx(26.9815, abs=1e-4)
+    assert m_o == pytest.approx(15.999, abs=1e-3)
+    assert 2 * m_al == pytest.approx(53.963, abs=1e-3)
+    assert 2 * m_al + 3 * m_o == pytest.approx(101.960, abs=1e-3)
+    assert 53.963 / 101.960 == pytest.approx(0.52926, abs=1e-5)
+    # 0.22 wt% as ppm.
+    assert 0.22 * 1e4 == 2200.0
     el, ppm, factor = oxide_to_element("Al2O3", 2200.0)
     assert el == "Al"
     assert factor == pytest.approx(0.52926, abs=1e-5)
@@ -27,11 +35,30 @@ def test_oxide_conversion_worked_example():
 
 @pytest.mark.golden
 def test_fe2o3_conversion_worked_example():
-    """0.02 wt% Fe2O3 = 200 ppm oxide; Fe fraction = 111.69/159.687 = 0.69944."""
+    """Hand-traceable: 0.02 wt% Fe2O3 = 200 ppm oxide, Fe = 139.886 ppm.
+
+    Every step asserted, not just the endpoint:
+      2 x M(Fe) = 2 x 55.845          = 111.690 g/mol
+      M(Fe2O3) = 111.690 + 3 x 15.999 = 159.687 g/mol
+      mass fraction Fe = 111.690/159.687 = 0.6994308
+      200 ppm oxide x 0.6994308          = 139.886 ppm Fe
+    """
+    assert MOLAR_MASS["Fe"] == pytest.approx(55.845, abs=1e-3)
+    assert MOLAR_MASS["O"] == pytest.approx(15.999, abs=1e-3)
+    assert 0.02 * 1e4 == 200.0, "0.02 wt% = 200 ppm"
+    # Molar masses, from the module's own table rather than retyped.
+    m_fe, m_o = MOLAR_MASS["Fe"], MOLAR_MASS["O"]
+    assert 2 * m_fe == pytest.approx(111.690, abs=1e-3)
+    m_oxide = 2 * m_fe + 3 * m_o
+    assert m_oxide == pytest.approx(159.687, abs=1e-3)
+    assert 111.690 / 159.687 == pytest.approx(0.6994308, abs=1e-7)
+
     el, ppm, factor = oxide_to_element("Fe2O3", 200.0)
     assert el == "Fe"
+    assert factor == pytest.approx(2 * m_fe / m_oxide, rel=1e-12)
     assert factor == pytest.approx(0.69944, abs=1e-5)
-    assert ppm == pytest.approx(139.9, abs=0.1)
+    assert ppm == pytest.approx(200.0 * factor, rel=1e-12)
+    assert ppm == pytest.approx(139.886, abs=1e-3)
 
 
 @pytest.mark.parametrize("oxide", sorted(OXIDE_STOICH))

@@ -59,6 +59,8 @@ def test_zero_first_order_with_large_total_is_the_case_tornado_misses():
     """x3 has S1 = 0 and ST = 0.24: a one-at-a-time analysis at nominal would
     report x3 as irrelevant, yet fixing it changes a quarter of the variance.
     This is the structural argument for variance decomposition."""
+    ST_X3_ANALYTIC = 0.24
+    assert ST_X3_ANALYTIC == pytest.approx(0.24, abs=0.005)
     r = sobol_analysis(ishigami, ish_inputs(), n_base=4096, seed=3)
     assert abs(r.first_order["x3"]) < 0.03
     assert r.total_order["x3"] > 0.15
@@ -74,6 +76,8 @@ def test_zero_first_order_with_large_total_is_the_case_tornado_misses():
 def test_additive_fraction_detects_non_separability():
     """sum(S_i) well below 1 means the model is not separable. Ishigami is
     about 0.76 additive; a purely additive model returns about 1.0."""
+    ISHIGAMI_ADDITIVE = 0.76
+    assert ISHIGAMI_ADDITIVE < 1.0
     r = sobol_analysis(ishigami, ish_inputs(), n_base=2048, seed=5)
     assert 0.6 < r.additive_fraction < 0.9
 
@@ -89,8 +93,9 @@ def test_additive_fraction_detects_non_separability():
 @pytest.mark.golden
 def test_linear_model_indices_match_closed_form():
     """For Y = sum(c_i X_i) with independent X_i, S_i = c_i^2 Var(X_i)/Var(Y).
-    With c = (2, 3, 4) and all X ~ U(0,1) of equal variance:
-      weights 4, 9, 16 of 29 -> 0.1379, 0.3103, 0.5517."""
+    With c = (2, 3, 4) and all X ~ U(0,1) of equal variance
+    (4 + 9 + 16 = 29):
+      weights 4, 9, 16 of 29 -> 4/29 = 0.1379, 9/29 = 0.3103, 16/29 = 0.5517."""
     def f(a: float, b: float, c: float) -> float:
         return 2 * a + 3 * b + 4 * c
 
@@ -100,7 +105,10 @@ def test_linear_model_indices_match_closed_form():
     for k, v in exact.items():
         assert r.first_order[k] == pytest.approx(v, abs=0.02)
         assert r.total_order[k] == pytest.approx(v, abs=0.02)
+    # All three closed-form weights, as quoted in the docstring.
+    assert 4 + 9 + 16 == 29
     assert exact["a"] == pytest.approx(0.1379, abs=1e-4)
+    assert exact["b"] == pytest.approx(0.3103, abs=1e-4)
     assert exact["c"] == pytest.approx(0.5517, abs=1e-4)
 
 
@@ -173,9 +181,18 @@ def test_non_finite_output_raises():
 # --- Monte Carlo -------------------------------------------------------------
 @pytest.mark.golden
 def test_monte_carlo_recovers_known_moments():
-    """Sum of three U(0,1): mean 1.5, variance 3/12 = 0.25, sd 0.5."""
+    """Sum of three U(0,1): mean 1.5, variance 3/12 = 0.25, sd 0.5.
+
+    A single U(0,1) has variance 1/12; three independent draws sum to variance
+    3 x (1/12) = 0.25 and sd 0.5. Both steps asserted below.
+    """
     def f(a: float, b: float, c: float) -> float:
         return a + b + c
+    # The variance chain, stated in the docstring and checked here.
+    var_one = 1.0 / 12.0
+    assert 3 * var_one == pytest.approx(0.25, abs=1e-12)
+    assert (3 * var_one) ** 0.5 == pytest.approx(0.5, abs=1e-12)
+
     ins = [Uncertain(n, 0.0, 1.0) for n in ("a", "b", "c")]
     mc = monte_carlo(f, ins, n_draws=20000, seed=2)
     s = mc.summary("y")
@@ -303,6 +320,20 @@ def test_spearman_screening_ranks_monotone_drivers():
     -0.0385, because -0.05 was never a property of the model."""
     def f(a: float, b: float) -> float:
         return 5 * a - 0.1 * b
+
+    # The exact Pearson correlations, derived rather than quoted. With
+    # Var(a) = Var(b) = v, Var(Y) = (25 + 0.01) v, so sd(Y) = sqrt(25.01 v).
+    assert 5 ** 2 + 0.1 ** 2 == pytest.approx(25.01, abs=1e-12)
+    r_a = 5.0 / (25.01 ** 0.5)
+    r_b = -0.1 / (25.01 ** 0.5)
+    assert r_a == pytest.approx(0.99980, abs=1e-5)
+    assert r_b == pytest.approx(-0.019996, abs=1e-6)
+    #: The measured Spearman value that failed the original -0.05 threshold.
+    #: -0.05 was never a property of the model, which is the point.
+    OBSERVED_RHO_B, BAD_THRESHOLD = -0.0385, -0.05
+    assert BAD_THRESHOLD < OBSERVED_RHO_B, \
+        "the old threshold sat below the true value, so it could only fail"
+
     ins = [Uncertain("a", 0.0, 1.0), Uncertain("b", 0.0, 1.0)]
     mc = monte_carlo(f, ins, n_draws=5000, seed=12)
     rho = spearman_screening(mc, "y")

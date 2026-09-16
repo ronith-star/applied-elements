@@ -59,6 +59,10 @@ def test_mass_to_mole_conversion_factors():
 def test_mole_ratio_is_not_silently_a_mass_ratio():
     """The defect this unit system exists to prevent: a single reported "30 ppm"
     can mean 30 (mass), 66.8 (per mol SiO2) or 22.3 (per mol atoms)."""
+    # The three readings of "30 ppm", recomputed from molar masses.
+    M_SIO2, M_AL = 60.083, 26.9815
+    assert 30.0 * M_SIO2 / M_AL == pytest.approx(66.8, abs=0.1)
+    assert 30.0 * (M_SIO2 / 3.0) / M_AL == pytest.approx(22.3, abs=0.1)
     with pytest.raises(ValueError, match="mole-basis"):
         to_ppm_mass(Q_(30.0, "umol/mol"))
     with pytest.raises(ValueError, match="volume-basis"):

@@ -194,6 +194,9 @@ def test_chain_is_deterministic_given_inputs():
 def test_spec_yield_dominates_when_variability_is_high():
     """Mechanism check: at a 30 ppm limit, raising lot-to-lot sigma from 1.5 to
     6.0 ppm must cut overall yield materially even with mass yields fixed."""
+    # The specification limit the mechanism is stated against.
+    USL_AL_PPM = 30.0
+    assert USL_AL_PPM == 30.0
     base = {"mass_yield_leach": 0.92, "mass_yield_flot": 0.85, "al_mean_ppm": 22.0,
             "price": 3500.0, "power_price": 0.07, "reagent_price": 1.8,
             "capex_musd": 38.0, "discount_rate": 0.14}

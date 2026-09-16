@@ -17,7 +17,22 @@ def proj(**kw):
 
 @pytest.mark.golden
 def test_npv_worked_example():
-    """-100 + 60/1.1 + 60/1.21 = -100 + 54.5455 + 49.5868 = 4.1322."""
+    """Hand-traceable at 10 percent on cash flows -100, 60, 60.
+
+    Each discount factor and term asserted, not just the total:
+      (1.10)^1 = 1.10   ->  60/1.10  = 54.5455
+      (1.10)^2 = 1.21   ->  60/1.21  = 49.5868
+      -100 + 54.5455 + 49.5868       =  4.1322
+    """
+    assert 1.10 ** 1 == pytest.approx(1.1, abs=1e-12)
+    assert 1.10 ** 2 == pytest.approx(1.21, abs=1e-12)
+    t1, t2 = 60.0 / 1.1, 60.0 / 1.21
+    assert t1 == pytest.approx(54.5455, abs=1e-4)
+    assert t2 == pytest.approx(49.5868, abs=1e-4)
+    assert -100.0 + t1 + t2 == pytest.approx(4.1322, abs=1e-4)
+    # And the module must reproduce the same sum.
+    assert npv(0.10, [-100.0, 60.0, 60.0]) == pytest.approx(-100.0 + t1 + t2,
+                                                            rel=1e-12)
     assert npv(0.10, [-100.0, 60.0, 60.0]) == pytest.approx(4.1322, abs=1e-4)
     assert npv(0.0, [-100.0, 60.0, 60.0]) == pytest.approx(20.0)
     # At the IRR, NPV is zero by definition.
@@ -27,8 +42,22 @@ def test_npv_worked_example():
 
 @pytest.mark.golden
 def test_irr_worked_example():
-    """-100, 60, 60 solves to 13.0662 percent."""
-    assert irr([-100.0, 60.0, 60.0]) == pytest.approx(0.130662, abs=1e-6)
+    """-100, 60, 60 solves to a rate of 0.130662 (13.0662 percent).
+
+    Verified two ways: the solver's root, and that discounting at the quoted
+    rate nearly zeroes the NPV. The residual at 6 significant figures is
+    5.02e-05, which is the rounding of the printed rate rather than solver
+    error; the solver's own root zeroes it to 1e-9.
+    """
+    assert 0.130662 * 100 == pytest.approx(13.0662, abs=1e-9)
+    r = irr([-100.0, 60.0, 60.0])
+    assert r == pytest.approx(0.130662, abs=1e-6)
+    quoted = 0.130662
+    residual = -100.0 + 60.0 / (1 + quoted) + 60.0 / (1 + quoted) ** 2
+    assert residual == pytest.approx(5.02e-05, abs=1e-7), \
+        "the residual is the rounding of the quoted rate, not solver error"
+    assert abs(residual) < 1e-4
+    assert npv(r, [-100.0, 60.0, 60.0]) == pytest.approx(0.0, abs=1e-9)
 
 
 def test_irr_returns_none_rather_than_a_misleading_number():
@@ -56,6 +85,12 @@ def test_multiple_sign_changes_alone_do_not_suppress_a_unique_irr():
     changes sign three times but its other two roots are complex (verified
     against numpy.roots), leaving a single real rate of 160.745 percent.
     Suppressing that would discard a valid answer."""
+    # The unique real root, verified independently before the module is asked.
+    import numpy as _np
+    roots_ = _np.roots([288.0, -630.0, 460.0, -100.0])
+    real_ = [r.real for r in roots_ if abs(r.imag) < 1e-9]
+    assert len(real_) == 1, "exactly one real root"
+    assert (1.0 / real_[0] - 1.0) * 100 == pytest.approx(160.745, abs=1e-2)
     r = irr([-100.0, 460.0, -630.0, 288.0])
     assert r == pytest.approx(1.607452, abs=1e-5)
     assert npv(r, [-100.0, 460.0, -630.0, 288.0]) == pytest.approx(0.0, abs=1e-8)
@@ -81,6 +116,9 @@ def test_timing_shift_reproduces_the_predecessor_error_magnitude():
     later, with NO change to any cost or price, must raise breakeven materially.
     In the predecessor analysis the equivalent correction moved a breakeven price
     from 3,722 to 5,144 USD/t, a 38.2 percent rise."""
+    # The predecessor figures: 3,722 -> 5,144 USD/t is a 38.2 percent rise.
+    assert (5144.0 / 3722.0 - 1.0) * 100 == pytest.approx(38.2, abs=0.05)
+    assert 5144.0 - 3722.0 == pytest.approx(1422.0, abs=1e-9)
     fast = proj(construction_periods=1, ramp_fractions=[1.0])
     slow = proj(construction_periods=3, ramp_fractions=[0.3, 0.7, 1.0])
     b_fast = breakeven_price(fast, 0.12)

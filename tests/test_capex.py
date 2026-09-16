@@ -46,6 +46,14 @@ def test_scale_cost_worked_example():
        ratio = 4.0, 4.0**0.6 = 2.29740, cost = 4,594,793 USD.
     Note the whole content of the rule is the exponent: at n = 0.9 the same
     ratio gives 4.0**0.9 = 3.48220 and 6,964,405 USD, 52 percent higher."""
+    # Every factor in the docstring chain, asserted.
+    ratio = 20000.0 / 5000.0
+    assert ratio == 4.0
+    assert 4.0 ** 0.6 == pytest.approx(2.29740, abs=1e-5)
+    assert 4.0 ** 0.9 == pytest.approx(3.48220, abs=1e-5)
+    assert 2.0e6 * 4.0 ** 0.6 == pytest.approx(4_594_793, abs=1.0)
+    assert 2.0e6 * 4.0 ** 0.9 == pytest.approx(6_964_405, abs=1.0)
+    assert (4.0 ** 0.9 / 4.0 ** 0.6 - 1.0) * 100 == pytest.approx(52, abs=0.5)
     c = scale_cost(Q_(2.0e6, "USD"), Q_(5000.0, "tonne/year"),
                    Q_(20000.0, "tonne/year"), 0.6)
     assert c.to("USD").magnitude == pytest.approx(4_594_793.0, abs=1.0)
@@ -127,6 +135,24 @@ def test_factored_estimate_worked_example():
        contingency at 15 percent of both=  4.0999 (0.15 x 27.3325)
        total project cost               = 31.4324 MUSD
     """
+    # Every line of the factored chain, asserted so no intermediate can drift.
+    purchased = [1.20, 0.85, 2.40, 3.10]
+    factors = [2.4, 2.1, 3.2, 2.8]
+    assert sum(purchased) == pytest.approx(7.55, abs=1e-9)
+    lines_ = [p * f for p, f in zip(purchased, factors)]
+    assert lines_[0] == pytest.approx(2.880, abs=1e-9)
+    assert lines_[1] == pytest.approx(1.785, abs=1e-9)
+    assert lines_[2] == pytest.approx(7.680, abs=1e-9)
+    assert lines_[3] == pytest.approx(8.680, abs=1e-9)
+    installed_ = sum(lines_)
+    assert installed_ == pytest.approx(21.025, abs=1e-9)
+    indirects_ = 0.30 * installed_
+    assert indirects_ == pytest.approx(6.3075, abs=1e-9)
+    base_ = installed_ + indirects_
+    assert base_ == pytest.approx(27.3325, abs=1e-9)
+    conting_ = 0.15 * base_
+    assert conting_ == pytest.approx(4.0999, abs=1e-4)
+    assert base_ + conting_ == pytest.approx(31.4324, abs=1e-4)
     est = estimate_capex(kit(), site(), indirect_factor=0.30, contingency_fraction=0.15,
                          capacity=Q_(5000.0, "tonne/year"))
     assert est.total_purchased.to("USD").magnitude == pytest.approx(7_550_000.0, abs=1.0)
@@ -139,7 +165,8 @@ def test_factored_estimate_worked_example():
 
 def test_accuracy_band_defaults_to_class_5_not_class_4():
     """A factored estimate from an equipment list with no flowsheet engineering
-    is AACE CLASS 5, minus 50 to plus 100 percent.
+    is AACE CLASS 5, minus 50 to plus 100 percent (multipliers 0.50 and 2.00,
+    since 2.00 - 1 = +100 percent).
 
     The previous default was the Class 4 band (minus 30 to plus 50) while the
     docstring described the estimate as "Class 4 to 5", which quoted the
@@ -149,6 +176,10 @@ def test_accuracy_band_defaults_to_class_5_not_class_4():
     """
     est = estimate_capex(kit(), site(), 0.30, 0.15)
     assert est.estimate_class == 5
+    # The band as PERCENTAGES, which is how the docstring states it.
+    lo_m, hi_m = est.accuracy
+    assert (lo_m - 1) * 100 == pytest.approx(-50.0, abs=1e-9)
+    assert (hi_m - 1) * 100 == pytest.approx(100.0, abs=1e-9)
     lo, hi = est.accuracy_band()
     t = est.total_project_cost.magnitude
     assert lo.magnitude == pytest.approx(0.50 * t)
@@ -208,6 +239,10 @@ def test_assumed_share_is_invariant_to_location_and_escalation():
     escalated and location-factored total, so at a 0.55 location factor an
     all-assumed list reported 182 percent. The factors are common to every item
     and must cancel."""
+    assert round(1.0 / 0.55 * 100) == 182
+    # The erroneous result reproduced from its mechanism: raw over factored is
+    # 1/0.55 = 181.8 percent, which is the "182 percent" the docstring records.
+    assert 1.0 / 0.55 * 100 == pytest.approx(181.8, abs=0.1)
     shares = []
     for cci in (0.55, 1.0, 1.85):
         est = estimate_capex(kit(), site(cci=cci), 0.30, 0.15)

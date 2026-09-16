@@ -14,6 +14,22 @@ def test_oee_worked_example():
          quality      0.90 x 0.95 x (1 - 0.99)  = 0.00855
          sum of losses                          = 0.15355 = 1 - 0.84645
     """
+    A_, P_, Q_o = 0.90, 0.95, 0.99
+    assert A_ * P_ * Q_o == pytest.approx(0.84645, abs=1e-9)
+    la_, lp_, lq_ = 1 - A_, A_ * (1 - P_), A_ * P_ * (1 - Q_o)
+    assert la_ == pytest.approx(0.10000, abs=1e-9)
+    assert lp_ == pytest.approx(0.04500, abs=1e-9)
+    assert lq_ == pytest.approx(0.00855, abs=1e-9)
+    assert la_ + lp_ + lq_ == pytest.approx(0.15355, abs=1e-9)
+    assert la_ + lp_ + lq_ == pytest.approx(1 - 0.84645, abs=1e-9)
+    A, P, Q = 0.90, 0.95, 0.99
+    assert A * P * Q == pytest.approx(0.84645, abs=1e-9)
+    l_a, l_p, l_q = 1 - A, A * (1 - P), A * P * (1 - Q)
+    assert l_a == pytest.approx(0.10000, abs=1e-9)
+    assert l_p == pytest.approx(0.04500, abs=1e-9)
+    assert l_q == pytest.approx(0.00855, abs=1e-9)
+    assert l_a + l_p + l_q == pytest.approx(0.15355, abs=1e-9)
+    assert l_a + l_p + l_q == pytest.approx(1 - 0.84645, abs=1e-9)
     o = OEE(0.90, 0.95, 0.99)
     assert o.value == pytest.approx(0.84645, abs=1e-9)
     lb = o.loss_breakdown
@@ -45,6 +61,21 @@ def test_oee_from_times_worked_example():
        Good 56133 t   -> Q = 56133/56700 = 0.99
        OEE = 0.90 x 0.90 x 0.99 = 0.8019
     """
+    run_h_ = 7000.0 - 700.0
+    assert run_h_ == 6300.0
+    assert run_h_ / 7000.0 == pytest.approx(0.90, abs=1e-12)
+    cap_ = 10.0 * run_h_
+    assert cap_ == 63000.0
+    assert 56700.0 / cap_ == pytest.approx(0.90, abs=1e-12)
+    assert 56133.0 / 56700.0 == pytest.approx(0.99, abs=1e-12)
+    assert 0.90 * 0.90 * 0.99 == pytest.approx(0.8019, abs=1e-9)
+    run_h = 7000.0 - 700.0
+    assert run_h == 6300.0
+    assert run_h / 7000.0 == pytest.approx(0.90, abs=1e-12)
+    cap = 10.0 * run_h
+    assert cap == 63000.0
+    assert 56700.0 / cap == pytest.approx(0.90, abs=1e-12)
+    assert 56133.0 / 56700.0 == pytest.approx(0.99, abs=1e-12)
     o = OEE.from_times(planned_hours=7000.0, downtime_hours=700.0,
                        nameplate_rate=Q_(10.0, "tonne/hour"),
                        actual_output=Q_(56700.0, "tonne"),
@@ -77,6 +108,11 @@ def test_from_times_requires_correct_dimensionality():
 def test_effective_capacity_worked_example():
     """10 t/h x 7000 h x 0.84645 = 59251.5 t/yr of own throughput.
        At 1.25 t feed per t product that is 47401.2 t/yr of product."""
+    oee_ = 0.90 * 0.95 * 0.99
+    assert oee_ == pytest.approx(0.84645, abs=1e-9)
+    own_ = 10.0 * 7000.0 * oee_
+    assert own_ == pytest.approx(59251.5, abs=0.1)
+    assert own_ / 1.25 == pytest.approx(47401.2, abs=0.1)
     u = UnitCapacity("mill", Q_(10.0, "tonne/hour"), 7000.0, OEE(0.90, 0.95, 0.99), 1.25)
     assert u.effective_capacity.to("tonne").magnitude == pytest.approx(59251.5, abs=0.1)
     assert u.product_capacity.to("tonne").magnitude == pytest.approx(47401.2, abs=0.1)
@@ -104,6 +140,30 @@ def test_bottleneck_uses_product_basis_not_nameplate():
     Line rate = min(47401.20, 53326.35) = 47401.20, set by the mill, even though
     the mill's nameplate rate (10 t/h) exceeds the leach's (9 t/h).
     """
+    oee_ = 0.90 * 0.95 * 0.99
+    assert oee_ == pytest.approx(0.84645, abs=1e-9)
+    mill_own_ = 10.0 * 7000.0 * oee_
+    leach_own_ = 9.0 * 7000.0 * oee_
+    assert mill_own_ == pytest.approx(59251.50, abs=0.1)
+    assert leach_own_ == pytest.approx(53326.35, abs=0.1)
+    mill_prod_, leach_prod_ = mill_own_ / 1.25, leach_own_ / 1.00
+    assert mill_prod_ == pytest.approx(47401.20, abs=0.1)
+    assert leach_prod_ == pytest.approx(53326.35, abs=0.1)
+    # The inversion: higher nameplate, lower product capacity.
+    assert 10.0 > 9.0 and mill_prod_ < leach_prod_
+    assert min(mill_prod_, leach_prod_) == pytest.approx(47401.20, abs=0.1)
+    oee = 0.90 * 0.95 * 0.99
+    assert oee == pytest.approx(0.84645, abs=1e-9)
+    mill_own = 10.0 * 7000.0 * oee
+    leach_own = 9.0 * 7000.0 * oee
+    assert mill_own == pytest.approx(59251.50, abs=1e-1)
+    assert leach_own == pytest.approx(53326.35, abs=1e-1)
+    mill_prod, leach_prod = mill_own / 1.25, leach_own / 1.00
+    assert mill_prod == pytest.approx(47401.20, abs=1e-1)
+    assert leach_prod == pytest.approx(53326.35, abs=1e-1)
+    # The inversion: higher nameplate, lower product capacity.
+    assert 10.0 > 9.0 and mill_prod < leach_prod
+    assert min(mill_prod, leach_prod) == pytest.approx(47401.20, abs=1e-1)
     o = OEE(0.90, 0.95, 0.99)
     mill = UnitCapacity("mill", Q_(10.0, "tonne/hour"), 7000.0, o, 1.25)
     leach = UnitCapacity("leach", Q_(9.0, "tonne/hour"), 7000.0, o, 1.0)

@@ -41,6 +41,15 @@ def test_cash_cost_worked_example():
       credit                                      = -20.0000
       cash cost                                   = 725.1786 USD/t
     """
+    # Each line of the per-tonne chain, at the 0.70 cascade yield.
+    assert 250.0 * 0.0541 == pytest.approx(13.525, abs=1e-9)
+    assert 13.525 / 0.70 == pytest.approx(19.3214, abs=1e-4)
+    assert 12.0 * 1.80 == pytest.approx(21.600, abs=1e-9)
+    assert 21.600 / 0.70 == pytest.approx(30.8571, abs=1e-4)
+    assert 3_000_000.0 / 5_000.0 == pytest.approx(600.0, abs=1e-9)
+    gross_ = 19.3214 + 30.8571 + 600.0 + 95.0
+    assert gross_ == pytest.approx(745.1786, abs=1e-3)
+    assert gross_ - 20.0 == pytest.approx(725.1786, abs=1e-3)
     b = cash_cost(
         site=us_site(),
         demands=[InputDemand("electricity", Q_(250.0, "kWh/tonne")),

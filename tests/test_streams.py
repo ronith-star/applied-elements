@@ -1,4 +1,6 @@
 """Flowsheet mass balance: closure, recycle, untracked-vs-zero, divergence."""
+import math
+
 import pytest
 from ae.core.units import Q_, DimensionalityError
 from ae.plant.streams import Stream, UnitOp, Flowsheet, MassBalanceError
@@ -39,6 +41,14 @@ def test_single_unit_worked_example():
       product flow= 8 kg/s -> 0.00582/8 = 727.5e-6 = 727.5 ppm
       reject flow = 2 kg/s -> 0.00582/2 = 2910e-6  = 2910 ppm
     """
+    # The element-flow chain, in kg/s.
+    al_in = 10.0 * 1164e-6
+    assert al_in == pytest.approx(0.01164, abs=1e-12)
+    al_rej = 0.5 * al_in
+    assert al_rej == pytest.approx(0.00582, abs=1e-12)
+    assert al_in - al_rej == pytest.approx(0.00582, abs=1e-12)
+    assert al_rej / 8.0 == pytest.approx(727.5e-6, abs=1e-12)
+    assert al_rej / 2.0 == pytest.approx(2910e-6, abs=1e-12)
     u = UnitOp("whims", mass_yield=0.80, element_removal={"Al": 0.50})
     prod, rej = u.apply(feed())
     assert prod.kg_s == pytest.approx(8.0)
@@ -277,12 +287,39 @@ def test_a_unit_with_no_reject_can_only_remove_nothing():
 def test_realistic_units_are_unaffected_by_the_new_check():
     """Regression guard: at real HPQ impurity levels (ppm, not percent) the
     bound is never approached, so the check must not constrain normal use.
-    At 1164 ppm Al, a 90 percent-yield unit removing 80 percent needs a reject
-    composition of 0.00093, three orders of magnitude inside the limit."""
+
+    Worked, at 1164 ppm Al with Y = 0.90 and r = 0.80:
+
+      feed fraction        c = 0.001164
+      reject composition   c*r/(1-Y) = 0.001164 * 0.80 / 0.10 = 0.009312
+      feasibility cap      (1-Y)/r   = 0.10 / 0.80            = 0.125
+      headroom             0.125 / 0.001164 = 107.4x, i.e. 2.03 orders
+
+    Two arithmetic errors were made stating this and are recorded so neither
+    recurs. The first docstring said the reject composition was 0.00093, which
+    is c*r with the /(1-Y) concentration step dropped, and called the headroom
+    "three orders of magnitude". A review then computed the headroom as
+    0.125/0.009312 = 13.4x, which compares the cap against the REJECT
+    composition; the cap bounds the FEED, so the correct comparison is
+    0.125/0.001164 = 107.4x. Every figure above is recomputed in the
+    assertions below rather than quoted.
+    """
+    assert 1164e-6 == pytest.approx(0.001164, abs=1e-12)
     u = UnitOp(name="leach", mass_yield=0.90, element_removal={"Al": 0.80})
     feed = Stream(name="f", mass_flow=Q_(10.0, "tonne/hour"),
                   composition={"Al": 1164e-6, "Fe": 140e-6})
     prod, rej = u.apply(feed)
-    assert rej.composition["Al"] == pytest.approx(1164e-6 * 0.80 / 0.10)
-    assert rej.composition["Al"] < 0.01
-    assert u.max_feasible_feed_fraction("Al") == pytest.approx(0.125)
+
+    c, r, Y = 1164e-6, 0.80, 0.90
+    # Reject composition: the concentration step /(1-Y) is what the first
+    # version of this docstring omitted.
+    assert rej.composition["Al"] == pytest.approx(c * r / (1 - Y))
+    assert rej.composition["Al"] == pytest.approx(0.009312, rel=1e-6)
+    assert rej.composition["Al"] < 1.0, "must remain a legal mass fraction"
+
+    # The cap bounds the FEED, so headroom is cap/feed, not cap/reject.
+    cap = u.max_feasible_feed_fraction("Al")
+    assert cap == pytest.approx((1 - Y) / r) == pytest.approx(0.125)
+    assert cap / c == pytest.approx(107.4, abs=0.1)
+    assert math.log10(cap / c) == pytest.approx(2.03, abs=0.01), \
+        "about two orders of magnitude, not three"

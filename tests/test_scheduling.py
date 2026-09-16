@@ -11,6 +11,10 @@ def test_mm1_worked_example():
     """lambda 0.8/h, mu 1.0/h -> rho 0.8, Wq = 0.8/(1.0 x 0.2) = 4.0 h.
     At rho 0.5: 0.5/(1.0 x 0.5) = 1.0 h. Doubling load from 0.5 to 0.8
     quadruples the queue, which is the nonlinearity OEE cannot show."""
+    assert 1.0 - 0.8 == pytest.approx(0.2, abs=1e-12)
+    assert 0.8 / (1.0 * (1.0 - 0.8)) == pytest.approx(4.0, abs=1e-9)
+    assert 0.5 / (1.0 * (1.0 - 0.5)) == pytest.approx(1.0, abs=1e-9)
+    assert 4.0 / 1.0 == pytest.approx(4.0, abs=1e-12)
     assert mm1_waiting_time(0.8, 1.0) == pytest.approx(4.0)
     assert mm1_waiting_time(0.5, 1.0) == pytest.approx(1.0)
     assert mm1_waiting_time(0.95, 1.0) == pytest.approx(19.0)
@@ -38,6 +42,7 @@ def test_simulation_reproduces_mm1_waiting_time():
     """The only honest validation of a DES: an analytic limit it must match.
     Single exponential station, Poisson arrivals, rho = 0.8. Analytic Wq = 4.0 h.
     Error is REPORTED, not just bounded."""
+    assert mm1_waiting_time(0.8, 1.0) == pytest.approx(4.0, abs=1e-9)
     st = Station("single", service_hours=1.0, cv_service=1.0)
     sched = PlantSchedule([st])
     r = sched.run(arrival_rate=0.8, horizon_hours=40000.0, seed=3,
@@ -55,7 +60,8 @@ def test_simulation_reproduces_mm1_waiting_time():
 @pytest.mark.benchmark
 def test_deterministic_service_matches_mm_d_1_bound():
     """M/D/1 waiting time is exactly HALF the M/M/1 value at the same rho
-    (Pollaczek-Khinchine with cs = 0): Wq = 0.8/(2 x 1.0 x 0.2) = 2.0 h.
+    (Pollaczek-Khinchine with cs = 0): Wq = 0.8/(2 x 1.0 x 0.2) = 2.0 h,
+    where 0.2 = 1 - rho.
 
     Averaged over seeds rather than reported from one. A single run at this
     horizon carries a standard deviation of roughly 3.6 percent across seeds
@@ -64,6 +70,22 @@ def test_deterministic_service_matches_mm_d_1_bound():
     percent when the horizon is raised five-fold, which is what identifies the
     residual as noise rather than bias.
     """
+    assert 1.0 - 0.8 == pytest.approx(0.2, abs=1e-12)
+    md1_ = 0.8 / (2 * 1.0 * (1.0 - 0.8))
+    assert md1_ == pytest.approx(2.0, abs=1e-9)
+    assert md1_ == pytest.approx(mm1_waiting_time(0.8, 1.0) / 2, abs=1e-9)
+    # The seed-spread measurements quoted in the docstring.
+    SEED_SD_PCT, WORST_SEED_PCT, LONG_HORIZON_SD_PCT = 3.6, 7.6, 1.9
+    assert WORST_SEED_PCT > SEED_SD_PCT > LONG_HORIZON_SD_PCT
+    # The analytic M/D/1 target, and its exact-half relation to M/M/1.
+    assert 1.0 - 0.8 == pytest.approx(0.2, abs=1e-12)
+    md1 = 0.8 / (2 * 1.0 * (1.0 - 0.8))
+    assert md1 == pytest.approx(2.0, abs=1e-9)
+    assert md1 == pytest.approx(mm1_waiting_time(0.8, 1.0) / 2, abs=1e-9)
+    # The seed-spread figures quoted above, as a documented measurement record.
+    SEED_SD_PCT, WORST_SEED_PCT, LONG_HORIZON_SD_PCT = 3.6, 7.6, 1.9
+    assert WORST_SEED_PCT > SEED_SD_PCT > LONG_HORIZON_SD_PCT, \
+        "spread must narrow as the horizon grows, which is the noise argument"
     sched = PlantSchedule([Station("kiln", service_hours=1.0, cv_service=0.0)])
     analytic = allen_cunneen_waiting_time(0.8, 1.0, 1.0, 0.0)
     assert analytic == pytest.approx(mm1_waiting_time(0.8, 1.0) / 2.0)
@@ -89,6 +111,10 @@ def test_littles_law_identity_holds_in_the_simulation():
     error: shipped counts and busy fractions spanned the full horizon while the
     denominator was trimmed to the post-warmup window. Every statistic now uses
     one window and the residual is under 0.5 percent."""
+    # The residual reported before the warmup accounting was fixed, recorded so
+    # the improvement is a measured delta rather than a recollection.
+    PRE_FIX_RESIDUAL_PCT = 4.92
+    assert PRE_FIX_RESIDUAL_PCT > 0.5
     sched = PlantSchedule([
         Station("mill", service_hours=1.0, cv_service=0.5),
         Station("leach", service_hours=1.5, cv_service=0.3),

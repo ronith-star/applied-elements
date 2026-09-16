@@ -16,6 +16,10 @@ def test_cascade_and_throughput_worked_example():
        Stage 2 handles 1/(0.90 x 0.95)   = 1.1696
        Stage 1 handles 1/0.8379          = 1.1935
     """
+    assert 0.98 * 0.90 * 0.95 == pytest.approx(0.8379, abs=1e-4)
+    assert 1 / 0.95 == pytest.approx(1.0526, abs=1e-4)
+    assert 1 / (0.90 * 0.95) == pytest.approx(1.1696, abs=1e-4)
+    assert 1 / (0.98 * 0.90 * 0.95) == pytest.approx(1.1935, abs=1e-4)
     ys = [0.98, 0.90, 0.95]
     assert cascade_yield(ys) == pytest.approx(0.8379, abs=1e-9)
     f = stage_throughput_factors(ys)
@@ -54,6 +58,10 @@ def test_required_process_mean_worked_example():
        sigma 5 ppm -> mu = 30 - 3(1.33)(5) = 30 - 19.95 = 10.05 ppm
     Halving sigma is worth more than a large shift in mean, which is why
     lot-to-lot control is the qualification-relevant quantity."""
+    assert 3 * 1.33 * 3 == pytest.approx(11.97, abs=1e-9)
+    assert 30 - 11.97 == pytest.approx(18.03, abs=1e-9)
+    assert 3 * 1.33 * 5 == pytest.approx(19.95, abs=1e-9)
+    assert 30 - 19.95 == pytest.approx(10.05, abs=1e-9)
     assert required_process_mean(30.0, 3.0, 1.33) == pytest.approx(18.03, abs=1e-9)
     assert required_process_mean(30.0, 5.0, 1.33) == pytest.approx(10.05, abs=1e-9)
     # Headroom gained by halving sigma from 6 to 3 ppm:
@@ -79,6 +87,11 @@ def test_capability_and_off_spec_are_the_same_number_two_ways():
     exactly, 3 Cpk = 3.99 and f = 3.3037e-5, 4 percent higher. The two are
     routinely conflated, and this test pins both so the distinction survives.
     """
+    # Cpk = 12/9 = 4/3, and the distinction from the tabulated 1.33.
+    assert (30 - 18) / (3 * 3) == pytest.approx(4 / 3, abs=1e-12)
+    assert 12 / 9 == pytest.approx(1.33333, abs=1e-5)
+    assert 3 * (4 / 3) == pytest.approx(4.0, abs=1e-12)
+    assert 3 * 1.33 == pytest.approx(3.99, abs=1e-12)
     assert (30.0 - 18.0) / (3.0 * 3.0) == pytest.approx(4.0 / 3.0, rel=1e-12)
     assert float(stats.norm.sf(4.0)) == pytest.approx(3.1671e-5, rel=1e-3)
     assert float(stats.norm.sf(3.0 * 1.33)) == pytest.approx(3.3037e-5, rel=1e-3)
@@ -92,6 +105,9 @@ def test_capability_estimate_converges_to_the_true_value():
     NOT: the seed-7 draw of 400 lots returns 1.481, 11 percent high, because a
     favourable mean and a low sample sd compound. That is the reason
     is_estimated_from_few_lots and the confidence interval exist."""
+    # The seed-7 sample estimate quoted above, and its 11 percent error.
+    SEED7_CPK, TRUE_CPK = 1.481, 4 / 3
+    assert (SEED7_CPK / TRUE_CPK - 1.0) * 100 == pytest.approx(11.0, abs=0.2)
     rng = np.random.default_rng(7)
     big = capability(rng.normal(18.0, 3.0, 40000), usl=30.0)
     assert big.cpk == pytest.approx(4.0 / 3.0, rel=0.03)
