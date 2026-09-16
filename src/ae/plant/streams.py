@@ -30,17 +30,26 @@ is tracked in an explicit reject stream, so the plant-wide balance closes.
 the unit operations are linear in flow, so the recycle problem admits a direct
 matrix solution :math:`(\mathbf{I} - \mathbf{A})\mathbf{x} = \mathbf{b}` with
 :math:`\mathbf{A}` the routing matrix of split fractions. **This module does not
-use that formulation.** :meth:`Flowsheet.solve` solves every case, with recycle
-or without, by DAMPED SUCCESSIVE SUBSTITUTION on the recycled streams:
+use that formulation.** :meth:`Flowsheet.solve` dispatches on topology:
+
+* **Acyclic flowsheet** (no link routes a stream to an earlier unit): ONE forward
+  pass in declaration order, no iteration and no damping, reported as
+  ``method="single_pass"`` with ``iterations=1``. The pass is exact, because with
+  no recycle every unit's feed is fully determined before it is evaluated.
+* **Flowsheet with recycle**: DAMPED SUCCESSIVE SUBSTITUTION on the recycled
+  streams, reported as ``method="successive_substitution"`` with the iteration
+  count taken.
+
+The recycle iteration is
 
 .. math::
    \mathbf{x}^{(k+1)} = (1 - \alpha)\,\mathbf{x}^{(k)}
                         + \alpha\, \mathbf{G}\!\left(\mathbf{x}^{(k)}\right)
 
-where :math:`\mathbf{G}` is one forward pass through the flowsheet and
-:math:`\alpha` is the damping factor (``damping``, default 0.5, range 0 to 1).
-Iteration stops when the largest change in a recycled stream's mass flow falls
-below ``tol``.
+where :math:`\mathbf{x}` collects the recycled stream flows, :math:`\mathbf{G}`
+is one forward pass through the flowsheet and :math:`\alpha` is the damping
+factor (``damping``, default 0.5, range 0 to 1). Iteration stops when the
+largest change in a recycled stream's mass flow falls below ``tol``.
 
 Successive substitution was chosen because it extends unchanged to the nonlinear
 case (a unit whose selectivity depends on its own feed grade, which is true of

@@ -168,6 +168,14 @@ def test_module_docstring_does_not_claim_an_unimplemented_solver():
     src = open(mod.__file__).read()
     doc = mod.__doc__ or ""
     assert "SUCCESSIVE SUBSTITUTION" in doc, "the actual method must be named"
+    # The acyclic path single-passes: no iteration, no damping. An earlier
+    # correction overstated it as iterating in every case, contradicting
+    # solve()'s own docstring beside it.
+    flat_doc = " ".join(doc.split())
+    assert "ONE forward pass" in flat_doc and 'method="single_pass"' in flat_doc, \
+        "the no-recycle path must be documented as a single exact forward pass"
+    assert "solves every case" not in flat_doc, \
+        "successive substitution does not run for acyclic flowsheets"
     # Phrase check is whitespace-insensitive: the docstring wraps at 79 columns,
     # so a literal substring test on a multi-word phrase is brittle.
     flat = " ".join(doc.split())
