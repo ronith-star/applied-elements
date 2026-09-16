@@ -83,7 +83,12 @@ def test_deterministic_service_matches_mm_d_1_bound():
 
 def test_littles_law_identity_holds_in_the_simulation():
     """L = lambda W is an identity. A discrepancy means the accounting is wrong,
-    so this checks the simulation against itself."""
+    so this checks the simulation against itself.
+
+    It previously reported a 4.92 percent residual, which was NOT simulation
+    error: shipped counts and busy fractions spanned the full horizon while the
+    denominator was trimmed to the post-warmup window. Every statistic now uses
+    one window and the residual is under 0.5 percent."""
     sched = PlantSchedule([
         Station("mill", service_hours=1.0, cv_service=0.5),
         Station("leach", service_hours=1.5, cv_service=0.3),
@@ -92,7 +97,41 @@ def test_littles_law_identity_holds_in_the_simulation():
     chk = r.littles_law_check()
     print(f"\nLittle's law: L {chk['L_measured']:.4f}, lambda W {chk['lambda_W']:.4f}, "
           f"error {chk['relative_error'] * 100:.2f} percent")
-    assert chk["relative_error"] < 0.10
+    assert chk["relative_error"] < 0.005
+
+
+def test_all_statistics_share_one_measurement_window():
+    """Regression. Throughput, utilisation and Little's law must be invariant to
+    the warmup length (up to noise), because warmup removes a transient rather
+    than changing the steady state. Mixing trimmed and untrimmed windows made
+    throughput rise with warmup, which is how the defect showed."""
+    sched = PlantSchedule([
+        Station("mill", service_hours=1.0, cv_service=0.5),
+        Station("leach", service_hours=1.5, cv_service=0.3),
+    ])
+    runs = {wu: sched.run(arrival_rate=0.5, horizon_hours=20000.0, seed=11,
+                          warmup_hours=wu) for wu in (0.0, 1000.0, 5000.0)}
+    for wu, r in runs.items():
+        chk = r.littles_law_check()
+        assert chk["relative_error"] < 0.01, f"warmup {wu}: {chk}"
+        # Throughput must recover the offered arrival rate, not exceed it.
+        assert r.throughput_per_hour == pytest.approx(0.5, rel=0.03), f"warmup {wu}"
+        # Utilisation of the mill is lambda / mu = 0.5 / 1.0.
+        assert r.station_busy_fraction["mill"] == pytest.approx(0.5, rel=0.05)
+    thru = [r.throughput_per_hour for r in runs.values()]
+    assert max(thru) - min(thru) < 0.02, f"throughput drifts with warmup: {thru}"
+
+
+def test_warmup_excludes_counts_not_just_cycle_times():
+    """A long warmup must reduce the reported counts, because those lots are
+    outside the measurement window."""
+    sched = PlantSchedule([Station("s", service_hours=1.0, cv_service=0.5)])
+    full = sched.run(0.5, 10000.0, seed=2, warmup_hours=0.0)
+    half = sched.run(0.5, 10000.0, seed=2, warmup_hours=5000.0)
+    assert half.lots_shipped < full.lots_shipped * 0.6
+    assert half.horizon_hours == pytest.approx(5000.0)
+    # But the RATE is unchanged, which is the point of the window.
+    assert half.throughput_per_hour == pytest.approx(full.throughput_per_hour, rel=0.05)
 
 
 def test_qc_hold_adds_directly_to_cycle_time():

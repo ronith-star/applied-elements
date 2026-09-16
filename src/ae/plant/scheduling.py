@@ -25,8 +25,15 @@ with :math:`c_a` and :math:`c_s` the coefficients of variation of interarrival
 and service times (dimensionless, typically 0 to 2). Two consequences the model
 must reproduce:
 
-1. Waiting time is driven by VARIABILITY as much as by load. Halving
-   :math:`c_s^2` halves the queue at fixed utilisation.
+1. Waiting time is driven by VARIABILITY as much as by load, but only through
+   the SUM :math:`c_a^2 + c_s^2`. Halving :math:`c_s^2` therefore cuts the queue
+   by a factor :math:`(c_a^2 + c_s^2/2) / (c_a^2 + c_s^2)`, which depends on the
+   arrival variability: from 1.0 to 0.5 at Poisson arrivals
+   (:math:`c_a = 1`, the default in :meth:`PlantSchedule.run`) gives a 25
+   percent reduction, not a halving. Only with perfectly regular arrivals
+   (:math:`c_a = 0`) does halving :math:`c_s^2` halve the queue. Service-side
+   variability reduction is worth less the burstier the arrivals, which is why
+   scheduling discipline and process consistency have to be attacked together.
 2. A batch process with a long fixed cycle (a calcination kiln, an acid leach
    autoclave) has low :math:`c_s`, which is protective, but its long service
    time raises :math:`\rho` for the same arrival rate.
@@ -232,15 +239,33 @@ class ScheduleResult:
             return float("nan")
         return float(np.percentile(self.cycle_times, p))
 
+    #: Start of the measurement window, so the WIP integral uses the same
+    #: interval as every other reported statistic.
+    warmup_hours: float = 0.0
+
     @property
     def mean_wip(self) -> float:
-        """Time-averaged work in process, from the recorded timeline."""
+        """Time-averaged work in process over the MEASUREMENT window.
+
+        The integral starts at ``warmup_hours``, matching the basis of the
+        counts and the busy fractions. Integrating the full timeline against a
+        trimmed horizon was an accounting mismatch that made
+        :meth:`littles_law_check` report a spurious residual.
+        """
         if len(self.wip_timeline) < 2:
             return float("nan")
-        t = np.array([x[0] for x in self.wip_timeline])
-        n = np.array([x[1] for x in self.wip_timeline])
-        dt = np.diff(t)
-        return float(np.sum(n[:-1] * dt) / np.sum(dt)) if np.sum(dt) > 0 else float("nan")
+        t = np.array([x[0] for x in self.wip_timeline], dtype=float)
+        n = np.array([x[1] for x in self.wip_timeline], dtype=float)
+        w = self.warmup_hours
+        end = t[-1]
+        if end <= w:
+            return float("nan")
+        # Clip each segment to [w, end] and weight by the surviving duration.
+        lo = np.clip(t[:-1], w, end)
+        hi = np.clip(t[1:], w, end)
+        dt = hi - lo
+        total = float(np.sum(dt))
+        return float(np.sum(n[:-1] * dt) / total) if total > 0 else float("nan")
 
     def littles_law_check(self) -> dict[str, float]:
         """Verify L = lambda W against the simulation's own numbers.
@@ -297,8 +322,15 @@ class PlantSchedule:
             1.0 gives Poisson arrivals; 0.0 gives a perfectly regular schedule,
             which is what a well-run campaign plan looks like.
         warmup_hours
-            Lots completing before this time are excluded from the statistics,
-            so a cold start does not bias the cycle-time distribution.
+            Transient-removal window. EVERY reported statistic is measured over
+            the post-warmup interval only, on one consistent basis: lots
+            completing before ``warmup_hours`` are excluded from the cycle-time
+            distribution AND from the shipped, scrapped and reworked counts;
+            station busy and failed fractions accumulate only after it; and the
+            WIP integral is taken over the same interval. Mixing a trimmed
+            denominator with untrimmed counts inflates throughput and makes
+            :meth:`ScheduleResult.littles_law_check` report a residual that is
+            an accounting artefact rather than a simulation error.
         """
         if arrival_rate <= 0:
             raise ValueError("arrival_rate must be positive")
@@ -314,6 +346,17 @@ class PlantSchedule:
         busy_time = {s.name: 0.0 for s in self.stations}
         failed_time = {s.name: 0.0 for s in self.stations}
         counters = {"started": 0, "shipped": 0, "scrapped": 0, "reworked": 0}
+
+        def post_warmup(t0: float, t1: float) -> float:
+            """Overlap of the interval [t0, t1] with the measurement window.
+
+            Busy and failed time are apportioned rather than counted whole, so a
+            service or repair straddling the warmup boundary contributes only
+            its post-warmup part. Counting it whole would attribute pre-warmup
+            work to the measured window and push utilisation above the true
+            value.
+            """
+            return max(0.0, min(t1, horizon_hours) - max(t0, warmup_hours))
         wip = {"n": 0}
         timeline: list[tuple[float, int]] = [(0.0, 0)]
 
@@ -327,7 +370,7 @@ class PlantSchedule:
                 broken[s.name] = True
                 t0 = env.now
                 yield env.timeout(rng.exponential(s.repair_hours))
-                failed_time[s.name] += env.now - t0
+                failed_time[s.name] += post_warmup(t0, env.now)
                 broken[s.name] = False
 
         def lot(idx: int) -> object:
@@ -339,35 +382,39 @@ class PlantSchedule:
                 t_q = env.now
                 with res.request() as req:
                     yield req
-                    queues[s.name].append(env.now - t_q)
+                    if env.now >= warmup_hours:
+                        queues[s.name].append(env.now - t_q)
                     # Wait out any active failure before starting service.
                     while broken[s.name]:
                         yield env.timeout(0.25)
                     t_svc = env.now
                     yield env.timeout(s.draw_service(rng))
-                    busy_time[s.name] += env.now - t_svc
+                    busy_time[s.name] += post_warmup(t_svc, env.now)
                 if s.qc_hold_hours > 0:
                     yield env.timeout(s.qc_hold_hours)
                 if s.qc_fail_probability > 0 and rng.random() < s.qc_fail_probability:
                     if s.qc_disposition == "scrap":
-                        counters["scrapped"] += 1
+                        if env.now >= warmup_hours:
+                            counters["scrapped"] += 1
                         touch_wip(-1)
                         return
                     if not reworked_once:
                         reworked_once = True
-                        counters["reworked"] += 1
+                        if env.now >= warmup_hours:
+                            counters["reworked"] += 1
                         with resources[s.name].request() as req2:
                             yield req2
                             t_svc = env.now
                             yield env.timeout(s.draw_service(rng))
-                            busy_time[s.name] += env.now - t_svc
+                            busy_time[s.name] += post_warmup(t_svc, env.now)
                     else:
-                        counters["scrapped"] += 1
+                        if env.now >= warmup_hours:
+                            counters["scrapped"] += 1
                         touch_wip(-1)
                         return
-            counters["shipped"] += 1
             touch_wip(-1)
             if env.now >= warmup_hours:
+                counters["shipped"] += 1
                 cycles.append(env.now - t_start)
 
         def source() -> object:
@@ -382,7 +429,8 @@ class PlantSchedule:
                     gap = rng.gamma(shape, (1.0 / arrival_rate) / shape)
                 yield env.timeout(gap)
                 i += 1
-                counters["started"] += 1
+                if env.now >= warmup_hours:
+                    counters["started"] += 1
                 env.process(lot(i))
 
         for s in self.stations:
@@ -401,10 +449,11 @@ class PlantSchedule:
             cycle_times=np.asarray(cycles, dtype=float),
             queue_times={k: np.asarray(v, dtype=float) for k, v in queues.items()},
             station_busy_fraction={
-                k: v / (horizon_hours * next(s.capacity for s in self.stations if s.name == k))
+                k: v / (eff * next(s.capacity for s in self.stations if s.name == k))
                 for k, v in busy_time.items()
             },
-            station_failed_fraction={k: v / horizon_hours for k, v in failed_time.items()},
+            station_failed_fraction={k: v / eff for k, v in failed_time.items()},
             horizon_hours=eff,
             wip_timeline=timeline,
+            warmup_hours=warmup_hours,
         )
