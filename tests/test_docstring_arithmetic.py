@@ -140,14 +140,24 @@ COVERED: dict[tuple[str, str], str] = {
     ("ae/plant/yield_cascade.py", "stage_throughput_factors"):
         "test_yield_cascade_prose_arithmetic",
     ("ae/econ/capex.py", "assumed_share"): "test_capex_assumed_share_prose",
+    ("ae/econ/valuation.py", "npv"): "test_valuation_npv_prose",
 }
 
-#: Numbers that are illustrative parameter values or version references, not
-#: arithmetic claims. Matched as substrings against the captured fragment.
+#: Fragments that match the ``= <number>`` pattern but are NOT arithmetic
+#: claims: illustrative parameter values, LaTeX notation, index enumerations.
+#: Matched as substrings against the captured fragment. Kept explicit and
+#: narrow, because a broad exclusion would silently re-open the hole this
+#: module closes: each entry suppresses one specific textual form, never a
+#: whole file or symbol.
 _NOT_ARITHMETIC = (
+    # Illustrative keyword-argument values in prose.
     'loc=100.0', 'scale=5.0', 'loc == 0.0', 'iterations=1', 'c_a = 1',
-    'c_a = 0', 'method="single_pass"', r'\prod', r'\Phi', r'\Pr',
-    'y_i', 'f_{\\mathrm{indep}}',
+    'c_a = 0', 'method="single_pass"',
+    # LaTeX operators and summation/product bounds: notation, not a claim.
+    r'\prod', r'\Phi', r'\Pr', 'y_i', 'f_{\\mathrm{indep}}',
+    '_{t=0}', '_{i=1}', '(r) = 0',
+    # Period-index enumerations and positional references to time zero.
+    't = 0, 1, 2', 'at t=0',
 )
 
 
@@ -227,3 +237,13 @@ def test_capex_assumed_share_prose():
     """capex.assumed_share prose: at a location factor of 0.55 the old mixed
     basis reported 1/0.55 = 1.82, i.e. 182 percent."""
     assert round(1.0 / 0.55, 2) == 1.82
+
+
+def test_valuation_npv_prose():
+    """valuation.npv prose: minus 100 + 60/1.1 + 60/1.21 = 4.1322, built from
+    the two discount factors 54.5455 and 49.5868."""
+    from ae.econ.valuation import npv as _npv
+    assert round(60 / 1.1, 4) == 54.5455
+    assert round(60 / 1.21, 4) == 49.5868
+    assert round(-100 + 60 / 1.1 + 60 / 1.21, 4) == 4.1322
+    assert round(_npv(0.10, [-100.0, 60.0, 60.0]), 4) == 4.1322
