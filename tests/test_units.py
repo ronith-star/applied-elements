@@ -36,9 +36,29 @@ def test_ratio_basis_classifies(unit, expected):
     assert ratio_basis(Q_(1.0, unit)) == expected
 
 
+def test_mass_to_mole_conversion_factors():
+    """Pins the numbers the ratio_basis docstring cites, so the claim is executable.
+
+    Mass to mole MULTIPLIES by M(SiO2)/M(Al): the mole-basis figure is larger.
+    The two mole conventions in use differ from each other by a further 3x.
+    """
+    M_Al, M_Si, M_O = 26.9815, 28.085, 15.999
+    M_SiO2 = M_Si + 2 * M_O
+    assert M_SiO2 == pytest.approx(60.083, abs=1e-3)
+    assert M_SiO2 / M_Al == pytest.approx(2.227, abs=1e-3)
+    w = 30e-6  # 30 ppm Al by mass
+    per_formula_unit = (w / M_Al) / ((1 - w) / M_SiO2)
+    per_atom = (w / M_Al) / ((1 - w) / M_SiO2 * 3)
+    assert per_formula_unit * 1e6 == pytest.approx(66.8, abs=0.1)
+    assert per_atom * 1e6 == pytest.approx(22.3, abs=0.1)
+    assert per_formula_unit / per_atom == pytest.approx(3.0, abs=1e-6)
+    # The mole-basis value is LARGER than the mass-basis value, not smaller.
+    assert per_formula_unit * 1e6 > 30.0
+
+
 def test_mole_ratio_is_not_silently_a_mass_ratio():
-    """The defect this unit system exists to prevent: 30 ppm Al by mass is
-    about 11 ppm by mole in SiO2, so accepting the wrong basis is a 2.7x error."""
+    """The defect this unit system exists to prevent: a single reported "30 ppm"
+    can mean 30 (mass), 66.8 (per mol SiO2) or 22.3 (per mol atoms)."""
     with pytest.raises(ValueError, match="mole-basis"):
         to_ppm_mass(Q_(30.0, "umol/mol"))
     with pytest.raises(ValueError, match="volume-basis"):

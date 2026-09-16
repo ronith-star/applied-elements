@@ -125,8 +125,14 @@ def ratio_basis(q: Quantity) -> str:
     reduces ``ug/g``, ``umol/mol`` and ``mL/L`` all to ``dimensionless``, so a
     dimensional check passes a mole ratio into a mass-ratio slot silently. That
     is not a hypothetical: trace-element data is published in all three bases and
-    the numeric values differ by the ratio of molar masses (30 ppm Al by mass is
-    about 11 ppm by mole in SiO2, a factor of 2.7).
+    the numeric values differ by the ratio of molar masses. For Al in SiO2,
+    M(SiO2)/M(Al) = 60.08/26.98 = 2.227, so 30 ppm Al BY MASS is 66.8 umol per
+    mol of SiO2 formula units, and the mole-basis figure is LARGER than the
+    mass-basis one. Worse, the two mole conventions in use disagree with each
+    other by a further factor of 3: expressed per mole of ATOMS (SiO2 contributing
+    three atoms per formula unit) the same material reads 22.3 umol/mol. A single
+    reported "30 ppm" can therefore mean any of three numbers spanning 3x, which
+    is why the basis is checked rather than assumed.
 
     ``"bare"`` means a true dimensionless number with no unit trace, i.e. a mass
     fraction entered as 0.0022 rather than as 2200 ug/g. Callers decide whether
