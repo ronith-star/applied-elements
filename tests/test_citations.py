@@ -25,37 +25,61 @@ _NOT_AUTHORS = {
     "Reading", "Requires", "Written", "Computed", "Reported", "Offered",
 }
 
-#: A publisher-year inside a FULL inline book citation, recognised by POSITION
-#: rather than by name.
+#: A publisher-year inside a FULL inline book citation, recognised by the shape
+#: of the citation TAIL.
 #:
-#: This replaced a name list ("Heinemann", "Press", "Hall", "Wiley", ...) that
-#: was wrong in two ways. It miscounted the defect it was written for: the
-#: detector had flagged SIX publisher-year hits across FOUR modules (capex.py:
-#: Heinemann 2021, Hill 2003; capacity.py: Press 1988; streams.py: Hall 2012,
-#: Heinemann 2015; yield_cascade.py: Wiley 2012), not four in three. Worse, the
-#: comment claimed "a genuinely missing citation is never suppressed", which the
-#: list could not honour: Press, Hall, Cambridge, Taylor and Francis are all
-#: real surnames, so a genuine "Taylor 2019" citation would have been silently
-#: ignored.
+#: Two earlier versions were wrong, in the same way each time: each asserted a
+#: safety property it did not have.
 #:
-#: The structural signature is reliable and carries no such risk. A full book
-#: citation names an italicised title before the publisher, and usually an
-#: edition:
-#:     Himmelblau and Riggs, *Basic Principles...*, 8th ed., Prentice Hall 2012
-#:     Montgomery, *Introduction to Statistical Quality Control*, 7th ed.,
-#:         Wiley 2012, chapter 6
-#: An author-year citation in running prose has no italic title immediately
-#: before it, so the two are distinguishable without guessing at names.
-#: The gap between the title and the publisher may contain periods ("8th ed.,")
-#: and the publisher name itself may be hyphenated ("McGraw-Hill",
-#: "Butterworth-Heinemann"), so the separator is bounded by LENGTH and by the
-#: absence of a sentence break (a period followed by a space and a capital),
-#: not by excluding periods outright. A first version used [^.]{0,60} and
-#: matched only 1 of the 6 known publisher citations.
+#: Version 1 was a name list (Heinemann, Press, Hall, Wiley, Cambridge, Taylor,
+#: Francis, ...) commented "a genuinely missing citation is never suppressed".
+#: Those are all real surnames, so a genuine "Taylor 2019" was silently
+#: ignored. It also miscounted the defect it was written for: SIX
+#: publisher-year hits across FOUR modules (capex.py: Heinemann 2021,
+#: Hill 2003; capacity.py: Press 1988; streams.py: Hall 2012, Heinemann 2015;
+#: yield_cascade.py: Wiley 2012), not four in three.
+#:
+#: Version 2 matched any capitalised token plus year within 70 characters after
+#: an italicised title, commented "carries no such risk" and "an author-year
+#: citation in running prose has no italic title immediately before it". Also
+#: false. Measured counterexamples, all silently suppressed:
+#:     "The approach in *Wills' Mineral Processing Technology* was later
+#:      refined by Taylor 2019 for quartz."          -> Taylor 2019 suppressed
+#:     "Following *Introduction to TPM*, the kinetics follow Bond 1952
+#:      closely."                                    -> Bond 1952 suppressed
+#:     "See *Some Book Title*, chapter 3, and also Saltelli 2002 for the
+#:      method."                                     -> Saltelli 2002 suppressed
+#: Proximity to a title is not the signal, because prose routinely names a book
+#: and then cites a paper in the same sentence.
+#:
+#: The actual discriminator is that a publisher-year terminates a
+#: COMMA-DELIMITED citation tail, with no verb or connective between the title
+#: and the publisher, only edition and series noise:
+#:     *Title*, 8th ed., Prentice Hall 2012
+#:     *Title*, 7th ed., Wiley 2012, chapter 6
+#:     *Title*, Productivity Press 1988
+#: whereas the counterexamples all interpose running prose ("was later refined
+#: by", "the kinetics follow", "chapter 3, and also"). Requiring the gap to
+#: contain no lower-case word other than a short edition vocabulary separates
+#: them. THIS IS STILL A HEURISTIC on prose, not a proof: it is verified by the
+#: tests below against the six real cases in this repository, the three
+#: counterexamples above, and a bare-surname probe. A new citation style may
+#: need a new case, which is why the tests enumerate rather than assert a
+#: general property.
+#: Tokens allowed between the title and the publisher: edition and volume
+#: wording only, no verbs or connectives. "8th ed." is TWO tokens, so the group
+#: repeats over whitespace as well as commas; a first attempt allowed them only
+#: comma-separated and matched just 1 of the 6 real cases.
+_EDITION_NOISE = (
+    r"(?:\d+(?:st|nd|rd|th)|ed\.?|edn\.?|eds\.?|vol\.?|rev\.?|"
+    r"reprint|series|no\.?|\d+)"
+)
+
 _BOOK_CITATION_TAIL = re.compile(
-    r"\*[^*]{4,140}\*"                            # italicised title
-    r"(?:(?!\.\s+[A-Z])[^*]){0,70}?"               # edition/series, no new sentence
-    r"\b[A-Z][A-Za-z.&'\u2032-]*(?:\s+[A-Z][A-Za-z.&'\u2032-]*){0,2}\s+"
+    r"\*[^*]{4,140}\*"                          # italicised title
+    r"(?:[\s,]*" + _EDITION_NOISE + r")*"        # edition noise only
+    r"[\s,]*"
+    r"\b(?P<pub>[A-Z][A-Za-z.&'\u2032-]*(?:\s+[A-Z][A-Za-z.&'\u2032-]*){0,2})\s+"
     r"(?P<year>\d{4})\b"
 )
 
@@ -233,28 +257,89 @@ def test_positive_control_unresolved_citation_is_detected():
     assert missing == [("Nonexistent", "1997")]
 
 
-def test_publisher_year_in_a_book_citation_is_not_read_as_an_author():
-    """The six real cases from this repository, plus the surname guard."""
-    for text, expected in [
-        ("Himmelblau and Riggs, *Basic Principles and Calculations in Chemical "
-         "Engineering*, 8th ed., Prentice Hall 2012, chapter on recycle.",
-         {("Hall", "2012")}),
-        ("Montgomery, *Introduction to Statistical Quality Control*, 7th ed., "
-         "Wiley 2012, chapter 6.", {("Wiley", "2012")}),
-        ("Nakajima, *Introduction to TPM*, Productivity Press 1988.",
-         {("Press", "1988")}),
-        ("Wills and Finch, *Wills' Mineral Processing Technology*, 8th ed., "
-         "Butterworth-Heinemann 2015, chapter 3.", {("Heinemann", "2015")}),
-    ]:
-        flat = re.sub(r"\s+", " ", text)
-        assert _publisher_years(flat) == expected, text[:50]
-        assert not _citations(text), (
-            f"publisher-year must not surface as an unresolved citation: {text[:50]}"
-        )
+#: The SIX real publisher-year citations in this repository, with the module
+#: each came from. Enumerated rather than counted, after a docstring claimed
+#: "the six real cases" while listing four.
+_REAL_PUBLISHER_CITATIONS = [
+    ("ae/econ/capex.py",
+     "Peters and Timmerhaus, *Plant Design and Economics for Chemical "
+     "Engineers*, 5th ed., McGraw-Hill 2003, chapters 6 and 12.",
+     ("Hill", "2003")),
+    ("ae/econ/capex.py",
+     "Towler and Sinnott, *Chemical Engineering Design*, 3rd ed., "
+     "Butterworth-Heinemann 2021, chapter 6.",
+     ("Heinemann", "2021")),
+    ("ae/plant/capacity.py",
+     "Nakajima, *Introduction to TPM*, Productivity Press 1988.",
+     ("Press", "1988")),
+    ("ae/plant/streams.py",
+     "Himmelblau and Riggs, *Basic Principles and Calculations in Chemical "
+     "Engineering*, 8th ed., Prentice Hall 2012, chapter on recycle.",
+     ("Hall", "2012")),
+    ("ae/plant/streams.py",
+     "Wills and Finch, *Wills' Mineral Processing Technology*, 8th ed., "
+     "Butterworth-Heinemann 2015, chapter 3.",
+     ("Heinemann", "2015")),
+    ("ae/plant/yield_cascade.py",
+     "Montgomery, *Introduction to Statistical Quality Control*, 7th ed., "
+     "Wiley 2012, chapter 6.",
+     ("Wiley", "2012")),
+]
 
-    # A genuine author-year citation whose surname coincides with a publisher
-    # must NOT be suppressed. The previous name-list approach failed this.
-    for surname in ("Press", "Hall", "Cambridge", "Taylor", "Wiley"):
+#: Genuine author-year citations that a proximity-based rule wrongly suppressed.
+#: Each names a book in the SAME SENTENCE as the citation, which is why
+#: "no italic title immediately before it" was not a safe discriminator.
+_MUST_NOT_SUPPRESS = [
+    "The approach in *Wills' Mineral Processing Technology* was later refined "
+    "by Taylor 2019 for quartz.",
+    "Following *Introduction to TPM*, the kinetics follow Bond 1952 closely.",
+    "See *Some Book Title*, chapter 3, and also Saltelli 2002 for the method.",
+    "Compare *Plant Design and Economics*, where Heinemann 2021 is discussed "
+    "at length.",
+]
+
+
+@pytest.mark.parametrize("module,text,expected", _REAL_PUBLISHER_CITATIONS,
+                         ids=[f"{m.split('/')[-1]}:{e[0]}"
+                              for m, _, e in _REAL_PUBLISHER_CITATIONS])
+def test_publisher_year_in_a_book_citation_is_not_read_as_an_author(
+        module, text, expected):
+    """All SIX real cases, one per parametrised run so a miss names itself."""
+    flat = re.sub(r"\s+", " ", text)
+    assert expected in _publisher_years(flat), (
+        f"{module}: {expected} must be recognised as publisher-year"
+    )
+    assert not _citations(text), (
+        f"{module}: publisher-year must not surface as an unresolved citation"
+    )
+
+
+def test_all_six_real_cases_are_enumerated():
+    """Guards the count claim itself: 6 citations across 4 modules."""
+    assert len(_REAL_PUBLISHER_CITATIONS) == 6
+    assert len({m for m, _, _ in _REAL_PUBLISHER_CITATIONS}) == 4
+
+
+@pytest.mark.parametrize("text", _MUST_NOT_SUPPRESS)
+def test_a_genuine_citation_near_a_book_title_is_not_suppressed(text):
+    """The counterexamples that broke the proximity rule.
+
+    A previous version matched any capitalised token plus year within 70
+    characters after an italicised title, and silently suppressed all of these.
+    Prose names a book and cites a paper in the same sentence routinely, so the
+    discriminator is the comma-delimited citation TAIL (no verbs or connectives
+    between title and publisher), not proximity.
+    """
+    flat = re.sub(r"\s+", " ", text)
+    assert _publisher_years(flat) == set(), (
+        f"genuine author-year wrongly suppressed as a publisher: {text[:60]}"
+    )
+    assert _citations(text), "the citation must still be detected"
+
+
+def test_a_real_author_sharing_a_publisher_surname_is_detected():
+    """The failure mode of the original name list."""
+    for surname in ("Press", "Hall", "Cambridge", "Taylor", "Wiley", "Hill"):
         doc = f"The kinetics follow {surname} 2019 closely."
         assert (surname, "2019") in _citations(doc), (
             f"a real author named {surname} must still be detected"

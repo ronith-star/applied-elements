@@ -105,7 +105,11 @@ def test_sum_excludes_OH():
 
 
 def test_characterization_tiers_replace_the_binary_flag():
-    """Three tiers, because a binary flag blocked all early screening.
+    """Four tiers, because a binary flag blocked all early screening.
+
+    The tiers are unmeasured, screened, bulk_quantified and located, matching
+    CharacterizationTier. An earlier version of this docstring said "three",
+    omitting unmeasured, while the assertions below already covered all four.
 
     The previous gate accepted characterized=True on any full element suite
     measured by LA-ICP-MS or GDMS, and rejected XRF with the rationale that
@@ -216,3 +220,25 @@ def test_uncharacterized_is_the_default():
                   deposit_name="Vikarabad", country="IN")
     assert f.characterized is False
     assert f.sio2_percent is MISSING
+
+
+def test_tier_docstrings_enumerate_every_tier_in_the_type():
+    """A docstring that names fewer tiers than CharacterizationTier defines is
+    how "three tiers" survived alongside a four-member Literal. Checked by
+    reflection against the type, so the two cannot drift again."""
+    import typing
+    from ae.core.feedstock import CharacterizationTier
+    tiers = set(typing.get_args(CharacterizationTier))
+    assert tiers == {"unmeasured", "screened", "bulk_quantified", "located"}
+
+    doc = Feedstock.characterization_tier.__doc__ or ""
+    missing = sorted(t for t in tiers if f"``{t}``" not in doc)
+    assert not missing, f"tiers defined but not documented: {missing}"
+
+    # And the stated count must match.
+    words = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+    for word, n in words.items():
+        if f"{word} tiers" in doc.lower():
+            assert n == len(tiers), (
+                f"docstring says '{word} tiers' but the type defines {len(tiers)}"
+            )

@@ -265,7 +265,7 @@ class Feedstock(BaseModel):
 
     @property
     def characterization_tier(self) -> CharacterizationTier:
-        """How well this ore is known, on three tiers rather than a binary flag.
+        """How well this ore is known, on four tiers rather than a binary flag.
 
         The tiers exist because a binary characterized flag blocked all early
         screening: a candidate ore with an XRF scan is not "characterized", but
@@ -273,6 +273,9 @@ class Feedstock(BaseModel):
         response. Each tier unlocks different outputs (see
         :meth:`permits_output`).
 
+        ``unmeasured``
+            No impurity measurement of any kind. Supports no output; every
+            grade-conditional result is a scenario.
         ``screened``
             Any measurement at all, typically XRF. Gives major-element
             composition and a Fe indication.
