@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.ipynb_checkpoints/
+.DS_Store
+docs/modelbook/*.aux
+docs/modelbook/*.log
+docs/modelbook/*.out
+docs/modelbook/*.toc

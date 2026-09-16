@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ae-platform"
+version = "0.1.0"
+description = "Ore-agnostic materials process, plant and economics simulator for Applied Elements"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=2.0", "scipy>=1.14", "pandas>=2.2", "matplotlib>=3.9",
+  "sympy>=1.13", "pint>=0.24", "pydantic>=2.8",
+  "SALib>=1.5", "simpy>=4.1", "PuLP>=2.8",
+  "scikit-learn>=1.5", "xgboost>=2.1",
+  "openpyxl>=3.1", "XlsxWriter>=3.2", "PyKrige>=1.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "mypy>=1.11", "ruff>=0.6"]
+materials = ["pymatgen>=2024.8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = ["golden: hand-traceable worked example with expected value and tolerance",
+           "benchmark: validation against a literature or industrial datapoint"]
+
+[tool.mypy]
+python_version = "3.13"
+packages = ["ae"]
+strict = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
