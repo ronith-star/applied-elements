@@ -53,13 +53,27 @@ and :math:`N/4` so a reader can see whether the ranking has stabilised. An
 index quoted without that check is an assertion about a number of samples, not
 about the model.
 
-Reference
----------
-Saltelli, A. et al. (2010), "Variance based sensitivity analysis of model
-output: Design and estimator for the total sensitivity index", *Computer
-Physics Communications* 181(2):259-270, doi:10.1016/j.cpc.2009.09.018.
-Sobol, I.M. (1993), "Sensitivity estimates for nonlinear mathematical models",
-*Mathematical Modelling and Computational Experiments* 1(4):407-414.
+References
+----------
+Both entries below were resolved against the Crossref API, and the fields
+here (title, journal, volume, issue, pages, year, author list) are as Crossref
+returned them. Verified 16 September 2026.
+
+Saltelli, A., Annoni, P., Azzini, I., Campolongo, F., Ratto, M. and Tarantola,
+S. (2010), "Variance based sensitivity analysis of model output. Design and
+estimator for the total sensitivity index", *Computer Physics Communications*
+181(2):259-270, doi:10.1016/j.cpc.2009.09.018. Source of the estimator used by
+:func:`sobol_analysis` via SALib.
+
+Sobol', I.M. (2001), "Global sensitivity indices for nonlinear mathematical
+models and their Monte Carlo estimates", *Mathematics and Computers in
+Simulation* 55(1-3):271-280, doi:10.1016/S0378-4754(00)00270-6. Source of the
+variance decomposition above.
+
+The decomposition is often attributed to a 1993 paper in *Mathematical
+Modelling and Computational Experiments*. That journal is not indexed by
+Crossref and the reference could not be verified, so it is NOT cited here; the
+2001 paper above states the same decomposition and does resolve.
 
 LIMITATIONS
 -----------
