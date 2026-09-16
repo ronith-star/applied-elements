@@ -103,16 +103,32 @@ class Distribution(BaseModel):
     ``kind="point"`` means no uncertainty is claimed, which is different from an
     uncertainty of zero: it is recorded so that a Sobol analysis can report the
     value as unswept rather than as certain.
+
+    Absolute versus relative
+    ------------------------
+    By default all parameters are ABSOLUTE, expressed in the Value's own unit:
+    ``Distribution(kind="normal", loc=100.0, scale=5.0)`` on a Value in USD/tonne
+    is a mean of 100 USD/tonne with a 5 USD/tonne standard deviation.
+
+    Setting ``relative=True`` makes the parameters MULTIPLICATIVE factors on the
+    Value's nominal magnitude instead, which is the natural form for a "plus or
+    minus 20 percent" input. It must be set explicitly: an earlier version of
+    this class inferred relative semantics from ``loc == 0.0``, which silently
+    turned a legitimate zero-mean absolute normal (say a temperature offset with
+    a 5 K standard deviation) into a 500 percent multiplicative spread. The flag
+    removes the ambiguity, and :meth:`Value.sample` dispatches on it alone.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal["point", "normal", "lognormal", "uniform", "triangular"]
-    # Interpretation depends on kind; all in the same unit as the Value.
+    # Interpretation depends on kind. ABSOLUTE (in the Value's own unit) unless
+    # relative=True, in which case these are multiplicative factors on the nominal.
     loc: float | None = None      # normal mean / lognormal log-mean / triangular mode
     scale: float | None = None    # normal sd / lognormal log-sd
     low: float | None = None      # uniform / triangular lower bound
     high: float | None = None     # uniform / triangular upper bound
+    relative: bool = False        # True: parameters are factors on the nominal
 
     @model_validator(mode="after")
     def _params_match_kind(self) -> "Distribution":
@@ -132,6 +148,8 @@ class Distribution(BaseModel):
             raise ValueError(f"low ({self.low}) exceeds high ({self.high})")
         if self.kind == "triangular" and not (self.low <= self.loc <= self.high):  # type: ignore[operator]
             raise ValueError("triangular mode must lie within [low, high]")
+        if self.relative and self.kind == "point":
+            raise ValueError("relative=True is meaningless for a point distribution")
         return self
 
     def sample(self, n: int, rng: np.random.Generator, point: float) -> np.ndarray:
@@ -147,15 +165,26 @@ class Distribution(BaseModel):
         return rng.triangular(self.low, self.loc, self.high, n)
 
     @classmethod
-    def relative(cls, frac: float) -> "Distribution":
-        """A symmetric normal with standard deviation ``frac`` of the nominal.
+    def relative_normal(cls, frac: float) -> "Distribution":
+        """Symmetric normal with standard deviation ``frac`` TIMES the nominal.
 
-        The nominal is supplied at sample time, so this is a shape without a
-        location and is the common case for "plus or minus 20 percent" inputs.
+        The common "plus or minus 20 percent" input: ``relative_normal(0.20)``.
+        Carries ``relative=True`` so the multiplicative reading is explicit in
+        the object rather than inferred from a sentinel value.
         """
         if frac < 0:
             raise ValueError("relative uncertainty must be non-negative")
-        return cls(kind="normal", loc=0.0, scale=frac)
+        return cls(kind="normal", loc=0.0, scale=frac, relative=True)
+
+    @classmethod
+    def relative_uniform(cls, lo_frac: float, hi_frac: float) -> "Distribution":
+        """Uniform between ``lo_frac`` and ``hi_frac`` times the nominal.
+
+        For an asymmetric scenario band such as "between 0.7x and 1.5x".
+        """
+        if lo_frac < 0 or hi_frac < 0:
+            raise ValueError("relative bounds must be non-negative")
+        return cls(kind="uniform", low=lo_frac, high=hi_frac, relative=True)
 
 
 class Value(BaseModel):
@@ -229,14 +258,25 @@ class Value(BaseModel):
     def sample(self, n: int, rng: np.random.Generator) -> Quantity:
         """Draw ``n`` samples as a Quantity array in this Value's own unit.
 
-        A ``relative`` distribution is interpreted as a multiplicative factor on
-        the nominal, so the returned samples are centred on the nominal value.
+        Dispatch is on ``dist.relative`` alone, never on the parameter values:
+
+        * ``relative=False`` (default): the distribution parameters are absolute,
+          in this Value's own unit, and are sampled directly.
+        * ``relative=True``: the parameters are multiplicative factors. A normal
+          is applied as ``nominal * (1 + N(loc, scale))`` so a zero-mean normal
+          centres on the nominal; a uniform or triangular is applied as
+          ``nominal * U(low, high)``.
         """
         base = self.magnitude
-        if self.dist.kind == "normal" and self.dist.loc == 0.0:
-            draws = base * (1.0 + self.dist.sample(n, rng, 0.0))
+        d = self.dist
+        if not d.relative:
+            draws = d.sample(n, rng, base)
+        elif d.kind == "normal":
+            draws = base * (1.0 + d.sample(n, rng, 0.0))
+        elif d.kind == "lognormal":
+            draws = base * d.sample(n, rng, 0.0)
         else:
-            draws = self.dist.sample(n, rng, base)
+            draws = base * d.sample(n, rng, 1.0)
         return UREG.Quantity(draws, self.quantity.units)
 
     def __str__(self) -> str:

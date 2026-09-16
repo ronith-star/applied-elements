@@ -90,10 +90,38 @@ def test_point_distribution_samples_constant():
 def test_relative_uncertainty_centres_on_nominal():
     v = Value(quantity=Q_(100.0, "USD/tonne"), tag=Tag.ASSUMED,
               basis="vendor-class estimate, plus or minus 20 percent",
-              dist=Distribution.relative(0.20))
+              dist=Distribution.relative_normal(0.20))
+    assert v.dist.relative is True
     s = v.sample(40000, np.random.default_rng(1)).magnitude
     assert s.mean() == pytest.approx(100.0, rel=0.01)
     assert s.std() == pytest.approx(20.0, rel=0.05)
+
+
+def test_absolute_zero_mean_normal_is_not_reinterpreted_as_relative():
+    """Regression: loc == 0.0 used to be sniffed as a relative spread, turning a
+    5 K absolute standard deviation into a 500 percent multiplicative one."""
+    v = Value(quantity=Q_(573.0, "K"), tag=Tag.ASSUMED, basis="setpoint tolerance",
+              dist=Distribution(kind="normal", loc=0.0, scale=5.0))
+    assert v.dist.relative is False
+    s = v.sample(40000, np.random.default_rng(3)).magnitude
+    # Absolute semantics: mean 0 K with sd 5 K, NOT 573 * (1 + N(0, 5)).
+    assert s.mean() == pytest.approx(0.0, abs=0.1)
+    assert s.std() == pytest.approx(5.0, rel=0.05)
+    assert abs(s).max() < 100.0, "a 500 percent relative spread would reach thousands"
+
+
+def test_relative_uniform_scales_nominal():
+    v = Value(quantity=Q_(200.0, "USD/tonne"), tag=Tag.ASSUMED,
+              basis="scenario band 0.7x to 1.5x",
+              dist=Distribution.relative_uniform(0.7, 1.5))
+    s = v.sample(20000, np.random.default_rng(4)).magnitude
+    assert s.min() >= 140.0 and s.max() <= 300.0
+    assert s.mean() == pytest.approx(220.0, rel=0.02)
+
+
+def test_relative_flag_rejected_for_point():
+    with pytest.raises(ValueError, match="meaningless for a point"):
+        Distribution(kind="point", relative=True)
 
 
 def test_uniform_sampling_respects_bounds():
