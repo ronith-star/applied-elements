@@ -69,6 +69,18 @@ ELEMENTS: tuple[str, ...] = (
     "Zr", "U", "Th", "OH",
 )
 
+#: How well an ore is known. Ordered from least to most informative; see
+#: :meth:`Feedstock.characterization_tier` for the criteria and
+#: :meth:`Feedstock.permits_output` for what each tier unlocks.
+CharacterizationTier = Literal[
+    "unmeasured", "screened", "bulk_quantified", "located",
+]
+
+#: Elements the AE-Q protocol requires quantified before an ore is considered
+#: bulk-quantified. Li and B are on the list precisely because XRF cannot
+#: measure them, which is what forces ICP-MS or GDMS rather than a cheaper scan.
+REQUIRED_SUITE: tuple[str, ...] = ("Al", "Ti", "Li", "Fe", "Na", "K", "B")
+
 #: g/mol. Source: IUPAC 2021 standard atomic weights.
 MOLAR_MASS: dict[str, float] = {
     "Al": 26.9815, "Ti": 47.867, "Fe": 55.845, "Li": 6.94, "Na": 22.9898,
@@ -242,18 +254,145 @@ class Feedstock(BaseModel):
     @model_validator(mode="after")
     def _characterized_means_measured(self) -> "Feedstock":
         if self.characterized:
-            required = ("Al", "Ti", "Li", "Fe", "Na", "K", "B")
-            missing = [e for e in required if e not in self.impurities.total]
-            if missing:
+            if self.characterization_tier != "located":
                 raise ValueError(
-                    f"characterized=True requires measured {required}; missing {missing}"
-                )
-            if self.impurities.method not in ("LA_ICP_MS", "GDMS", "mixed"):
-                raise ValueError(
-                    "characterized=True requires a single-grain capable method "
-                    "(LA_ICP_MS or GDMS): bulk XRF cannot resolve lattice impurities"
+                    f"characterized=True requires tier 'located' (full element suite "
+                    f"by a spatially resolved method); this feedstock is at tier "
+                    f"'{self.characterization_tier}'. See characterization_gap() for "
+                    f"what is missing."
                 )
         return self
+
+    @property
+    def characterization_tier(self) -> CharacterizationTier:
+        """How well this ore is known, on three tiers rather than a binary flag.
+
+        The tiers exist because a binary characterized flag blocked all early
+        screening: a candidate ore with an XRF scan is not "characterized", but
+        it is not unknown either, and refusing to model it at all is the wrong
+        response. Each tier unlocks different outputs (see
+        :meth:`permits_output`).
+
+        ``screened``
+            Any measurement at all, typically XRF. Gives major-element
+            composition and a Fe indication.
+        ``bulk_quantified``
+            The full element suite (Al, Ti, Li, Fe, Na, K, B) by a bulk method
+            with adequate detection limits, i.e. ICP-MS after digestion or
+            GDMS. This gives TOTAL content per element at ppm-to-ppb limits.
+        ``located``
+            The full suite by a spatially resolved method (LA-ICP-MS), with the
+            lattice fraction measured rather than assumed, plus inclusion work.
+            Only this tier supports a purification ceiling.
+
+        WHY XRF IS INSUFFICIENT, stated correctly. A previous version of this
+        module claimed bulk XRF "cannot resolve lattice impurities", implying it
+        misses lattice-bound atoms. That is wrong: XRF measures TOTAL element
+        content irrespective of where the atoms sit. Its actual limitations are
+        that it cannot measure Li or B at all (both too light for practical
+        XRF), its detection limits for Ti and the alkalis are poor at the ppm
+        level that matters here, and, like every bulk method, it reports no
+        spatial information. The last point applies equally to bulk ICP-MS,
+        which does achieve the detection limits: the reason bulk analysis cannot
+        set a purification ceiling is that it cannot tell you WHERE the
+        impurities are, not that it cannot see them.
+        """
+        total = self.impurities.total
+        method = self.impurities.method
+        if not total:
+            return "unmeasured"
+        required = REQUIRED_SUITE
+        have_suite = all(e in total for e in required)
+        lattice_measured = bool(self.impurities.lattice_fraction) and all(
+            not isinstance(v, _Missing)
+            for e in required
+            for v in [self.impurities.lattice_fraction.get(e, MISSING)]
+        )
+        if have_suite and method in ("LA_ICP_MS", "mixed") and lattice_measured:
+            return "located"
+        if have_suite and method in ("ICP_MS", "GDMS", "LA_ICP_MS", "INAA", "mixed"):
+            return "bulk_quantified"
+        return "screened"
+
+    def characterization_gap(self) -> dict[str, object]:
+        """What is missing to reach the next tier, as a checklist.
+
+        Written to be actionable by a campaign planner: it names the elements
+        and the measurement, not a score.
+        """
+        required = REQUIRED_SUITE
+        total = self.impurities.total
+        missing_elements = [e for e in required if e not in total]
+        lattice_unmeasured = [
+            e for e in required
+            if isinstance(self.impurities.lattice_fraction.get(e, MISSING), _Missing)
+        ]
+        tier = self.characterization_tier
+        nxt = {"unmeasured": "screened", "screened": "bulk_quantified",
+               "bulk_quantified": "located", "located": None}[tier]
+        needed: list[str] = []
+        if tier in ("unmeasured", "screened"):
+            if missing_elements:
+                needed.append(
+                    f"quantify {', '.join(missing_elements)} by ICP-MS after "
+                    f"digestion or GDMS (XRF cannot measure Li or B and has "
+                    f"inadequate ppm limits for Ti and the alkalis)"
+                )
+            if self.impurities.method in (None, "XRF", "ICP_OES"):
+                needed.append(
+                    f"current method {self.impurities.method!r} does not reach the "
+                    f"required detection limits for the full suite"
+                )
+        elif tier == "bulk_quantified":
+            needed.append(
+                f"locate impurities by LA-ICP-MS on single grains and measure the "
+                f"lattice fraction for {', '.join(lattice_unmeasured)}; bulk totals "
+                f"cannot set a purification ceiling because they carry no spatial "
+                f"information"
+            )
+            needed.append("fluid-inclusion microthermometry and CL imaging")
+        return {
+            "tier": tier,
+            "next_tier": nxt,
+            "missing_elements": missing_elements,
+            "lattice_unmeasured": lattice_unmeasured,
+            "to_advance": needed,
+            "basis_material": self.impurities.basis_material,
+        }
+
+    def permits_output(self, output: str) -> bool:
+        """Whether this ore's characterization tier supports a given output.
+
+        The gate the binary flag was trying to be, at the right granularity:
+        a screened ore may be ranked and costed on mass yield, but only a
+        located ore may have a purification ceiling or a product grade claimed.
+        """
+        tier = self.characterization_tier
+        order = ("unmeasured", "screened", "bulk_quantified", "located")
+        need = {
+            "screening_rank": "screened",
+            "mass_yield_estimate": "screened",
+            "reagent_demand": "bulk_quantified",
+            "impurity_removal_estimate": "bulk_quantified",
+            "purification_ceiling": "located",
+            "product_grade_claim": "located",
+            "qualification_dossier": "located",
+        }
+        if output not in need:
+            raise ValueError(
+                f"unknown output {output!r}; known outputs are {sorted(need)}"
+            )
+        return order.index(tier) >= order.index(need[output])
+
+    def require_output(self, output: str) -> None:
+        """Raise unless the tier supports the output, naming the gap."""
+        if not self.permits_output(output):
+            gap = self.characterization_gap()
+            raise ValueError(
+                f"{self.sample_id}: output {output!r} requires a higher "
+                f"characterization tier than '{gap['tier']}'. To advance: "
+                f"{'; '.join(gap['to_advance']) or 'see characterization_gap()'}"
+            )
 
     @property
     def id_parts(self) -> dict[str, str]:

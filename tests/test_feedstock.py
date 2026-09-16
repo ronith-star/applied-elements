@@ -104,20 +104,111 @@ def test_sum_excludes_OH():
     assert p.sum_ppm() == pytest.approx(25.0)
 
 
-def test_characterized_requires_full_suite_and_capable_method():
+def test_characterization_tiers_replace_the_binary_flag():
+    """Three tiers, because a binary flag blocked all early screening.
+
+    The previous gate accepted characterized=True on any full element suite
+    measured by LA-ICP-MS or GDMS, and rejected XRF with the rationale that
+    "bulk XRF cannot resolve lattice impurities". That rationale was WRONG: XRF
+    measures total element content wherever the atoms sit. Its real limits are
+    that it cannot measure Li or B at all and has inadequate ppm detection for
+    Ti and the alkalis; and no bulk method, XRF or ICP-MS, carries the spatial
+    information a purification ceiling needs.
+    """
     els = {e: sourced(1.0) for e in ("Al", "Ti", "Li", "Fe", "Na", "K", "B")}
-    with pytest.raises(ValueError, match="single-grain capable"):
-        Feedstock(sample_id="AE-Q-IN-VKB-002", ore_type=OreType.VEIN_QUARTZ,
+
+    def fs(**kw):
+        base = dict(sample_id="AE-Q-IN-VKB-002", ore_type=OreType.VEIN_QUARTZ,
+                    deposit_name="V", country="IN")
+        base.update(kw)
+        return Feedstock(**base)
+
+    # No measurement at all.
+    assert fs().characterization_tier == "unmeasured"
+
+    # XRF on the full suite is SCREENED, not rejected outright.
+    xrf = fs(impurities=ImpurityProfile(total=els, method="XRF"))
+    assert xrf.characterization_tier == "screened"
+    assert xrf.permits_output("screening_rank")
+    assert xrf.permits_output("mass_yield_estimate")
+    assert not xrf.permits_output("reagent_demand")
+    assert not xrf.permits_output("purification_ceiling")
+
+    # Full suite by a bulk method with adequate limits is BULK_QUANTIFIED.
+    bulk = fs(impurities=ImpurityProfile(total=els, method="ICP_MS"))
+    assert bulk.characterization_tier == "bulk_quantified"
+    assert bulk.permits_output("reagent_demand")
+    assert bulk.permits_output("impurity_removal_estimate")
+    assert not bulk.permits_output("purification_ceiling"), (
+        "bulk totals carry no spatial information, so no ceiling"
+    )
+
+    # LA-ICP-MS on the full suite but with the lattice split UNMEASURED is
+    # still only bulk_quantified. The method alone is not the criterion.
+    unlocated = fs(impurities=ImpurityProfile(total=els, method="LA_ICP_MS"))
+    assert unlocated.characterization_tier == "bulk_quantified"
+
+    # With the lattice fraction measured for every element, it is LOCATED.
+    located = fs(impurities=ImpurityProfile(
+        total=els, method="LA_ICP_MS",
+        lattice_fraction={e: sourced(0.3, "dimensionless") for e in els}))
+    assert located.characterization_tier == "located"
+    assert located.permits_output("purification_ceiling")
+    assert located.permits_output("product_grade_claim")
+
+
+def test_characterized_flag_requires_the_located_tier():
+    els = {e: sourced(1.0) for e in ("Al", "Ti", "Li", "Fe", "Na", "K", "B")}
+    with pytest.raises(ValueError, match="requires tier 'located'"):
+        Feedstock(sample_id="AE-Q-IN-VKB-005", ore_type=OreType.VEIN_QUARTZ,
                   deposit_name="V", country="IN", characterized=True,
                   impurities=ImpurityProfile(total=els, method="XRF"))
-    with pytest.raises(ValueError, match="missing"):
-        Feedstock(sample_id="AE-Q-IN-VKB-003", ore_type=OreType.VEIN_QUARTZ,
-                  deposit_name="V", country="IN", characterized=True,
-                  impurities=ImpurityProfile(total={"Al": sourced(1.0)}, method="LA_ICP_MS"))
-    ok = Feedstock(sample_id="AE-Q-IN-VKB-004", ore_type=OreType.VEIN_QUARTZ,
+    ok = Feedstock(sample_id="AE-Q-IN-VKB-006", ore_type=OreType.VEIN_QUARTZ,
                    deposit_name="V", country="IN", characterized=True,
-                   impurities=ImpurityProfile(total=els, method="LA_ICP_MS"))
-    assert ok.characterized
+                   impurities=ImpurityProfile(
+                       total=els, method="LA_ICP_MS",
+                       lattice_fraction={e: sourced(0.3, "dimensionless")
+                                         for e in els}))
+    assert ok.characterized and ok.characterization_tier == "located"
+
+
+def test_characterization_gap_names_the_missing_measurement():
+    """The gap must be actionable by a campaign planner: which elements, which
+    method, not a score."""
+    partial = Feedstock(sample_id="AE-Q-IN-VKB-007", ore_type=OreType.VEIN_QUARTZ,
+                        deposit_name="V", country="IN",
+                        impurities=ImpurityProfile(
+                            total={"Al": sourced(1.0), "Fe": sourced(1.0)},
+                            method="XRF"))
+    gap = partial.characterization_gap()
+    assert gap["tier"] == "screened"
+    assert gap["next_tier"] == "bulk_quantified"
+    assert set(gap["missing_elements"]) == {"Ti", "Li", "Na", "K", "B"}
+    joined = " ".join(gap["to_advance"])
+    assert "Li" in joined and "B" in joined
+    assert "ICP-MS" in joined or "GDMS" in joined
+
+    els = {e: sourced(1.0) for e in ("Al", "Ti", "Li", "Fe", "Na", "K", "B")}
+    bulk = Feedstock(sample_id="AE-Q-IN-VKB-008", ore_type=OreType.VEIN_QUARTZ,
+                     deposit_name="V", country="IN",
+                     impurities=ImpurityProfile(total=els, method="ICP_MS"))
+    g2 = bulk.characterization_gap()
+    assert g2["next_tier"] == "located"
+    assert not g2["missing_elements"]
+    assert len(g2["lattice_unmeasured"]) == 7
+    assert "LA-ICP-MS" in " ".join(g2["to_advance"])
+
+
+def test_require_output_raises_with_the_gap_in_the_message():
+    els = {e: sourced(1.0) for e in ("Al", "Ti", "Li", "Fe", "Na", "K", "B")}
+    bulk = Feedstock(sample_id="AE-Q-IN-VKB-009", ore_type=OreType.VEIN_QUARTZ,
+                     deposit_name="V", country="IN",
+                     impurities=ImpurityProfile(total=els, method="ICP_MS"))
+    bulk.require_output("reagent_demand")          # permitted, no raise
+    with pytest.raises(ValueError, match="LA-ICP-MS"):
+        bulk.require_output("purification_ceiling")
+    with pytest.raises(ValueError, match="unknown output"):
+        bulk.permits_output("free_lunch")
 
 
 def test_uncharacterized_is_the_default():

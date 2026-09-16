@@ -11,7 +11,7 @@ partition the OUTPUT VARIANCE, so the shortfall is visible and attributable.
 Decomposition
 -------------
 For a model :math:`Y = f(X_1, \dots, X_k)` with independent inputs, the
-variance decomposes uniquely (Sobol 1993):
+variance decomposes uniquely (Sobol' 2001, see References):
 
 .. math::
    \mathrm{Var}(Y) = \sum_i V_i + \sum_{i<j} V_{ij} + \dots + V_{1\dots k}
@@ -58,6 +58,10 @@ References
 Both entries below were resolved against the Crossref API, and the fields
 here (title, journal, volume, issue, pages, year, author list) are as Crossref
 returned them. Verified 16 September 2026.
+
+Saltelli, A. (2002), "Making best use of model evaluations to compute
+sensitivity indices", *Computer Physics Communications* 145(2):280-297,
+doi:10.1016/S0010-4655(02)00280-1. Source of the sampling scheme.
 
 Saltelli, A., Annoni, P., Azzini, I., Campolongo, F., Ratto, M. and Tarantola,
 S. (2010), "Variance based sensitivity analysis of model output. Design and
