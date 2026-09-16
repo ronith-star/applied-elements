@@ -24,7 +24,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers"
+addopts = "-q --strict-markers --doctest-modules"
 markers = ["golden: hand-traceable worked example with expected value and tolerance",
            "benchmark: validation against a literature or industrial datapoint"]
 

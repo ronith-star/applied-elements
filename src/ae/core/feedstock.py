@@ -109,7 +109,7 @@ def oxide_to_element(oxide: str, oxide_ppm: float) -> tuple[str, float, float]:
 
     >>> el, ppm, f = oxide_to_element("Al2O3", 2200.0)
     >>> el, round(ppm), round(f, 4)
-    ('Al', 1164, 0.5292)
+    ('Al', 1164, 0.5293)
     """
     if oxide not in OXIDE_STOICH:
         raise KeyError(f"unknown oxide {oxide!r}; known: {sorted(OXIDE_STOICH)}")
