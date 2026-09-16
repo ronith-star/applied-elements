@@ -176,6 +176,17 @@ def test_module_docstring_does_not_claim_an_unimplemented_solver():
         "the no-recycle path must be documented as a single exact forward pass"
     assert "solves every case" not in flat_doc, \
         "successive substitution does not run for acyclic flowsheets"
+    # The whole docstring is checked, not just the header: the same overstatement
+    # survived in LIMITATIONS after the header was corrected, because this test
+    # only looked at the top block. Any sentence claiming the iteration runs in
+    # EVERY case is wrong, wherever in the docstring it sits.
+    import re as _re
+    for m in _re.finditer(r"[^.]*successive substitution[^.]*\.", flat_doc,
+                          flags=_re.IGNORECASE):
+        sent = m.group(0)
+        assert not _re.search(r"\bevery (case|flowsheet)\b", sent, flags=_re.IGNORECASE) \
+            or "RECYCLE" in sent or "recycle" in sent, \
+            f"overstates the solver's scope: {sent.strip()!r}"
     # Phrase check is whitespace-insensitive: the docstring wraps at 79 columns,
     # so a literal substring test on a multi-word phrase is brittle.
     flat = " ".join(doc.split())

@@ -78,13 +78,14 @@ LIMITATIONS
 -----------
 * Steady state only. Batch scheduling, surge capacity and startup transients are
   handled by the discrete-event model in :mod:`ae.plant.scheduling`, not here.
-* No direct linear solve. Every case goes through damped successive substitution,
-  including the linear ones where a matrix solve would be faster and would supply
-  an exact convergence criterion from the spectral radius of the routing matrix.
-  Consequence: convergence is diagnosed empirically, so a loop with gain very
-  close to unity may exhaust ``max_iter`` and report ``converged=False`` on a
-  problem a direct solve would settle exactly. Raising ``max_iter`` is not the
-  fix; check the routing.
+* No direct linear solve. Acyclic flowsheets take one exact forward pass, which
+  needs no solver at all. Every flowsheet WITH RECYCLE goes through damped
+  successive substitution, including the linear ones where a matrix solve would
+  be faster and would supply an exact convergence criterion from the spectral
+  radius of the routing matrix. Consequence, for recycle cases only: convergence
+  is diagnosed empirically, so a loop with gain very close to unity may exhaust
+  ``max_iter`` and report ``converged=False`` on a problem a direct solve would
+  settle exactly. Raising ``max_iter`` is not the fix; check the routing.
 * Nonlinear units (``grade_dependent`` set) are handled by the same iteration,
   which is why it was chosen, but for those no convergence guarantee exists at
   all, and a converged result is a fixed point rather than a proven unique
