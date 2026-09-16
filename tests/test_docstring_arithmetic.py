@@ -227,10 +227,73 @@ def test_capex_scaling_prose():
 
 
 def test_unit_economics_yield_basis_prose():
-    """unit_economics prose: at a 70 percent yield a feed-basis cost is 1.4286x
-    larger on a product basis. Phrased without an equals sign, so it is not
-    caught by the mechanical detector and is checked here explicitly."""
-    assert round(1.0 / 0.70, 4) == 1.4286
+    """unit_economics module docstring: at a 70 percent yield a feed-basis cost
+    is "1.43 times larger" on a product basis.
+
+    Phrased without an equals sign, so the mechanical detector does not see it.
+    The value is READ OUT OF THE DOCSTRING with a regex rather than retyped
+    here, then recomputed and compared against the module's own behaviour. An
+    earlier version of this case asserted ``round(1.0/0.70, 4) == 1.4286``,
+    which is arithmetically true but pinned a literal that appears nowhere in
+    src/ (the docstring says 1.43): a hand-written case that quotes the text
+    from memory can drift from it, which is the defect that got the Muller case
+    deleted. Reading the string closes that.
+    """
+    import re
+
+    import ae.econ.unit_economics as ue
+
+    doc = ue.__doc__ or ""
+    m = re.search(r"(\d+(?:\.\d+)?)\s*times larger", doc)
+    assert m, "the yield-basis claim is no longer in the module docstring"
+    stated = float(m.group(1))
+    # Recompute from the yield the docstring names, read from the same sentence.
+    # \s+ not a literal space: the docstring wraps between "percent" and
+    # "yield", so a space-only pattern silently finds nothing.
+    y = re.search(r"(\d+)\s+percent\s+yield", doc)
+    assert y, "the docstring no longer names the yield it refers to"
+    frac = float(y.group(1)) / 100.0
+    assert stated == pytest.approx(round(1.0 / frac, 2), abs=5e-3), (
+        f"docstring says {stated}x at a {frac:.0%} yield, but 1/{frac} = "
+        f"{1.0 / frac:.4f}"
+    )
+    # And the module must actually behave that way, not merely say so.
+    from ae.core.units import Q_
+    from ae.econ.unit_economics import InputDemand, cash_cost
+
+    kw = dict(site=us_site_for_prose(), cascade_yield=frac,
+              product_tonnes_per_year=1000.0, freight_waived=True)
+    feed = cash_cost(demands=[InputDemand("HF", Q_(10.0, "kg/tonne"), basis="feed")], **kw)
+    prod = cash_cost(demands=[InputDemand("HF", Q_(10.0, "kg/tonne"), basis="product")], **kw)
+    ratio = feed.cash_cost.magnitude / prod.cash_cost.magnitude
+    assert ratio == pytest.approx(1.0 / frac, rel=1e-9)
+    assert round(ratio, 2) == stated
+
+
+def us_site_for_prose():
+    """Minimal priced site for the yield-basis check above."""
+    import datetime as _dt
+
+    from ae.core.provenance import Source, Tag, Tier, Value
+    from ae.core.site import Currency, LabourRates, PowerSupply, ReagentPrices, Site
+    from ae.core.units import Q_
+
+    # Tier.T2, not T3: the platform forbids a Tier-3 source from being sole
+    # evidence, and this fixture is the only evidence for its own values. The
+    # rule fired when this was written as T3, which is the rule working.
+    src = Source(citation="TEST FIXTURE, not a real source", tier=Tier.T2,
+                 url="https://example.invalid/test-fixture",
+                 accessed=_dt.date(2026, 9, 16))
+
+    def v(mag, unit):
+        return Value(quantity=Q_(mag, unit), tag=Tag.SOURCED, source=src)
+
+    return Site(site_id="US-NM-ABQ", name="probe", country="US", region="NM",
+                currency=Currency.USD,
+                power=PowerSupply(energy_price=v(0.05, "USD/kWh"),
+                                  rate_basis="state_average"),
+                labour=LabourRates(fully_loaded_operator=v(36.92, "USD/hour")),
+                reagents=ReagentPrices(prices={"HF": v(1.80, "USD/kg")}))
 
 
 def test_capex_assumed_share_prose():

@@ -5,7 +5,8 @@ from ae.core.units import Q_, DimensionalityError
 from ae.core.provenance import Tag, Tier, Source, Value
 from ae.core.site import Currency, PowerSupply, LabourRates, Site
 from ae.econ.capex import (
-    Equipment, scale_cost, escalate_cost, estimate_capex, SCALING_RANGE,
+    Equipment, scale_cost, escalate_cost, estimate_capex, exponent_provenance,
+    SCALING_RANGE,
 )
 
 SRC = Source(citation="Vendor quotation, redacted", tier=Tier.T2,
@@ -184,6 +185,41 @@ def test_assumed_share_is_invariant_to_location_and_escalation():
                   Equipment("b", sv(2e6, "USD", Tag.ASSUMED), 2.0)]
     assert estimate_capex(allassumed, site(cci=0.55), 0.30, 0.15).assumed_share == \
         pytest.approx(1.0)
+
+
+def test_scaling_exponent_carries_provenance():
+    """The exponent is the entire content of the six-tenths relation, so an
+    untagged one must not masquerade as a sourced figure. A bare float reports
+    ASSUMED, which is the honest default: the rule is a convention, not a
+    measurement of this equipment."""
+    assert exponent_provenance(0.6) == Tag.ASSUMED
+    tagged = Value(quantity=Q_(0.72, "dimensionless"), tag=Tag.SOURCED, source=SRC)
+    assert exponent_provenance(tagged) == Tag.SOURCED
+    # A tagged exponent gives an identical number to the bare float.
+    a = scale_cost(Q_(2e6, "USD"), Q_(5e3, "tonne/year"), Q_(2e4, "tonne/year"), 0.72)
+    b = scale_cost(Q_(2e6, "USD"), Q_(5e3, "tonne/year"), Q_(2e4, "tonne/year"), tagged)
+    assert a.magnitude == pytest.approx(b.magnitude, rel=1e-12)
+    # Range validation applies to the tagged form too.
+    bad = Value(quantity=Q_(1.4, "dimensionless"), tag=Tag.ASSUMED, basis="test")
+    with pytest.warns(UserWarning, match="outside the supported range"):
+        scale_cost(Q_(1e6, "USD"), Q_(1.0, "tonne/year"), Q_(2.0, "tonne/year"), bad)
+
+
+def test_equipment_records_which_exponent_produced_the_cost():
+    """A scaled estimate must record the exponent AND its origin, or a reader
+    cannot tell a vendor curve from a textbook default."""
+    eq = [Equipment("kiln", sv(3.1e6, "USD", Tag.ASSUMED), 2.8,
+                    scaling_exponent=Value(quantity=Q_(0.65, "dimensionless"),
+                                           tag=Tag.SOURCED, source=SRC)),
+          Equipment("WHIMS", sv(850_000.0, "USD"), 2.1, scaling_exponent=0.6),
+          Equipment("tank", sv(100_000.0, "USD"), 1.4)]
+    rows = {r["item"]: r for r in estimate_capex(eq, site(), 0.30, 0.15).to_records()}
+    assert rows["kiln"]["scaling_exponent"] == pytest.approx(0.65)
+    assert rows["kiln"]["scaling_exponent_tag"] == "SOURCED"
+    assert rows["WHIMS"]["scaling_exponent"] == pytest.approx(0.6)
+    assert rows["WHIMS"]["scaling_exponent_tag"] == "ASSUMED", "bare float is an assumption"
+    assert rows["tank"]["scaling_exponent"] is None
+    assert rows["total project cost"]["scaling_exponent"] is None
 
 
 def test_installation_factor_guards():

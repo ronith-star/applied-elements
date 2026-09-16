@@ -85,6 +85,7 @@ from ae.core.units import Q_, Quantity
 
 __all__ = [
     "Equipment",
+    "exponent_provenance",
     "CapexEstimate",
     "scale_cost",
     "escalate_cost",
@@ -132,6 +133,10 @@ class Equipment:
     size_basis: str | None = None
     reference_index: float | None = None
     equipment_class: EquipmentClass = "process"
+    #: Scaling exponent for this item, with its own origin tag. Stored on the
+    #: item (not passed ad hoc) so that a scaled estimate records WHICH exponent
+    #: produced it and where that exponent came from.
+    scaling_exponent: float | Value | None = None
 
     def __post_init__(self) -> None:
         if self.installation_factor < 1.0:
@@ -156,14 +161,45 @@ class Equipment:
         return self.purchased_cost.quantity * self.installation_factor
 
 
+def _exponent_magnitude(exponent: float | Value, name: str) -> float:
+    """Extract a float exponent from either a bare float or a tagged Value."""
+    if isinstance(exponent, Value):
+        q = exponent.quantity
+        try:
+            return float(q.to("dimensionless").magnitude)
+        except Exception as exc:  # pragma: no cover - dimensionality guard
+            raise ValueError(
+                f"{name}: scaling exponent must be dimensionless, got {q.units}"
+            ) from exc
+    return float(exponent)
+
+
+def exponent_provenance(exponent: float | Value) -> Tag:
+    """Origin tag of a scaling exponent.
+
+    A bare float returns :attr:`~ae.core.provenance.Tag.ASSUMED`, because an
+    untagged exponent IS an assumption however conventional it is. This is the
+    honest default: the six-tenths rule is a convention, not a measurement of
+    the equipment in question.
+    """
+    return exponent.tag if isinstance(exponent, Value) else Tag.ASSUMED
+
+
 def scale_cost(
     known_cost: Quantity,
     known_size: Quantity,
     target_size: Quantity,
-    exponent: float,
+    exponent: float | Value,
     name: str = "equipment",
 ) -> Quantity:
     """Scale a cost by the six-tenths rule, with extrapolation control.
+
+    The exponent is the ENTIRE content of this relation: at a 4x size ratio,
+    n = 0.6 and n = 0.9 differ by 52 percent in the answer. It therefore accepts
+    a provenance-tagged :class:`~ae.core.provenance.Value` as well as a bare
+    float, and :func:`exponent_provenance` reports which was supplied. A bare
+    float is accepted (many exponents are genuinely conventional) but is
+    reported as untagged so an estimate cannot masquerade as a sourced figure.
 
     Examples
     --------
@@ -175,7 +211,19 @@ def scale_cost(
     ...                Q_(20000.0, "tonne/year"), 0.6)
     >>> round(c.to("USD").magnitude, 0)
     4594793.0
+
+    A tagged exponent gives the same number and keeps its origin:
+
+    >>> from ae.core.provenance import Tag, Value
+    >>> n = Value(quantity=Q_(0.6, "dimensionless"), tag=Tag.ASSUMED,
+    ...           basis="classical six-tenths default")
+    >>> round(scale_cost(Q_(2.0e6, "USD"), Q_(5000.0, "tonne/year"),
+    ...                  Q_(20000.0, "tonne/year"), n).to("USD").magnitude, 0)
+    4594793.0
+    >>> exponent_provenance(n).value
+    'ASSUMED'
     """
+    exponent = _exponent_magnitude(exponent, name)
     if known_cost.magnitude <= 0:
         raise ValueError(f"{name}: known cost must be positive")
     if known_size.magnitude <= 0 or target_size.magnitude <= 0:
@@ -299,11 +347,16 @@ class CapexEstimate:
                 "tag": e.purchased_cost.tag.value,
                 "source": (e.purchased_cost.source.citation
                            if e.purchased_cost.source else None),
+                "scaling_exponent": (None if e.scaling_exponent is None else
+                                     _exponent_magnitude(e.scaling_exponent, e.name)),
+                "scaling_exponent_tag": (None if e.scaling_exponent is None else
+                                         exponent_provenance(e.scaling_exponent).value),
             })
         for label, amount in self.lines:
             rows.append({"item": label, "class": "aggregate", "purchased": None,
                          "install_factor": None, "installed": amount,
-                         "tag": None, "source": None})
+                         "tag": None, "source": None,
+                         "scaling_exponent": None, "scaling_exponent_tag": None})
         return rows
 
 
