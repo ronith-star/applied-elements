@@ -164,6 +164,28 @@ def test_assumed_share_flags_unsourced_equipment():
     assert est.assumed_share > 0.40
 
 
+def test_assumed_share_is_invariant_to_location_and_escalation():
+    """Regression. assumed_share previously divided RAW assumed costs by an
+    escalated and location-factored total, so at a 0.55 location factor an
+    all-assumed list reported 182 percent. The factors are common to every item
+    and must cancel."""
+    shares = []
+    for cci in (0.55, 1.0, 1.85):
+        est = estimate_capex(kit(), site(cci=cci), 0.30, 0.15)
+        shares.append(est.assumed_share)
+        assert 0.0 <= est.assumed_share <= 1.0, f"cci {cci}: {est.assumed_share}"
+    assert shares[0] == pytest.approx(shares[1]) == pytest.approx(shares[2])
+    # With escalation applied as well.
+    est = estimate_capex(kit(), site(cci=0.55), 0.30, 0.15,
+                         base_index=708.0, target_index=800.0)
+    assert est.assumed_share == pytest.approx(3_100_000.0 / 7_550_000.0, rel=1e-9)
+    # An all-ASSUMED list is exactly 1.0, never above it.
+    allassumed = [Equipment("a", sv(1e6, "USD", Tag.ASSUMED), 2.0),
+                  Equipment("b", sv(2e6, "USD", Tag.ASSUMED), 2.0)]
+    assert estimate_capex(allassumed, site(cci=0.55), 0.30, 0.15).assumed_share == \
+        pytest.approx(1.0)
+
+
 def test_installation_factor_guards():
     with pytest.raises(ValueError, match="below 1.0"):
         Equipment("x", sv(1e6, "USD"), 0.35)

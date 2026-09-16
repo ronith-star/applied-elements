@@ -139,6 +139,7 @@ COVERED: dict[tuple[str, str], str] = {
     ("ae/plant/yield_cascade.py", "<module>"): "test_spc_prose_arithmetic",
     ("ae/plant/yield_cascade.py", "stage_throughput_factors"):
         "test_yield_cascade_prose_arithmetic",
+    ("ae/econ/capex.py", "assumed_share"): "test_capex_assumed_share_prose",
 }
 
 #: Numbers that are illustrative parameter values or version references, not
@@ -220,3 +221,9 @@ def test_unit_economics_yield_basis_prose():
     larger on a product basis. Phrased without an equals sign, so it is not
     caught by the mechanical detector and is checked here explicitly."""
     assert round(1.0 / 0.70, 4) == 1.4286
+
+
+def test_capex_assumed_share_prose():
+    """capex.assumed_share prose: at a location factor of 0.55 the old mixed
+    basis reported 1/0.55 = 1.82, i.e. 182 percent."""
+    assert round(1.0 / 0.55, 2) == 1.82

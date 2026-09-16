@@ -263,13 +263,24 @@ class CapexEstimate:
 
     @property
     def assumed_share(self) -> float:
-        """Fraction of purchased equipment cost carried by ASSUMED values."""
-        tot = float(self.total_purchased.magnitude)
-        if tot <= 0:
+        """Fraction of purchased equipment cost carried by ASSUMED values.
+
+        Both numerator and denominator are taken on the RAW (un-escalated,
+        un-located) basis. An earlier version divided raw ASSUMED costs by
+        ``total_purchased``, which carries the index ratio and location factor,
+        so at a location factor of 0.55 an all-assumed equipment list reported a
+        share of 1/0.55 = 1.82. A provenance guard that can read 182 percent is
+        worse than no guard, since it invites the reader to dismiss it. The
+        scaling factors are common to every item and therefore cancel, so the
+        raw basis is the correct one.
+        """
+        raw_total = float(sum(e.purchased_cost.quantity.magnitude
+                              for e in self.equipment))
+        if raw_total <= 0:
             return 0.0
         assumed = sum(e.purchased_cost.quantity.magnitude for e in self.equipment
                       if e.purchased_cost.tag == Tag.ASSUMED)
-        return float(assumed) / tot
+        return float(assumed) / raw_total
 
     def reconciles(self, tol: float = 1e-6) -> bool:
         """The components must sum to the total."""
