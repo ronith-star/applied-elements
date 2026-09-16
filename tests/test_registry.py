@@ -6,17 +6,25 @@ from ae.core.units import Q_, DimensionalityError
 from ae.core.provenance import Tag, Tier, Source, Distribution, Value
 from ae.core.registry import Registry, ParameterNotFound, DuplicateParameter
 
-SRC = Source(citation="Bond 1952, The Third Theory of Comminution", tier=Tier.T2,
-             url="https://www.onemine.org/documents/the-third-theory-of-comminution",
+# Deliberately synthetic. This file tests the registry MACHINERY, so its fixture
+# must not assert a real-world claim: an earlier version cited a real comminution
+# paper with a retrieval URL and access date that nothing in the build had
+# actually fetched, which is a fabricated provenance trail even when the
+# underlying number is plausible. example.invalid is reserved by RFC 2606, so the
+# URL cannot be mistaken for a real retrieval, and the magnitudes below are round
+# numbers no reader would lift as data. Real sourced work indices live in the
+# comminution module's own registry seed, not here.
+SRC = Source(citation="TEST FIXTURE, not a real source", tier=Tier.T2,
+             url="https://example.invalid/test-fixture",
              accessed=dt.date(2026, 9, 16))
 
 
 def reg_with(**kw):
     r = Registry()
     r.add("comminution.work_index.quartzite",
-          Value(quantity=Q_(12.18, "kWh/ton"), tag=Tag.SOURCED, source=SRC))
+          Value(quantity=Q_(10.0, "kWh/ton"), tag=Tag.SOURCED, source=SRC))
     r.add("comminution.work_index.vein_quartz",
-          Value(quantity=Q_(13.57, "kWh/ton"), tag=Tag.SOURCED, source=SRC))
+          Value(quantity=Q_(20.0, "kWh/ton"), tag=Tag.SOURCED, source=SRC))
     r.add("leach.temperature",
           Value(quantity=Q_(200.0, "degC"), tag=Tag.ASSUMED,
                 basis="mid-range of the 160 to 250 C band reported for mixed-acid leaching",
@@ -26,7 +34,7 @@ def reg_with(**kw):
 
 def test_exact_lookup_and_unit_conversion():
     r = reg_with()
-    assert r.magnitude("comminution.work_index.quartzite", "kWh/ton") == pytest.approx(12.18)
+    assert r.magnitude("comminution.work_index.quartzite", "kWh/ton") == pytest.approx(10.0)
     assert len(r) == 3
     assert "leach.temperature" in r
 
@@ -110,7 +118,7 @@ def test_records_flatten_provenance():
     rows = {x["key"]: x for x in r.to_records()}
     row = rows["comminution.work_index.quartzite"]
     assert row["tag"] == "SOURCED" and row["tier"] == 2
-    assert row["url"].startswith("https://")
+    assert row["url"].startswith("https://example.invalid")
     assert row["accessed"] == "2026-09-16"
     leach = rows["leach.temperature"]
     assert leach["dist_kind"] == "uniform" and leach["dist_low"] == 160.0
@@ -141,3 +149,16 @@ def test_key_format_validated():
     for bad in ["", "has space"]:
         with pytest.raises(ValueError, match="dotted path"):
             r.add(bad, v)
+
+
+def test_coverage_docstring_lists_exactly_the_returned_keys():
+    """Contract test: a documented key the function never returns is a KeyError
+    waiting to happen for any caller who trusts the docstring."""
+    import inspect
+    import re
+    actual = set(reg_with().coverage())
+    documented = set(re.findall(r"``(\w+)``", inspect.getdoc(Registry.coverage) or ""))
+    assert actual == documented, (
+        f"undocumented: {sorted(actual - documented)}, "
+        f"phantom: {sorted(documented - actual)}"
+    )

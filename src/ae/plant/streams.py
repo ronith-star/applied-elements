@@ -26,18 +26,35 @@ where :math:`\dot r_{u,e}` is the rate of removal of :math:`e` to a reject or
 effluent stream (kg/s). Removal is not annihilation: every unit's rejected mass
 is tracked in an explicit reject stream, so the plant-wide balance closes.
 
-**Recycle solution.** Writing the unknown stream flows as a vector
-:math:`\mathbf{x}`, the unit operations are linear in flow for a fixed split
-specification, giving
+**Recycle solution, as actually implemented.** For a fixed split specification
+the unit operations are linear in flow, so the recycle problem admits a direct
+matrix solution :math:`(\mathbf{I} - \mathbf{A})\mathbf{x} = \mathbf{b}` with
+:math:`\mathbf{A}` the routing matrix of split fractions. **This module does not
+use that formulation.** :meth:`Flowsheet.solve` solves every case, with recycle
+or without, by DAMPED SUCCESSIVE SUBSTITUTION on the recycled streams:
 
 .. math::
-   (\mathbf{I} - \mathbf{A})\,\mathbf{x} = \mathbf{b}
+   \mathbf{x}^{(k+1)} = (1 - \alpha)\,\mathbf{x}^{(k)}
+                        + \alpha\, \mathbf{G}\!\left(\mathbf{x}^{(k)}\right)
 
-with :math:`\mathbf{A}` the matrix of split fractions routing each unit's output
-to each downstream unit, and :math:`\mathbf{b}` the external feed. This is the
-standard recycle formulation, and the spectral radius of :math:`\mathbf{A}`
-controls convergence: :math:`\rho(\mathbf{A}) \ge 1` means a recycle loop that
-gains mass, which is unphysical and is rejected rather than iterated.
+where :math:`\mathbf{G}` is one forward pass through the flowsheet and
+:math:`\alpha` is the damping factor (``damping``, default 0.5, range 0 to 1).
+Iteration stops when the largest change in a recycled stream's mass flow falls
+below ``tol``.
+
+Successive substitution was chosen because it extends unchanged to the nonlinear
+case (a unit whose selectivity depends on its own feed grade, which is true of
+flotation and of leaching at low acid-to-solids ratio), where no constant
+:math:`\mathbf{A}` exists. The cost is that convergence is not guaranteed: the
+loop gain plays the role the spectral radius of :math:`\mathbf{A}` would, and a
+gain at or above unity describes a loop that gains mass. That case is detected
+empirically, by the iteration-to-iteration change RISING for more than five
+iterations, and raises rather than being iterated to a nonsense answer. A
+non-converged run within ``max_iter`` is reported as ``converged=False``, never
+dressed as a solution.
+
+A direct linear solve would be faster and would give an exact convergence
+criterion for the linear case. It is not implemented here; see LIMITATIONS.
 
 Sources
 -------
@@ -52,12 +69,17 @@ LIMITATIONS
 -----------
 * Steady state only. Batch scheduling, surge capacity and startup transients are
   handled by the discrete-event model in :mod:`ae.plant.scheduling`, not here.
-* Linear in flow for a FIXED split specification. A unit whose recovery depends
-  on its own feed grade (true of flotation and of leaching at low acid-to-solids
-  ratio) makes the system nonlinear; :func:`solve_flowsheet` detects that case
-  via the ``grade_dependent`` flag and falls back to damped successive
-  substitution, reporting whether it converged rather than returning a
-  silently-unconverged answer.
+* No direct linear solve. Every case goes through damped successive substitution,
+  including the linear ones where a matrix solve would be faster and would supply
+  an exact convergence criterion from the spectral radius of the routing matrix.
+  Consequence: convergence is diagnosed empirically, so a loop with gain very
+  close to unity may exhaust ``max_iter`` and report ``converged=False`` on a
+  problem a direct solve would settle exactly. Raising ``max_iter`` is not the
+  fix; check the routing.
+* Nonlinear units (``grade_dependent`` set) are handled by the same iteration,
+  which is why it was chosen, but for those no convergence guarantee exists at
+  all, and a converged result is a fixed point rather than a proven unique
+  solution.
 * Liquid phase is not balanced here. Acid and water balances live in
   :mod:`ae.physics.reagents`, because their stoichiometry couples to impurity
   load rather than to solids flow.
@@ -69,8 +91,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Literal
 
-import numpy as np
-
 from ae.core.units import Q_, Quantity, require_dimensionality
 
 __all__ = [
@@ -81,8 +101,12 @@ __all__ = [
     "MassBalanceError",
 ]
 
-#: Absolute closure tolerance on the solids balance, as a fraction of feed.
-CLOSURE_TOL = 1e-9
+#: Relative closure tolerance on the solids balance, as a fraction of feed flow.
+#: Used by :meth:`Flowsheet._result`. Set at 1e-6 rather than machine epsilon
+#: because the recycle iteration terminates on a flow-change tolerance, so a
+#: converged recycle solution carries a residual of that order; the single-pass
+#: linear case closes near 1e-12 and is checked against the same bound.
+CLOSURE_TOL = 1e-6
 
 
 class MassBalanceError(RuntimeError):
@@ -235,7 +259,7 @@ class BalanceResult:
     closure_error: float
     converged: bool
     iterations: int
-    method: Literal["linear", "successive_substitution"]
+    method: Literal["single_pass", "successive_substitution"]
 
     def element_closure(self, element: str) -> float:
         """Relative element balance error across the whole flowsheet."""
@@ -298,10 +322,13 @@ class Flowsheet:
     ) -> BalanceResult:
         """Solve the steady-state balance.
 
-        With no recycle and no grade dependence this is a single forward pass.
-        With recycle it is damped successive substitution on the recycle flows,
+        With no recycle this is a single forward pass in declaration order
+        (``method="single_pass"``). With recycle it is damped successive
+        substitution on the recycled streams (``method="successive_substitution"``),
         which converges when the loop gain is below unity and reports failure
-        otherwise rather than returning an unconverged answer.
+        otherwise rather than returning an unconverged answer. Note that
+        ``"single_pass"`` denotes a forward sweep, NOT a linear matrix solve:
+        no routing matrix is assembled anywhere in this module.
         """
         start = first_unit or self.order[0]
         if start not in self.units:
@@ -309,7 +336,7 @@ class Flowsheet:
         recycle_targets = self._recycle_map()
         if not recycle_targets:
             state = self._forward(feed, start, {})
-            return self._result(feed, state, converged=True, iterations=1, method="linear")
+            return self._result(feed, state, converged=True, iterations=1, method="single_pass")
 
         # Damped successive substitution on the recycled streams.
         recycled: dict[str, Stream] = {}
@@ -392,7 +419,7 @@ class Flowsheet:
         state: dict[str, dict[str, Stream]],
         converged: bool,
         iterations: int,
-        method: Literal["linear", "successive_substitution"],
+        method: Literal["single_pass", "successive_substitution"],
     ) -> BalanceResult:
         products, rejects = state["products"], state["rejects"]
         # A stream is terminal when it is not routed onward. Routing is keyed by
@@ -409,7 +436,7 @@ class Flowsheet:
             if u in rejects and (u, "reject") not in routed:
                 out_mass += rejects[u].kg_s
         closure = abs(out_mass - feed.kg_s) / feed.kg_s if feed.kg_s else 0.0
-        if converged and closure > 1e-6:
+        if converged and closure > CLOSURE_TOL:
             raise MassBalanceError(
                 f"flowsheet {self.name!r} solids balance does not close: in {feed.kg_s:.6g} "
                 f"kg/s, out {out_mass:.6g} kg/s, relative error {closure:.3g}. Every "

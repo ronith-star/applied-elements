@@ -83,7 +83,7 @@ def test_linear_chain_closes_and_compounds_yield():
           .add(UnitOp("leach", mass_yield=0.95, element_removal={"Al": 0.45, "Fe": 0.60})))
     fs.connect("crush", "product", "whims").connect("whims", "product", "leach")
     r = fs.solve(feed())
-    assert r.converged and r.method == "linear"
+    assert r.converged and r.method == "single_pass"
     assert r.overall_yield == pytest.approx(0.98 * 0.90 * 0.95, rel=1e-12)
     assert r.closure_error < 1e-12
     for el in ("Al", "Fe", "Ti"):
@@ -156,3 +156,26 @@ def test_unknown_unit_in_connect_raises():
         fs.connect("a", "product", "nope")
     with pytest.raises(ValueError, match="product' or 'reject"):
         fs.connect("a", "tailings", "a")
+
+
+def test_module_docstring_does_not_claim_an_unimplemented_solver():
+    """Contract test. The module previously documented an (I-A)x=b linear solve
+    with a spectral-radius convergence criterion while implementing only damped
+    successive substitution, and named a solve_flowsheet() that did not exist.
+    A docstring describing a different algorithm than the code is a correctness
+    claim a reader cannot check, so it is pinned here."""
+    import ae.plant.streams as mod
+    src = open(mod.__file__).read()
+    doc = mod.__doc__ or ""
+    assert "SUCCESSIVE SUBSTITUTION" in doc, "the actual method must be named"
+    # Phrase check is whitespace-insensitive: the docstring wraps at 79 columns,
+    # so a literal substring test on a multi-word phrase is brittle.
+    flat = " ".join(doc.split())
+    assert "This module does not use that formulation" in flat, \
+        "if the linear form is mentioned, it must be marked as not implemented"
+    assert "solve_flowsheet" not in src, "phantom function reference"
+    # If a routing matrix is ever assembled, the docstring must be revised.
+    assert "linalg" not in src and "np." not in src, \
+        "a matrix solve now exists; update the module docstring to describe it"
+    # The documented tolerance constant must be the one actually enforced.
+    assert src.count("CLOSURE_TOL") >= 2, "CLOSURE_TOL must be used, not just defined"

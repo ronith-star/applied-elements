@@ -118,10 +118,14 @@ class Registry:
     def coverage(self) -> dict[str, Any]:
         """Count parameters by tag and source tier, and list the weak spots.
 
-        Returns a dict with ``by_tag``, ``by_tier``, ``assumed_keys``,
-        ``untiered_sourced`` and ``point_estimate_keys``. The last matters
-        because a parameter with no uncertainty is excluded from every
-        sensitivity result, which can make a model look more robust than it is.
+        Returns a dict with exactly these keys: ``n_parameters``, ``by_tag``,
+        ``by_tier``, ``assumed_keys``, ``assumed_fraction``,
+        ``point_estimate_keys`` and ``tier3_keys``.
+
+        ``point_estimate_keys`` matters because a parameter with no uncertainty
+        is excluded from every sensitivity result, which can make a model look
+        more robust than it is. ``tier3_keys`` matters because a tier 3 source
+        may never be sole evidence.
         """
         by_tag = Counter(v.tag.value for v in self._values.values())
         by_tier = Counter(
