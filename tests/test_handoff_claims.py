@@ -320,9 +320,23 @@ def test_the_exporter_scan_scope_claim_is_still_true() -> None:
     )
     subdir = ROOT / "tests/golden/test_golden_vectors.py"
     assert subdir.is_file(), f"{subdir} is gone, so the explanation is stale"
-    assert "pytest.mark.golden" in subdir.read_text(), (
+    subdir_text = subdir.read_text()
+    assert "pytest.mark.golden" in subdir_text, (
         "tests/golden/test_golden_vectors.py carries no golden marker, so it "
         "cannot explain the gap between the marker run and the registry"
+    )
+    # The scan-scope explanation covers the GOLDEN count only. It is wrong for
+    # the benchmark count, and asserting that here is what stops the two from
+    # being merged again: giving one cause for both was the defect that made
+    # this test necessary, and the arithmetic refuted it.
+    assert "pytest.mark.benchmark" not in subdir_text, (
+        "tests/golden/ now carries benchmark markers, so the documents' claim "
+        "that scan scope explains the golden count only must be re-measured"
+    )
+    docs = _text("README.md") + _text("HANDOFF.md")
+    assert "non-recursively" in docs, (
+        "neither document says the glob is non-recursive, which is the whole "
+        "of the explanation"
     )
 
 

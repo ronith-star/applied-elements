@@ -1,6 +1,6 @@
 # HANDOFF: what is validated, what is scaffolding, what needs data
 
-Measured at commit `e926ac6`. Every number below was produced by a command run in
+Measured at commit `97c55f5`. Every number below was produced by a command run in
 this repository during the session that wrote this file. Where a quantity could
 not be measured or sourced, it says so.
 
@@ -287,7 +287,7 @@ its status:
    important the parameter is, because a confident prior says there is little left
    to learn; with `ASSUMED` priors the confidence itself is invented.
 2. **There is no test file.** `tests/test_decisions.py` does not exist, the module
-   contributes 0 of the 1,738 collected tests, and it has no doctest. I verified
+   contributes 0 of the 1,840 collected tests, and it has no doctest. I verified
    this session that its public API imports and that `evpi`, `rank_measurements`
    and `measurement_priority` have the signatures given in `PLAN.md`. Nothing
    beyond importability is verified.
@@ -512,31 +512,40 @@ test files, the tree has 36"; restoring it passes.
 
 ## The committed validation record, and what changes it
 
-Measured at `e926ac6`. Every count in the VALIDATED section above is read from
+Measured at `97c55f5`. Every count in the VALIDATED section above is read from
 the **committed** `data/registry/validation_record.csv`: 162 marked tests, 115
 golden, 47 benchmark.
 
 Regenerating that file moves it, for two separate reasons that must not be
 confused. With `tests/test_handoff_claims.py` moved out of the tree, the
-exporter produces 164 marked tests, 115 golden, 49 benchmark: two benchmark rows
-added by another track's commits after the CSV was last written. With my guard
-file present, its 11 `@pytest.mark.golden` guards are collected on top, raising
-the golden count further. The first is upstream drift, the second is my own
+exporter produces 165 marked tests, 116 golden, 49 benchmark: one golden and two
+benchmark rows added by other tracks' commits after the CSV was written. With my
+guard file present it produces 177 / 128 / 49, which is exactly 12 more golden
+rows, one per guard, confirmed by asking the exporter for the rows it attributes
+to that file. The first difference is upstream drift, the second is my own
 additions being counted, and an earlier draft of this document attributed the
 second to the first.
 
-Neither difference touches the benchmark classification (literature 28, analytic
-12, self-consistency 7), so no measured error in the VALIDATED section changes.
-I have not committed a regenerated CSV. Regenerate it before quoting the
-marked-test totals, and expect the golden count to rise by the number of guards
-in that file, which is the expected behaviour of a marker-driven exporter rather
-than drift.
+The two benchmark additions do move the classification: regenerating gives
+literature 28, analytic 14, self-consistency 7 against the committed 28 / 12 /
+7. The literature count, which is the one the VALIDATED section above is built
+on, is unchanged, so no measured error there changes. I have not committed a
+regenerated CSV. Regenerate it before quoting any of its totals, and expect the
+golden count to rise by the number of guards in that file, which is a
+marker-driven exporter working rather than drift.
 
 A third cause, which I originally mistook for the other two: the exporter globs
-`tests/test_*.py` only (`scripts/export_validation.py:190`), so it never scans
-`tests/golden/test_golden_vectors.py`. Running `pytest -m golden` at `e926ac6`
-collects 262, decomposing as 134 from `tests/golden/`, 115 from the flat files
-the exporter does scan (exactly the committed 115), 11 from my guards, and 2
-skipped. So the registry's golden count is not a count of golden-marked tests in
-the repository; it is a count of those the exporter can see. Quoting it as the
-former overstates nothing but understates by 134.
+`tests/test_*.py` non-recursively (`scripts/export_validation.py:190`), so it
+never scans `tests/golden/test_golden_vectors.py`. Running `pytest -m golden` at
+`97c55f5` collects 298, decomposing as 168 from `tests/golden/`, 116 from the
+flat files the exporter does scan, 12 from my guards, and 2 skipped. So the
+registry's golden count is not a count of golden-marked tests in the repository;
+it is a count of those the exporter can see, and it understates by the 168 in
+that subdirectory.
+
+This cause applies to the GOLDEN count only. `tests/golden/` carries no
+benchmark marker at all (measured: 0 of the 50 benchmark collections), so the
+benchmark difference above is drift and nothing else. Giving one cause for both
+halves was the error in an earlier version of this section, and the arithmetic
+refutes it: two guard files cannot account for a difference of well over a
+hundred tests.
