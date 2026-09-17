@@ -1,0 +1,9 @@
+# LaTeX intermediates and local scratch. The .tex and .pdf are committed
+# deliberately: the book is a deliverable, and a reader without a TeX
+# installation still needs the PDF.
+__pycache__/
+*.aux
+*.log
+*.out
+*.toc
+pgcheck/

@@ -26,23 +26,23 @@ where :math:`b` is moles of B consumed per mole of A. Conversion of B is
 
 with :math:`r_c` the unreacted-core radius. Symbols, units and valid ranges:
 
-=================  ==========================  ==============================
-Symbol             Unit                        Valid range
-=================  ==========================  ==============================
-:math:`R`          m                           1e-7 to 1e-1 (0.1 um to 100 mm)
-:math:`\rho_B`     mol m^-3                    > 0
-:math:`C_A`        mol m^-3                    > 0
-:math:`b`          dimensionless               > 0
-:math:`k_g`        m s^-1                      > 0 (film coefficient)
-:math:`k_s`        m s^-1                      > 0 (surface rate constant)
-:math:`D_e`        m^2 s^-1                    > 0 (effective pore diffusivity)
-:math:`X`          dimensionless               [0, 1]
-:math:`t`          s                           >= 0
-:math:`\tau`       s                           > 0 (time for complete conversion)
-:math:`E_a`        J mol^-1                    > 0
-:math:`T`          K                           > 0
-:math:`\mathcal{R}`  J mol^-1 K^-1             8.314462618 (CODATA 2018)
-=================  ==========================  ==============================
+===================  =============  ==================================
+Symbol               Unit           Valid range
+===================  =============  ==================================
+:math:`R`            m              1e-7 to 1e-1 (0.1 um to 100 mm)
+:math:`\rho_B`       mol m^-3       > 0
+:math:`C_A`          mol m^-3       > 0
+:math:`b`            dimensionless  > 0
+:math:`k_g`          m s^-1         > 0 (film coefficient)
+:math:`k_s`          m s^-1         > 0 (surface rate constant)
+:math:`D_e`          m^2 s^-1       > 0 (effective pore diffusivity)
+:math:`X`            dimensionless  [0, 1]
+:math:`t`            s              >= 0
+:math:`\tau`         s              > 0 (time for complete conversion)
+:math:`E_a`          J mol^-1       > 0
+:math:`T`            K              > 0
+:math:`\mathcal{R}`  J mol^-1 K^-1  8.314462618 (CODATA 2018)
+===================  =============  ==================================
 
 Regime 1: fluid-film (external mass transfer) control
 -----------------------------------------------------
