@@ -52,7 +52,8 @@ produced the number, and is never tighter than that criterion.
 ## What the loader enforces
 
 `tests/golden/test_golden_vectors.py` loads every file and checks seven structural
-properties, each with its own test and each verified by control (the defect was
+properties (plus two label-consistency properties described in the defect record
+below), each with its own test and each verified by control (the defect was
 injected, the guard confirmed to fire, the defect removed, the guard confirmed to
 pass). Three further tests put this document itself under assertion, so a count
 written here that the files or the commit history contradict fails the suite:
@@ -114,16 +115,18 @@ twice.
 | GV-27 | Sobol indices of a linear additive function, checked against the exact variance decomposition | golden | `ae.econ.uncertainty` | 13 |
 | RV-01 | Seeded Monte Carlo percentiles of a uniform variable, with the analytic quantile alongside | regression | `ae.econ.uncertainty` | 8 |
 | RV-02 | Leave-one-deposit-out folds on a six-sample three-group set, with the mean baseline derived by hand | regression | `ae.ml.surrogate` | 18 |
-| RV-03 | EVPI on a two-action problem whose closed-form answer is 1/16, showing the nested-Monte-Carlo bias | regression | `ae.agent.decisions` | 4 |
+| RV-03 | EVPI on a two-action problem whose closed-form answer is 1/16, with a paired estimator whose deviation is outer-loop sampling error | regression | `ae.agent.decisions` | 4 |
 
 ## Control results
 
-Sixteen defects were injected into the loader one at a time, each confirmed to
+Eighteen defects were injected into the loader one at a time, each confirmed to
 be reported, then removed and confirmed to pass. The script is
 `tests/golden/control.py`, runnable from the repository root. Measured output:
-sixteen defects injected, sixteen reported, then twenty-one clean checks with
-zero failures. Three of the sixteen edit this document on disk and restore it,
-and the script asserts byte-identical restoration rather than assuming it.
+eighteen defects injected, eighteen reported, then twenty-six clean checks
+with zero failures. Four of the eighteen edit this document on disk and restore
+it, and the script asserts byte-identical restoration rather than assuming it.
+The row count of the table below is itself asserted against the number of
+defects the script reports, so the table cannot drift from the script.
 
 | defect injected | guard that reported it |
 | --- | --- |
@@ -143,18 +146,35 @@ and the script asserts byte-identical restoration rather than assuming it.
 | this document stating a shortest-reason length the files contradict | `test_the_document_states_the_measured_residual_reason_properties` |
 | this document stating a checked-output count the files contradict | `test_the_document_states_the_measured_residual_reason_properties` |
 | this document stating a defect extent the committed diff contradicts | `test_the_document_s_stated_defect_extent_matches_the_committed_diff` |
+| a vector title claiming a mechanism its own body denies | `test_no_title_claims_a_mechanism_its_own_body_denies` |
+| this table losing a row so it no longer matches the injections | `test_the_control_table_has_one_row_per_injection_the_script_performs` |
 
 The count is reported rather than a pass or fail verdict because a control whose
-partial failure looks like success is worse than no control: had fourteen of
-sixteen been caught, printing only the first result would have read as success.
+partial failure looks like success is worse than no control: had sixteen of
+eighteen been caught, printing only the first result would have read as
+success.
 
-The last two rows were added after a reviewer found the defect they guard
-against in the committed files. Both were then run against the committed
-version of `RV-01-monte-carlo-percentiles.yaml` retrieved from git, and both
-fire on it: the deferral guard names `p10`, `p50`, `p90` and
-`bootstrap_se_p50`, and the duplicate guard names `p50` and `p90` at values
-150.0565756103 and 189.7903414569. A guard added after the fact is worth
-nothing until it is shown to catch the original.
+The two reason-text guards (the deferral row and the duplicate-reason row) were
+added after a reviewer found the defect they guard against in the committed
+files. Both were then run against the committed version of
+`RV-01-monte-carlo-percentiles.yaml` retrieved from git, and both fire on it:
+the deferral guard names `p10`, `p50`, `p90` and `bootstrap_se_p50`, and the
+duplicate guard names `p50` and `p90` at values 150.0565756103 and
+189.7903414569. A guard added after the fact is worth nothing until it is shown
+to catch the original.
+
+The three document-count guards (shortest-reason length, checked-output count,
+defect extent) were added after a
+reviewer found a count in this document that its own evidence did not support.
+Each was run against a hand-edited copy of this file and confirmed to fire, and
+each is also one of the sixteen control injections, which edit this document on
+disk and restore it. This paragraph previously read "the last two rows" and was
+left unamended when three rows were inserted above it, so it pointed at guards
+it did not describe. That is the same class of defect as a tolerance reason
+describing the wrong output, and it is recorded rather than silently corrected.
+Both paragraphs now name the guards rather than their positions, so inserting a
+row cannot falsify them again, and the row count of the table above is asserted
+against the number of injections the control script performs.
 
 ## Defects this suite found in its own construction
 
@@ -249,7 +269,21 @@ Recorded because being right is not the same as having checked.
     rescaling the old bound instead of re-deriving it would have left a test
     that admits a fivefold error. The deviation from 1/16 is 0.796 paired
     standard errors.
-11. Five dispatch calls were written against signatures that do not exist:
+11. Two documentation labels contradicted the text they label, both found by a
+    reviewer and both of the same kind as defect 1: a description that does not
+    match what it describes. RV-03's title read "showing the
+    nested-Monte-Carlo bias" while its own provenance said that bias "does NOT
+    arise here" and its arithmetic concluded the entire deviation is
+    outer-loop sampling error, backed by a measured n_inner 256 against 2048
+    difference of 2.220446049250313e-16. The title had survived the rewrite
+    that corrected the body. And the paragraph under the control table read
+    "the last two rows were added after a reviewer found the defect they guard
+    against", which stopped being true when three document-count rows were
+    inserted above it, so it pointed at guards it did not describe. Both are
+    corrected, and a guard was added that fails when a vector's title asserts a
+    mechanism its own body explicitly negates; it was run against the stale
+    title and confirmed to fire, and it is control injection D17.
+12. Five dispatch calls were written against signatures that do not exist:
    `removable_ppm` takes no `efficiencies`, `krieger_dougherty_relative_viscosity`
    takes a provenance `Value` and not a float, `volume_to_mass_fraction` names its
    first parameter `phi`, `Flowsheet` has `connect` and not `link`, and
@@ -2515,7 +2549,7 @@ that is reported" behaviour exists for.
 
 ---
 
-## RV-03: EVPI on a two-action problem whose closed-form answer is 1/16, showing the nested-Monte-Carlo bias
+## RV-03: EVPI on a two-action problem whose closed-form answer is 1/16, with a paired estimator whose deviation is outer-loop sampling error
 
 - File: `data/golden/RV-03-evpi.yaml`
 - Kind: **regression**, derivation `mixed`
@@ -2524,7 +2558,7 @@ that is reported" behaviour exists for.
 
 **Reference.** Howard, R.A. 1966, Information Value Theory, IEEE Transactions on Systems Science and Cybernetics 2(1):22-26, doi:10.1109/TSSC.1966.300074, verified against Crossref in this repository's corrections record. Raiffa, H. and Schlaifer, R. 1961, Applied Statistical Decision Theory, Division of Research, Graduate School of Business Administration, Harvard University, for the decision-analytic framing.
 
-**Why this is a regression vector.** The EVPI of this problem has an exact closed form, 1/16 = 0.0625, derived below with a calculator. The value the module returns does NOT equal it and cannot be expected to: it is a Monte Carlo estimate at a finite outer sample. The expected value in this file is therefore the MEASURED value at a stated seed and sample size, so the file is a REGRESSION vector. The closed form is carried alongside as analytic_reference and the test checks the seeded value against the pin AND the deviation against its derived standard error, which is the part that tests the model rather than the snapshot. THIS VECTOR HAS ALREADY DONE ITS JOB ONCE. The pins first recorded here were measured against a version of ae.agent.decisions in which the baseline was drawn from an INDEPENDENT sample (problem.best_action_now()), so the difference resolved minus baseline did not cancel the two terms' common sampling error. Commit baadddf paired both terms on the same outer and inner draws (common random numbers). This vector failed on that commit, with evpi moving from 0.06732450807636592 to 0.064788758648048 and baseline_value from 0.4928314937557836 to 0.4953672431841015, which is exactly what a regression vector is for. The pins below are the paired estimator's, and the error model in the arithmetic chain was re-derived for the paired estimator rather than rescaled.
+**Why this is a regression vector.** The EVPI of this problem has an exact closed form, 1/16 = 0.0625, derived below with a calculator. The value the module returns does NOT equal it and cannot be expected to: it is a Monte Carlo estimate at a finite outer sample. The expected value in this file is therefore the MEASURED value at a stated seed and sample size, so the file is a REGRESSION vector. The closed form is carried alongside as analytic_reference and the test checks the seeded value against the pin AND the deviation against its derived standard error, which is the part that tests the model rather than the snapshot. THIS VECTOR HAS ALREADY DONE ITS JOB ONCE. The pins first recorded here were measured against a version of ae.agent.decisions in which the baseline was drawn from an INDEPENDENT sample (problem.best_action_now()), so the difference resolved minus baseline did not cancel the two terms' common sampling error. Commit baadddf paired both terms on the same outer and inner draws (common random numbers). This vector failed on that commit, with evpi moving from 0.06732450807636592 to 0.064788758648048 and baseline_value from 0.4928314937557836 to 0.4953672431841015, which is exactly what a regression vector is for. The pins below are the paired estimator's, and the error model in the arithmetic chain was re-derived for the paired estimator rather than rescaled. THE TITLE OF THIS FILE WAS ALSO WRONG. It read "showing the nested-Monte-Carlo bias", which this file's own provenance and arithmetic both deny: there is no residual uncertainty once theta is resolved, so the inner loop averages a constant, no upward nesting bias arises, and the measured difference between n_inner 256 and 2048 is 2.220446049250313e-16. The title was carried over from a pre-rewrite version whose regression_reason did claim that bias; the rewrite dropped the claim from the body and left it in the label. A reviewer found it. A vector whose title contradicts its own derivation is a documentation defect of the same kind as a tolerance reason describing the wrong output, so it is recorded here rather than quietly renamed.
 
 **Inputs.**
 

@@ -27,6 +27,7 @@ GV1 = D / "GV-01-bond-specific-energy.yaml"
 GV20 = D / "GV-20-capacity-oee.yaml"
 GV27 = D / "GV-27-sobol-additive.yaml"
 RV1 = D / "RV-01-monte-carlo-percentiles.yaml"
+RV3 = D / "RV-03-evpi.yaml"
 
 
 def main() -> int:
@@ -176,6 +177,40 @@ def main() -> int:
         doc.write_text(original)
     assert doc.read_text() == original, "the document was not restored byte-identically"
 
+    # D17: a vector title that claims a mechanism its own body denies. This is
+    # the defect a reviewer found in RV-03, whose title advertised the
+    # nested-Monte-Carlo bias while its provenance and arithmetic both stated
+    # that bias does not arise in this problem.
+    v = load(RV3)
+    v["title"] = (
+        "EVPI on a two-action problem whose closed-form answer is 1/16, "
+        "showing the nested-Monte-Carlo bias"
+    )
+    results.append((
+        "D17 vector title contradicts its own derivation",
+        *ran(T.test_no_title_claims_a_mechanism_its_own_body_denies, "D17", v),
+    ))
+
+    # D18: the control table in the document loses a row, so it no longer
+    # matches the injections this script performs. The table used to be
+    # described by position, which is how a stale description survived.
+    doc2 = REPO / "docs" / "golden-vectors.md"
+    original2 = doc2.read_text()
+    drop = (
+        "| a vector title claiming a mechanism its own body denies | "
+        "`test_no_title_claims_a_mechanism_its_own_body_denies` |\n"
+    )
+    assert drop in original2, "D18: anchor row not present in the document"
+    doc2.write_text(original2.replace(drop, ""))
+    try:
+        results.append((
+            "D18 control table row count drifts from the injections",
+            *ran(T.test_the_control_table_has_one_row_per_injection_the_script_performs),
+        ))
+    finally:
+        doc2.write_text(original2)
+    assert doc2.read_text() == original2, "D18: document not restored byte-identically"
+
     # D11: suite shape claim contradicted
     v = load(GV27)
     saved = T._VECTORS
@@ -201,13 +236,15 @@ def main() -> int:
         for fn in (T.test_vector_outputs_match_expected,
                    T.test_every_expected_output_has_a_reasoned_tolerance,
                    T.test_vector_declares_its_kind_and_provenance,
-                   T.test_no_tolerance_reason_defers_to_another_output):
+                   T.test_no_tolerance_reason_defers_to_another_output,
+                   T.test_no_title_claims_a_mechanism_its_own_body_denies):
             failed, msg = ran(fn, p.name, v)
             clean.append((p.name, fn.__name__, failed, msg))
     for fn in (T.test_every_provenance_tag_is_one_of_the_five,
                T.test_the_suite_has_the_declared_shape,
                T.test_the_document_states_the_measured_residual_reason_properties,
                T.test_the_document_s_stated_defect_extent_matches_the_committed_diff,
+               T.test_the_control_table_has_one_row_per_injection_the_script_performs,
                T.test_no_two_outputs_in_a_file_share_a_verbatim_reason_unless_identical):
         failed, msg = ran(fn)
         clean.append(("suite", fn.__name__, failed, msg))

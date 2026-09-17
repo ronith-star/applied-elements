@@ -1,6 +1,6 @@
 id: RV-03
 kind: regression
-title: EVPI on a two-action problem whose closed-form answer is 1/16, showing the nested-Monte-Carlo bias
+title: EVPI on a two-action problem whose closed-form answer is 1/16, with a paired estimator whose deviation is outer-loop sampling error
 check: evpi
 derivation: mixed
 regression_reason: >
@@ -22,6 +22,17 @@ regression_reason: >
   0.4928314937557836 to 0.4953672431841015, which is exactly what a regression
   vector is for. The pins below are the paired estimator's, and the error model in
   the arithmetic chain was re-derived for the paired estimator rather than rescaled.
+  THE TITLE OF THIS FILE WAS ALSO WRONG. It read "showing the
+  nested-Monte-Carlo bias", which this file's own provenance and arithmetic both
+  deny: there is no residual uncertainty once theta is resolved, so the inner
+  loop averages a constant, no upward nesting bias arises, and the measured
+  difference between n_inner 256 and 2048 is 2.220446049250313e-16. The title
+  was carried over from a pre-rewrite version whose regression_reason did claim
+  that bias; the rewrite dropped the claim from the body and left it in the
+  label. A reviewer found it. A vector whose title contradicts its own
+  derivation is a documentation defect of the same kind as a tolerance reason
+  describing the wrong output, so it is recorded here rather than quietly
+  renamed.
 module: ae.agent.decisions
 reference: >
   Howard, R.A. 1966, Information Value Theory, IEEE Transactions on Systems Science

@@ -31,6 +31,7 @@ from __future__ import annotations
 import math
 import os
 import pathlib
+import re
 import subprocess
 from typing import Any
 
@@ -264,6 +265,50 @@ def test_no_tolerance_reason_defers_to_another_output(
 
 
 @pytest.mark.golden
+@pytest.mark.parametrize("name,vec", _VECTORS, ids=_IDS)
+def test_no_title_claims_a_mechanism_its_own_body_denies(
+    name: str, vec: dict[str, Any]
+) -> None:
+    """A vector's title may not assert a mechanism its own text rules out.
+
+    This guard exists because the EVPI regression vector's title read "showing
+    the nested-Monte-Carlo bias" while its provenance said that bias "does NOT
+    arise here" and its arithmetic concluded the whole deviation is outer-loop
+    sampling error. The title had been carried over from a pre-rewrite version
+    whose body did claim the bias; the rewrite corrected the body and left the
+    label. A reviewer found it. Titles are what a reader sees first and what
+    the generated document uses as its heading and index entry, so a title
+    contradicting its own derivation misleads before any number is read.
+
+    The check is narrow by design: for each phrase a vector's body explicitly
+    negates, the title must not assert it. A general contradiction detector is
+    not attempted, because a guard that claims more than it checks is the
+    failure mode this suite exists to prevent.
+    """
+    title = str(vec["title"]).lower()
+    body = " ".join(
+        [
+            str(vec.get("regression_reason", "")),
+            str(vec["arithmetic"]),
+            " ".join(str(t) for t in vec["provenance"].values()),
+        ]
+    ).lower()
+    denied = [
+        ("nesting bias", ("no upward nesting bias", "bias does not arise")),
+        ("nested-monte-carlo bias", ("no upward nesting bias", "does not arise here")),
+        ("upward bias", ("no upward nesting bias", "does not arise here")),
+    ]
+    for phrase, denials in denied:
+        if phrase not in title:
+            continue
+        hit = [d for d in denials if d in body]
+        assert not hit, (
+            f"{name}: the title claims {phrase!r} while the body states {hit[0]!r}. "
+            f"Correct the title or the body, whichever is wrong."
+        )
+
+
+@pytest.mark.golden
 def test_the_document_states_the_measured_residual_reason_properties() -> None:
     """docs/golden-vectors.md's claims about the reason texts are re-derived.
 
@@ -306,6 +351,40 @@ def test_the_document_states_the_measured_residual_reason_properties() -> None:
     assert f"{total_outputs} checked outputs" in text, (
         "the document states an output count the files contradict"
     )
+
+
+@pytest.mark.golden
+def test_the_control_table_has_one_row_per_injection_the_script_performs() -> None:
+    """The document's control table lists exactly as many defects as are injected.
+
+    Stated because the paragraph under that table used to describe its rows by
+    POSITION ("the last two rows"), and inserting rows above it silently made
+    the description point at the wrong guards. Both paragraphs now name the
+    guards, and the row count is checked against the injection count parsed out
+    of control.py, so a defect added to the script without a table row, or a
+    row added without an injection, fails here.
+    """
+    root = pathlib.Path(__file__).resolve().parent.parent.parent
+    doc = (root / "docs" / "golden-vectors.md").read_text()
+    start = doc.index("| defect injected | guard that reported it |")
+    table = doc[start : doc.index("\n\n", start)]
+    rows = [
+        line
+        for line in table.split("\n")
+        if line.startswith("| ") and "| ---" not in line
+    ]
+    data_rows = len(rows) - 1
+    # Count the distinct defect TAGS the script reports, not its comments: two
+    # of the document-count injections share a loop and therefore one comment,
+    # which a comment count misses. The tags are what the operator reads.
+    script = (root / "tests" / "golden" / "control.py").read_text()
+    tags = sorted(set(re.findall(r'"(D\d+) [^"]+"', script)))
+    assert data_rows == len(tags), (
+        f"the control table lists {data_rows} defects but control.py reports "
+        f"{len(tags)} tags {tags}. Every injection needs a row and every row an "
+        f"injection."
+    )
+    assert data_rows >= 17, f"only {data_rows} control rows"
 
 
 @pytest.mark.golden
