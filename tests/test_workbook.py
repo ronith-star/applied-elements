@@ -124,14 +124,14 @@ def test_cash_cost_is_physically_plausible(evaluated) -> None:
         f"cash cost {float(cc):,.1f} USD/t is outside any plausible range for "
         "HPQ purification; check whether fixed costs are being counted"
     )
-    # The 158 USD/t the omitted-fixed-cost build returned. Two things are
+    # The 157.77 USD/t the omitted-fixed-cost build returned. Two things are
     # checked and neither is a restatement of the 400 floor above. First, the
     # defect figure must be one that floor rejects, which is why the floor
-    # catches this class of omission at all: 158 x 2 = 316 is still under 400,
-    # so even doubling the defective cost would not have passed. Second, the
-    # current cost must exceed the defect figure by more than the floor's own
-    # width above it, so the margin is measured rather than just bounded.
-    defect_value = 158.0
+    # catches this class of omission at all: even doubling it, 315.54, is
+    # still under 400. Second, the current cost must exceed the defect figure
+    # by more than twice the floor's own width above it, so the margin is
+    # measured rather than just bounded.
+    defect_value = 157.77
     assert not 400.0 < defect_value < 5000.0
     assert not 400.0 < defect_value * 2.0 < 5000.0
     assert float(cc) - defect_value > 2.0 * (400.0 - defect_value)

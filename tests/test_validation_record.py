@@ -152,7 +152,14 @@ def test_no_analytic_check_is_reported_as_literature() -> None:
     # self-consistency checks that caused it are all still present, so the
     # measured inflation cannot have fallen below the 9 rows it was then, and
     # every overcounted row must be one the corrected rule reclassifies.
-    historical_inflation = 36 - 27
+    # The historical count pairs this docstring names, 27 and 36 when written
+    # and 28 and 37 after the demoted benchmark was restored. Neither absolute
+    # is pinned (the comment above explains why); what is used is the SIZE of
+    # the inflation, which was 9 rows at both snapshots, as a floor on the
+    # measured overcount: the analytic and self-consistency checks that caused
+    # it are all still present, so the inflation cannot have fallen below it.
+    assert 36 - 27 == 37 - 28
+    historical_inflation = 37 - 28
     assert inflated - n_lit >= historical_inflation
     assert len(over) == inflated - n_lit
     assert len(over) >= historical_inflation
@@ -276,3 +283,20 @@ def test_no_docstring_in_this_module_states_an_unasserted_count() -> None:
         "body and are not marked historical, so they are live claims with "
         "nothing behind them:\n  " + "\n  ".join(offenders)
     )
+
+    # This guard's OWN docstring names 27, 36, 28 and 37 as the drifted count
+    # pairs. They are exempt above only because their sentences are marked
+    # historical, so that exemption is exercised here on those exact numbers
+    # rather than trusted: each must be extracted as a candidate count, must
+    # fall in the guarded range, and must be suppressed by a HIST marker.
+    hist_sentence = "they named a literature count of 27 and a DOI-first count of 36"
+    moved_sentence = "Restoring a demoted benchmark moved them to 28 and 37"
+    assert candidates(hist_sentence) == ["27", "36"]
+    assert candidates(moved_sentence) == ["28", "37"]
+    for lit in ("27", "36", "28", "37"):
+        assert 5 <= int(lit) <= 200
+    assert any(h in hist_sentence.lower() for h in HIST)
+    assert any(h in moved_sentence.lower() for h in HIST)
+    # And the inflation is the same size at both snapshots, which is the claim
+    # the pairs are there to support.
+    assert 36 - 27 == 37 - 28 == 9
