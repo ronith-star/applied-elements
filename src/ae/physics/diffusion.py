@@ -142,22 +142,28 @@ against an independent finite-difference solution of the same PDE in
 better than 0.01 percent at Fo = 1e-3. The short-time limit of the same solution
 is
 
-.. math:: \frac{M_t}{M_\infty} \approx \frac{6}{R}\sqrt{\frac{Dt}{\pi}}
-          = \frac{6}{\sqrt{\pi}} \sqrt{\mathrm{Fo}}
+.. math:: \frac{M_t}{M_\infty} \approx \frac{6}{\sqrt{\pi}} \sqrt{\mathrm{Fo}}
+          - 3\,\mathrm{Fo}
 
-Both are exact solutions of the same equation, not correlations.
+The series is exact. The second expression is the first TWO terms of the
+short-time expansion, which is a different statement: the leading term alone is
+an upper bound that exceeds the series by 8.870e-04 relative at
+:math:`\mathrm{Fo} = 10^{-6}`, 8.942e-03 at :math:`10^{-4}` and 9.724e-02 at
+:math:`10^{-2}`, while the two-term form reproduces the series to better than
+4e-14 relative over :math:`10^{-6}` to :math:`10^{-2}`. An earlier revision of
+this module used the leading term alone below :math:`\mathrm{Fo} = 10^{-4}` and
+described it as the exact short-time limit, which left the function
+non-monotonic in :math:`\mathrm{Fo}`: extraction FELL by 2.36e-04 across the
+switch, and the 0.89 percent quoted there as agreement between the two forms was
+the expansion's own truncation error.
 
-The two forms cross over near :math:`\mathrm{Fo} = 10^{-4}`, where they agree to
-0.89 percent (series 0.033551, short-time 0.033851). Below that the short-time
-form is used, because the series converges too slowly there to truncate safely:
-the summand decays as :math:`\exp(-n^2\pi^2\mathrm{Fo})`, so the number of terms
-needed scales as :math:`\mathrm{Fo}^{-1/2}`, and a fixed 200-term truncation
-overstates the extraction by 23 percent at :math:`\mathrm{Fo} = 10^{-6}`
-(0.004158 truncated against 0.003382 converged). Above the crossover the term
-count is chosen adaptively from :math:`\mathrm{Fo}` so the neglected tail is
-below 1e-12, and the disagreement between the two forms GROWS with
-:math:`\mathrm{Fo}` (2.9 percent at 1e-3, 9.7 percent at 1e-2) because the
-short-time form is the asymptote, not a competitor.
+The switch at :math:`\mathrm{Fo} = 10^{-4}` is retained because the series
+converges too slowly below it to truncate safely: the summand decays as
+:math:`\exp(-n^2\pi^2\mathrm{Fo})`, so the number of terms needed scales as
+:math:`\mathrm{Fo}^{-1/2}`, and a fixed 200-term truncation overstates the
+extraction by 23 percent at :math:`\mathrm{Fo} = 10^{-6}` (0.004158 truncated
+against 0.003382 converged). Above the switch the term count is chosen
+adaptively from :math:`\mathrm{Fo}` so the neglected tail is below 1e-12.
 
 Limiting grain size
 -------------------
@@ -166,8 +172,12 @@ that can be depleted in time :math:`t`:
 
 .. math:: R_{max}(T, t) = \sqrt{D(T) t}
 
-A grain coarser than :math:`R_{max}` retains essentially all of its lattice
-inventory. :func:`limiting_grain_radius` reports this, and its value is strongly
+:math:`R_{max}` is the radius at which the diffusion length equals the radius,
+which is a scale rather than a retention threshold: at :math:`R = 2R_{max}` this
+module's sphere solution still gives 0.9484 extraction, and 0.3085 at
+:math:`R = 10R_{max}`. Retention is near-total only at
+:math:`R \sim 100R_{max}` (0.0336) and beyond.
+:func:`limiting_grain_radius` reports this length, and its value is strongly
 temperature dependent, which is why the verdict in this module is regime
 dependent rather than universal. Evaluated with :data:`MOST_MOBILE_BOUND`
 (:math:`D_0 = 10^{-4}` m^2 s^-1, :math:`E_a = 90` kJ mol^-1), :math:`R_{max}` is
@@ -688,9 +698,12 @@ def fourier_number(d: Quantity, t: Quantity, radius: Quantity) -> float:
     return fo
 
 
-#: Fourier number below which the short-time asymptote replaces the series.
-#: At this value the two forms agree to 0.89 percent; below it the series needs
-#: more terms than is safe to truncate (see the module docstring).
+#: Fourier number below which the two-term short-time expansion replaces the
+#: series. Below it the series needs more terms than is safe to truncate (see
+#: the module docstring). An earlier revision used the LEADING term only and
+#: recorded here that "the two forms agree to 0.89 percent" at this value: that
+#: 0.89 percent was the expansion's own truncation error, not a tolerance, and
+#: it made the function fall by 2.36e-04 in extraction across this switch.
 FO_SHORT_TIME_SWITCH: Final[float] = 1e-4
 
 
@@ -701,11 +714,21 @@ def fractional_extraction_sphere(fo: float, n_terms: int | None = None) -> float
     derived in the module docstring by eigenfunction expansion and verified
     against a finite-difference solution of the same PDE.
 
-    For ``fo`` below :data:`FO_SHORT_TIME_SWITCH` the exact short-time limit
-    :math:`(6/\sqrt{\pi})\sqrt{\mathrm{Fo}}` is used instead, because the series
-    summand decays as :math:`\exp(-n^2\pi^2\mathrm{Fo})` and the term count needed
-    grows as :math:`\mathrm{Fo}^{-1/2}`: a fixed truncation silently overstates
+    For ``fo`` below :data:`FO_SHORT_TIME_SWITCH` the two-term short-time
+    expansion :math:`(6/\sqrt{\pi})\sqrt{\mathrm{Fo}} - 3\,\mathrm{Fo}` is used
+    instead, because the series summand decays as
+    :math:`\exp(-n^2\pi^2\mathrm{Fo})` and the term count needed grows as
+    :math:`\mathrm{Fo}^{-1/2}`: a fixed truncation silently overstates
     extraction at small ``fo``.
+
+    The second term is not optional. The leading term alone is the ASYMPTOTE,
+    not the solution: it exceeds the series by 8.870e-04 relative at
+    :math:`\mathrm{Fo} = 10^{-6}` and 8.942e-03 at
+    :math:`\mathrm{Fo} = 10^{-4}`, always high, so using it below the switch and
+    the series above made this function non-monotonic in ``fo`` at the switch.
+    With the :math:`-3\,\mathrm{Fo}` term restored the two branches agree to
+    better than 1e-13 relative over the whole switch neighbourhood, which is
+    what ``tests/test_physics_audit.py`` pins.
 
     Above the switch, ``n_terms`` defaults to the adaptive count
     :math:`\lceil\sqrt{28/(\pi^2 \mathrm{Fo})}\rceil` (floored at 50), which makes
@@ -727,8 +750,8 @@ def fractional_extraction_sphere(fo: float, n_terms: int | None = None) -> float
     if fo == 0.0:
         return 0.0
     if fo < FO_SHORT_TIME_SWITCH:
-        val = 6.0 / math.sqrt(math.pi) * math.sqrt(fo)
-        return require_fraction(min(1.0, val), "fractional extraction")
+        val = 6.0 / math.sqrt(math.pi) * math.sqrt(fo) - 3.0 * fo
+        return require_fraction(min(1.0, max(0.0, val)), "fractional extraction")
     if n_terms is None:
         n_terms = max(50, int(math.ceil(math.sqrt(28.0 / (math.pi**2 * fo)))))
     n = np.arange(1, n_terms + 1, dtype=float)
@@ -745,10 +768,21 @@ def fractional_extraction_sphere(fo: float, n_terms: int | None = None) -> float
 
 
 def limiting_grain_radius(d: Quantity, t: Quantity) -> Quantity:
-    r"""Largest grain radius that can be depleted in time ``t``: :math:`R_{max} = \sqrt{Dt}`.
+    r"""Grain radius at which the diffusion length equals the radius: :math:`\sqrt{Dt}`.
 
-    A grain coarser than this retains essentially all of its lattice inventory,
-    because the depleted skin is thin compared with the radius.
+    This is a SCALE, not a threshold, and the distinction was previously stated
+    the wrong way round here ("a grain coarser than this retains essentially all
+    of its lattice inventory"). Computed from this module's own
+    :func:`fractional_extraction_sphere` at :math:`\mathrm{Fo} = 1/k^2`, a grain
+    of radius :math:`k\sqrt{Dt}` loses 0.9484 of its inventory at
+    :math:`k = 2`, 0.7951 at :math:`k = 3`, 0.5570 at :math:`k = 5` and 0.3085
+    at :math:`k = 10`. Retention becomes near-total only two to three orders of
+    magnitude out: 0.0336 extraction at :math:`k = 100` and 0.003382 at
+    :math:`k = 1000`.
+
+    Use this value to bracket a verdict, not to make one. The extraction test in
+    :func:`lattice_removal_verdict` calls the sphere solution directly at the
+    actual grain radius rather than comparing against this length.
     """
     return diffusion_length(d, t)
 
@@ -914,9 +948,12 @@ def lattice_removal_verdict(
 
     On why ``extraction_threshold`` defaults to 0.05 and not to something
     smaller. For a thin depleted skin the extracted fraction from a sphere is
-    approximately :math:`3L/R`, so even a 300-fold deficit in diffusion length
-    (80 degC, 6 h, 100 um grain) still extracts about 1 percent of the lattice
-    inventory: the geometric skin term never vanishes. A threshold of a few
+    :math:`(6/\\sqrt{\\pi})L/R = 3.3851\\,L/R` to leading order (the coefficient
+    is :math:`6/\\sqrt{\\pi}`, not 3; the volume-to-surface ratio 3 is the naive
+    guess and it understates extraction by 11.3 percent). At a 300-fold deficit
+    in diffusion length (80 degC, 6 h, 100 um grain) the sphere solution gives
+    0.011250 extraction against the 0.010000 the coefficient 3 would give, so
+    the geometric skin term never vanishes. A threshold of a few
     percent is therefore the meaningful one, and the process consequence is
     reported as ``ppm_removable_from_lattice`` so the number can be compared
     against a ppm-level product specification rather than against an abstract

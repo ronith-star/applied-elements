@@ -262,28 +262,43 @@ def test_golden_critical_activation_energy_arithmetic() -> None:
 
 @pytest.mark.golden
 def test_golden_sphere_extraction_short_time_arithmetic() -> None:
-    r"""Hand-check the short-time sphere limit Mt/Minf = (6/sqrt(pi)) sqrt(Fo).
+    r"""Hand-check the short-time sphere expansion (6/sqrt(pi)) sqrt(Fo) - 3 Fo.
 
     At Fo = 1.0e-6:
-      sqrt(Fo)   = 1.0e-3
-      6/sqrt(pi) = 6 / 1.7724539 = 3.3851375
-      Mt/Minf    = 3.3851375 * 1.0e-3 = 3.385137e-3
+      sqrt(Fo)     = 1.0e-3
+      6/sqrt(pi)   = 6 / 1.7724539 = 3.3851375
+      leading term = 3.3851375 * 1.0e-3 = 3.385137e-3
+      second term  = 3 * 1.0e-6 = 3.0e-6
+      Mt/Minf      = 3.385137e-3 - 3.0e-6 = 3.382137e-3
+
+    Recorded because this test previously asserted the LEADING TERM ALONE as the
+    function's return value, which is how the missing second term survived: the
+    test agreed with the code and both were wrong by 8.870e-04 relative. The
+    expected value is now the two-term expansion and it is cross-checked against
+    an independent 200000-term evaluation of the series in
+    tests/test_physics_audit.py rather than against the same arithmetic.
 
     Sanity on the geometry: for a thin depleted skin the extracted fraction is
-    approximately 3 L / R, and Fo = 1e-6 means L/R = 1e-3, giving 3.0e-3, which
-    agrees with 3.385e-3 to within the shape factor. The skin term never
-    vanishes, which is why the infeasibility threshold in
-    lattice_removal_verdict is a few percent rather than zero.
+    (6/sqrt(pi)) L / R to leading order, and Fo = 1e-6 means L/R = 1e-3. The
+    naive volume-to-surface coefficient 3 would give 3.0e-3, understating the
+    true 3.382137e-3 by 11.30 percent. The skin term never vanishes, which is
+    why the infeasibility threshold in lattice_removal_verdict is a few percent
+    rather than zero.
     """
     coeff = 6.0 / math.sqrt(math.pi)
     assert coeff == pytest.approx(3.3851375, rel=1e-6)
-    val = coeff * math.sqrt(1.0e-6)
-    assert val == pytest.approx(3.385137e-3, rel=1e-6)
+    leading = coeff * math.sqrt(1.0e-6)
+    assert leading == pytest.approx(3.385137e-3, rel=1e-6)
+    second = 3.0 * 1.0e-6
+    assert second == pytest.approx(3.0e-6, rel=1e-12)
+    val = leading - second
+    assert val == pytest.approx(3.382137e-3, rel=1e-6)
     assert fractional_extraction_sphere(1.0e-6) == pytest.approx(val, rel=1e-12)
-    assert val / 3.0e-3 == pytest.approx(1.128, rel=1e-3)
     sqrt_pi = math.sqrt(math.pi)
     assert sqrt_pi == pytest.approx(1.7724539, rel=1e-6)
-    assert val == pytest.approx(3.385e-3, rel=1e-3)
+    assert val / 3.0e-3 == pytest.approx(1.1273791670955127, rel=1e-9)
+    assert (leading - val) / val == pytest.approx(8.870e-04, rel=2e-3)
+    assert (1.0 - 3.0e-3 / val) * 100 == pytest.approx(11.30, rel=1e-2)
 
 
 @pytest.mark.golden
