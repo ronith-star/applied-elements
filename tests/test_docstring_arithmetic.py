@@ -150,6 +150,25 @@ def test_scheduling_prose_arithmetic():
 #: test here or elsewhere that recomputes the claim by calling module code.
 #: This map is the completeness contract: a new detected site fails
 #: ``test_every_prose_arithmetic_site_is_covered`` until it is added.
+def test_valuation_irr_prose_arithmetic():
+    """valuation.py irr: the flow [-1, 20] has the single exact root
+    20/1 - 1 = 19.0, i.e. a 1900 percent return, which the historical
+    bracket-scanning implementation reported as None because its upper bound
+    was 10.0."""
+    from ae.econ.valuation import irr as _irr  # noqa: PLC0415
+    from ae.econ.valuation import npv as _npv  # noqa: PLC0415
+
+    root = _irr([-1.0, 20.0])
+    assert root is not None
+    assert root == pytest.approx(20.0 / 1.0 - 1.0, rel=1e-9)
+    assert root == pytest.approx(19.0, rel=1e-9)
+    assert 1900.0 == pytest.approx(100.0 * root, rel=1e-9)
+    # NPV at that rate is zero, which is what makes it the root.
+    assert _npv(root, [-1.0, 20.0]) == pytest.approx(0.0, abs=1e-9)
+    # 10.0 was the historical scan's upper bound, and the root exceeds it.
+    assert root > 10.0
+
+
 COVERED: dict[tuple[str, str], str] = {
     ("ae/core/units.py", "ratio_basis"): "test_units_mole_conversion_prose",
     ("ae/econ/capex.py", "scale_cost"): "test_capex_scaling_prose",
@@ -161,6 +180,7 @@ COVERED: dict[tuple[str, str], str] = {
         "test_yield_cascade_prose_arithmetic",
     ("ae/econ/capex.py", "assumed_share"): "test_capex_assumed_share_prose",
     ("ae/econ/valuation.py", "npv"): "test_valuation_npv_prose",
+    ("ae/econ/valuation.py", "irr"): "test_valuation_irr_prose_arithmetic",
     ("ae/plant/streams.py", "max_feasible_feed_fraction"):
         "test_streams_feasibility_bound_prose",
     ("ae/physics/comminution.py", "bond_specific_energy"):
@@ -860,6 +880,7 @@ PINNED_LITERALS: dict[tuple[str, str], tuple[str, ...]] = {
     ("ae/econ/capex.py", "assumed_share"): ("0.55", "1.82"),
     ("ae/econ/capex.py", "scale_cost"): ("4.0**0.6", "2.2974"),
     ("ae/econ/valuation.py", "npv"): ("60/1.1 + 60/1.21 = 4.1322",),
+    ("ae/econ/valuation.py", "irr"): ("20/1 - 1 = 19.0",),
     ("ae/physics/comminution.py", "<module>"):
         ("44.5", "0.23", "0.82", "907.18474", "1.1023113"),
     ("ae/physics/leaching.py", "<module>"): ("8.314462618",),
