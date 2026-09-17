@@ -173,7 +173,7 @@ class Uncertain:
         """
         u = np.clip(np.asarray(u, dtype=float), 1e-12, 1 - 1e-12)
         if self.kind == "uniform":
-            return self.low + u * (self.high - self.low)
+            return np.asarray(self.low + u * (self.high - self.low), dtype=float)
         if self.kind == "triangular":
             m = self.mode if self.mode is not None else 0.5 * (self.low + self.high)
             c = (m - self.low) / (self.high - self.low)
@@ -183,19 +183,37 @@ class Uncertain:
                 self.high - np.sqrt(
                     np.maximum((1 - u) * (self.high - self.low) * (self.high - m), 0.0)),
             )
-            return out
+            return np.asarray(out, dtype=float)
         from scipy import stats
+
+        # __post_init__ rejects a normal or lognormal without both mean and
+        # sd, so these cannot be None here. Binding them to locals states that
+        # invariant where the arithmetic happens instead of relying on the
+        # reader to remember it, and it is what lets a type checker see the
+        # guard: without it mypy reported nine operand errors on this block
+        # (float / None, float - None) which read as real division-by-None
+        # bugs and were not.
+        if self.mean is None or self.sd is None:      # pragma: no cover
+            raise AssertionError(
+                f"{self.name}: {self.kind} reached ppf without mean and sd, "
+                "which __post_init__ is supposed to make impossible"
+            )
+        mean, sd = self.mean, self.sd
+
         if self.kind == "normal":
-            a = (self.low - self.mean) / self.sd
-            b = (self.high - self.mean) / self.sd
-            return stats.truncnorm.ppf(u, a, b, loc=self.mean, scale=self.sd)
+            a = (self.low - mean) / sd
+            b = (self.high - mean) / sd
+            return np.asarray(
+                stats.truncnorm.ppf(u, a, b, loc=mean, scale=sd), dtype=float)
         # Lognormal by method of moments on the variable itself.
-        s2 = np.log1p((self.sd / self.mean) ** 2)
+        s2 = np.log1p((sd / mean) ** 2)
         s = np.sqrt(s2)
-        mu = np.log(self.mean) - 0.5 * s2
+        mu = np.log(mean) - 0.5 * s2
         lo_p = stats.lognorm.cdf(self.low, s, scale=np.exp(mu))
         hi_p = stats.lognorm.cdf(self.high, s, scale=np.exp(mu))
-        return stats.lognorm.ppf(lo_p + u * (hi_p - lo_p), s, scale=np.exp(mu))
+        return np.asarray(
+            stats.lognorm.ppf(lo_p + u * (hi_p - lo_p), s, scale=np.exp(mu)),
+            dtype=float)
 
 
 @dataclass

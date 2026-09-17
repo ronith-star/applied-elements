@@ -484,9 +484,20 @@ def estimate_capex(
     # whether a location correction was actually applied.
     loc_f = float(site.construction_cost_index)
 
-    idx_ratio = 1.0 if base_index is None else float(target_index) / float(base_index)
-    if base_index is not None and (base_index <= 0 or target_index <= 0):
-        raise ValueError("cost indices must be positive")
+    # The one-sided case is already rejected above, so by here the two indices
+    # are either both None or both set. Narrowing on both names rather than on
+    # base_index alone is what lets a type checker see that: the original
+    # `float(target_index)` read as float(None) to mypy and was reported as an
+    # operand error. It was NOT a reachable bug, and an earlier version of this
+    # comment wrongly claimed it was. Ordering the positivity check before the
+    # division is still worth keeping, because it makes the guarantee local
+    # instead of thirty lines away.
+    if base_index is not None and target_index is not None:
+        if base_index <= 0 or target_index <= 0:
+            raise ValueError("cost indices must be positive")
+        idx_ratio = float(target_index) / float(base_index)
+    else:
+        idx_ratio = 1.0
 
     zero = Q_(0.0, cur)
     purchased = sum((e.purchased_cost.quantity for e in equipment), zero)

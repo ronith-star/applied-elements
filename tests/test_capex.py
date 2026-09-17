@@ -345,3 +345,12 @@ def test_records_carry_provenance_per_item():
     assert rows["WHIMS"]["source"] == "Vendor quotation, redacted"
     assert rows["leach train"]["installed"] == pytest.approx(7_680_000.0)
     assert rows["total project cost"]["class"] == "aggregate"
+
+
+def test_the_other_one_sided_index_is_also_rejected():
+    """The existing pair test covers base_index alone; this covers the mirror.
+
+    Both one-sided cases must raise, and only one of them was pinned.
+    """
+    with pytest.raises(ValueError, match="BOTH base_index and target_index"):
+        estimate_capex(kit(), site(), 0.30, 0.15, target_index=800.0)
