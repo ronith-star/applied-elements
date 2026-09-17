@@ -78,9 +78,19 @@ def test_no_analytic_check_is_reported_as_literature() -> None:
     sufficient for "literature". That reclassified two analytic checks as
     external validation: a Sobol test against the Ishigami function, whose
     indices are known in closed form, counted as literature-backed because
-    uncertainty.py cites Saltelli and Sobol METHOD papers. The reported
-    literature count was inflated from 27 to 36 by that rule and by a
-    keyword scan that read "identity" and "reported" too loosely.
+    uncertainty.py cites Saltelli and Sobol METHOD papers. That rule, together
+    with a keyword scan that read "identity" and "reported" too loosely,
+    inflated the reported literature count.
+
+    NO ABSOLUTE COUNTS ARE STATED HERE, deliberately. Earlier revisions of
+    this docstring named 27 and 36; the measured values later moved to 28 and
+    37 when a demoted Xia benchmark was restored and a new guard was added to
+    this module, and because the assertions on those literals had by then
+    been replaced with a property check, nothing caught the drift. A reader
+    would have taken 27 as current. Numbers that change when a benchmark is
+    added do not belong in prose; the body below measures both figures at run
+    time and asserts only the relation between them, which is what the claim
+    actually is.
 
     The invariant: a benchmark whose docstring declares its reference value
     exact, or names a closed form, is analytic no matter what its module
@@ -187,3 +197,72 @@ def test_all_six_xia_benchmarks_are_literature() -> None:
     assert len(xia) == 6, f"expected 6 Xia benchmarks, found {len(xia)}: {xia}"
     wrong = {t: k for t, k in xia.items() if k != "literature"}
     assert not wrong, f"Xia benchmarks misclassified: {wrong}"
+
+
+def test_no_docstring_in_this_module_states_an_unasserted_count() -> None:
+    """Counts in prose must be asserted, or not stated.
+
+    This module's own docstrings drifted: they named a literature count of 27
+    and a DOI-first count of 36, both correct when written. Restoring a
+    demoted benchmark moved them to 28 and 37, and because the assertions on
+    those literals had been replaced by a property check, nothing failed and
+    the prose silently became wrong. A reader takes a number in a docstring as
+    current.
+
+    The rule enforced here is narrow and mechanical: any integer in the range
+    where these counts live, appearing in a docstring in this file, must also
+    appear in that function's body, OR appear in a sentence that marks it as
+    historical. Anything else is a live claim with nothing behind it.
+
+    The range is bounded to plausible benchmark counts rather than all
+    integers, because years, DOIs and section numbers are not counts and
+    flagging them would make the guard unusable.
+    """
+    import ast
+    import re
+
+    src = pathlib.Path(__file__).read_text()
+    tree = ast.parse(src)
+    HIST = ("earlier", "once", "named", "later moved", "was inflated",
+            "historical", "previously", "drifted", "no longer",
+            "would have taken", "moved them to")
+
+    # A first version of this guard tokenised on \b\d{1,3}\b, which split
+    # decimals and identifiers into spurious "counts": 128.86 ug/g became 128
+    # and 86, and the DOI 10.3390/min14070727 contributed 10. Those are not
+    # counts and flagging them makes the guard unusable, so measurements,
+    # DOIs, versions and dates are masked out before tokenising. A number is
+    # only a candidate count when it stands alone.
+    def candidates(sentence: str) -> list[str]:
+        masked = re.sub(r"\d+\.\d+", " ", sentence)          # decimals
+        masked = re.sub(r"\b10\.\d{4,}/\S+", " ", masked)     # DOIs
+        masked = re.sub(r"\bv?\d+(\.\d+)+\b", " ", masked)    # versions
+        masked = re.sub(r"\b(19|20)\d{2}\b", " ", masked)     # years
+        masked = re.sub(r"\b[0-9a-f]{7,40}\b", " ", masked)   # git hashes
+        return re.findall(r"(?<![\w.])(\d{1,3})(?![\w.])", masked)
+
+    offenders: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        doc = ast.get_docstring(node) or ""
+        if not doc:
+            continue
+        body_src = "".join(
+            ast.unparse(s) for s in node.body
+            if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant))
+        )
+        for sentence in re.split(r"(?<=[.!?])\s+", doc):
+            if any(h in sentence.lower() for h in HIST):
+                continue
+            for lit in candidates(sentence):
+                if not (5 <= int(lit) <= 200):
+                    continue
+                if lit not in body_src:
+                    offenders.append(f"{node.name}: {lit} in {sentence.strip()[:70]!r}")
+
+    assert not offenders, (
+        "these docstring numbers are not asserted anywhere in their test "
+        "body and are not marked historical, so they are live claims with "
+        "nothing behind them:\n  " + "\n  ".join(offenders)
+    )

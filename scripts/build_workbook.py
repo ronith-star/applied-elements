@@ -60,8 +60,8 @@ SITES = {
 
 # Annual fixed costs, spread over product tonnes. OMITTING THESE WAS A REAL
 # ERROR in the first version of this script: a cash cost built from
-# electricity, reagent and direct labour alone came out at 158 USD/t, which is
-# roughly twenty times too low for HPQ purification and would have made every
+# electricity, reagent and direct labour alone came out at 157.77 USD/t
+# against the corrected 795.02, a factor of 5.0, and would have made every
 # scenario look profitable. A cash cost is not three line items. The platform's
 # own cash_cost() takes labour, maintenance and overhead as arguments for
 # exactly this reason, and the workbook now mirrors that structure.
@@ -285,9 +285,9 @@ def build(path: pathlib.Path) -> dict[str, dict[str, float]]:
          f"*{b('Maintenance, fraction of capex/yr')}", money, ""),
         ("Fixed cost, USD/yr",
          f"=$B${r3 + 8}+$B${r3 + 9}+{b('Overhead, USD/yr')}", money,
-         "Labour, maintenance and overhead. Omitting these gave a 158 USD/t "
-         "cash cost, about twenty times too low, and made every scenario "
-         "look profitable."),
+         "Labour, maintenance and overhead. Omitting these gave a 157.77 "
+         "USD/t cash cost against the corrected 795.02, a factor of 5.0, "
+         "and made every scenario look profitable."),
         ("Freight, USD/yr", f"=$B${r3 + 6}*{b('Freight, USD/t')}", money, ""),
         ("Cash cost, USD/t product",
          f"=($B${r3 + 7}+$B${r3 + 10}+$B${r3 + 11})/$B${r3 + 6}", money2, ""),

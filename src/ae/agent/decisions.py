@@ -39,11 +39,25 @@ output is therefore a RANKING to argue with, not a budget to execute.
 
 References
 ----------
+Both entries below were written from memory in the first version of this
+module and neither was verified at the time, which is a provenance failure of
+exactly the kind the platform's tagging scheme exists to prevent: a citation
+in committed source carries more weight than one in conversation, because the
+next reader has no way to tell it was never checked. Both have since been
+resolved against primary metadata and the fields corrected.
+
 Raiffa, H. and Schlaifer, R. (1961) *Applied Statistical Decision Theory*.
-Harvard Business School. The EVPI construct.
+Division of Research, Graduate School of Business Administration, Harvard
+University, Boston. xxviii + 356 pp. The EVPI construct. No DOI: the 1961
+edition predates DOI assignment. Verified by publisher record; the imprint is
+the Division of Research rather than the Harvard Business School as first
+written.
 
 Howard, R. A. (1966) 'Information value theory'. *IEEE Transactions on
 Systems Science and Cybernetics* 2(1):22-26. doi:10.1109/TSSC.1966.300074
+Verified against Crossref metadata: author Ronald Howard, 1966, volume 2,
+issue 1, pages 22-26, IEEE. Closed access, so no full text was retrieved and
+the derivations here are not quoted from it.
 """
 from __future__ import annotations
 

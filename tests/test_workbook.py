@@ -12,15 +12,23 @@ build script could write a correct Python value into column C and a broken
 formula into column B, and a test that only read the file would pass. Here the
 formulas are evaluated by an engine that has never seen the Python model.
 
-Two defects this caught while it was being written are worth recording. The
+One defect this caught while it was being written is worth recording. The
 first version of the cost build omitted fixed costs entirely, summing
-electricity, reagent and per-tonne labour to a cash cost of 158 USD/t: about
-twenty times too low for HPQ purification, and every scenario looked
+electricity, reagent and per-tonne labour to a cash cost of 157.77 USD/t
+against the corrected 795.02, a factor of 5.0, and every scenario looked
 profitable. The platform's own cash_cost() takes labour, maintenance and
 overhead as arguments precisely because a cash cost is not three line items.
-The second was that after restructuring the cost rows, the hardcoded row
-offsets in the downstream NPV and breakeven formulas still pointed at the old
-rows, which only surfaced when the formulas were actually evaluated.
+
+A correction to this module's own history, since an earlier version of this
+docstring recorded a second defect that never happened: it claimed the
+downstream NPV and breakeven row offsets were left pointing at stale rows
+after the cost-row restructure and that the error surfaced only on
+evaluation. That is not what occurred. The offsets were updated in the same
+edit as the restructure, and the first formula-engine run reported all five
+reconciled rows agreeing at worst 4.82e-13. The only build failure was a
+TypeError from passing a CashFlowResult to a function expecting an array.
+A plausible-sounding defect is not a defect, and inventing one to illustrate
+why a test matters is the same error as inventing a number.
 """
 from __future__ import annotations
 
@@ -105,7 +113,7 @@ def test_cash_cost_is_physically_plausible(evaluated) -> None:
     """A regression guard on the omitted-fixed-cost defect.
 
     The first build summed electricity, reagent and per-tonne labour only and
-    returned 158 USD/t. Published HPQ purification cash costs sit in the
+    returned 157.77 USD/t. Published HPQ purification cash costs sit in the
     high hundreds to low thousands per tonne, so a figure under 400 means a
     cost category has gone missing again rather than that the plant is
     efficient.
