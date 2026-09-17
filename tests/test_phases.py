@@ -250,10 +250,14 @@ def test_golden_cumulative_volume_strain_across_the_inversion() -> None:
     assert strain == pytest.approx(0.0421470, abs=1e-7)
     assert 0.035 < strain < 0.045, "must bracket the trade-literature 3.5 to 4.5 vol% band"
     assert strain * 100.0 == pytest.approx(4.2147, abs=1e-4)
-    # The brief's 3.7 vol% figure is a comparison point, so the claim that it
-    # sits inside the 3.5 to 4.5 vol% band is asserted rather than stated.
+    # The brief's 3.7 vol% figure is a comparison point for the COMPUTED
+    # strain, so what is asserted is the model's agreement with it: the
+    # computed 4.2147 vol% must sit within 1 vol% of the brief's figure and
+    # above it, which is the claim the docstring makes about the brief.
     brief_vol_pct = 3.7
-    assert 3.5 < brief_vol_pct < 4.5
+    assert strain * 100.0 > brief_vol_pct
+    assert strain * 100.0 - brief_vol_pct == pytest.approx(0.5147, abs=5e-4)
+    assert 3.5 < strain * 100.0 < 4.5
     # And the 0.4 vol% step this must NOT be confused with, read from the sourced
     # transition table, differs from the cumulative strain by about tenfold.
     inv = next(t for t in TRANSITIONS if t.name == "alpha_beta_quartz_inversion")

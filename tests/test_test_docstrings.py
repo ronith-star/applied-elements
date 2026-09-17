@@ -41,6 +41,18 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_capex.py", "18"), ("test_capex.py", "97"),
     ("test_capex.py", "4"), ("test_capex.py", "5"), ("test_capex.py", "3"),
     ("test_capex.py", "1"), ("test_capex.py", "2"),
+    # Year in the citation Xia et al. 2024, not a computed quantity.
+    ("test_impurity_location.py", "2024"),
+    # measured value quoted from another test's docstring (test_benchmark_xia_2024_residual_is_lattice) for narrative illustration of the defect, not a quantity computed or checked in this test
+    ("test_validation_record.py", "128.86"),
+    # measured value quoted from another test's docstring for narrative illustration of the defect, not a quantity computed or checked in this test
+    ("test_validation_record.py", "24.23"),
+    # publication year identifying the cited reference (Xia et al. 2024), not a computed claim
+    ("test_validation_record.py", "2024"),
+    # DOI prefix identifying the literature source, not a computed value
+    ("test_validation_record.py", "10.3390"),
+    # publication year of the cited Xia et al. reference, not a computed value
+    ("test_validation_record.py", "2024"),
     # refers to equation (1) mentioned in the docstring, a section/equation reference, not a computed value
     ("test_thermal.py", "1"),
     # part of a DOI identifier for the cited LBNL report, not a computed quantity

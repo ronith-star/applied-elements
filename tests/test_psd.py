@@ -154,9 +154,11 @@ def test_golden_lognormal_weighted_medians() -> None:
     assert 16.37558 / 10.0 == pytest.approx(1.637558, abs=1e-6)
     assert 2.0 * s * s == pytest.approx(0.32880391, abs=5e-9)
     assert 3.0 * s * s == pytest.approx(0.49320586, abs=5e-9)
-    # The superseded exponents came from multiplying the ROUNDED s^2, and
-    # each is low by 1e-8; the exp() values they give are unchanged at the
-    # eight digits the docstring quotes, which is why only the exponents moved.
+    # The superseded exponents came from multiplying the ROUNDED s^2, and each
+    # is low by 1e-8. Their exp() values differ in the eighth digit too
+    # (1.63755758 against 1.63755760), so the quoted 1.63755760 belongs to the
+    # exact exponent; both branches are asserted below. The five-decimal
+    # diameters above are unaffected either way.
     assert 3.0 * 0.16440195 == pytest.approx(0.49320585, abs=5e-9)
     assert math.exp(0.49320585) == pytest.approx(1.63755758, abs=5e-9)
     assert math.exp(3.0 * s * s) == pytest.approx(1.63755760, abs=5e-9)

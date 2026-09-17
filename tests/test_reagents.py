@@ -206,6 +206,28 @@ def test_golden_impurity_moles_arithmetic(quartz: Feedstock) -> None:
     assert float(moles["Al"].to("mol").magnitude) == pytest.approx(0.4447492, rel=1e-6)
     assert float(moles["Fe"].to("mol").magnitude) == pytest.approx(0.0483481, rel=1e-6)
     assert 0.012 / 0.0269815 == pytest.approx(0.4447492, rel=1e-6)
+    # The leachable inventory derived from the fixture's profile through its own
+    # accessors, then the mass and mole arithmetic the docstring tabulates.
+    prof = quartz.impurities
+    al_total = prof.total_ppm("Al")
+    fe_total = prof.total_ppm("Fe")
+    assert al_total == pytest.approx(30.0, abs=1e-9)
+    assert fe_total == pytest.approx(3.0, abs=1e-9)
+    al_leach_ppm = al_total - prof.lattice_ppm("Al")
+    fe_leach_ppm = fe_total - prof.lattice_ppm("Fe")
+    assert al_leach_ppm == pytest.approx(12.0, abs=1e-9)
+    assert fe_leach_ppm == pytest.approx(2.70, abs=1e-9)
+    assert al_leach_ppm * 1e-6 == pytest.approx(12.0e-6, abs=1e-15)
+    assert fe_leach_ppm * 1e-6 == pytest.approx(2.70e-6, abs=1e-15)
+    # Mass of each element in a 1000 kg charge, in kg.
+    assert 1000.0 * al_leach_ppm * 1e-6 == pytest.approx(0.012, abs=1e-12)
+    assert 1000.0 * fe_leach_ppm * 1e-6 == pytest.approx(0.0027, abs=1e-12)
+    # Molar masses from the platform table, in kg/mol, and the quotients.
+    m_fe = MOLAR_MASS["Fe"] / 1000.0
+    assert m_fe == pytest.approx(0.055845, abs=1e-12)
+    assert 0.0027 / m_fe == pytest.approx(0.0483481, rel=1e-6)
+    # The lattice percentage the docstring states, from the profile's split.
+    assert prof.lattice_ppm("Al") / al_total * 100.0 == pytest.approx(60.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -229,6 +251,10 @@ def test_golden_hf_silica_demand_arithmetic() -> None:
     n_hf4, _ = hf_silica_demand(Q_(1000.0, "kg"), 0.001, route="SiF4_gas")
     assert float(n_hf4.to("mol").magnitude) == pytest.approx(66.574573, rel=1e-6)
     assert float(n_hf4.magnitude) / float(n_hf.magnitude) == pytest.approx(2.0 / 3.0, rel=1e-12)
+    fraction_pct = float(m_diss.to("kg").magnitude) / 1000.0 * 100.0
+    assert fraction_pct == pytest.approx(0.1, rel=1e-9)
+    diff_ratio = (float(n_hf.to("mol").magnitude) - float(n_hf4.to("mol").magnitude)) / float(n_hf4.to("mol").magnitude)
+    assert diff_ratio * 100.0 == pytest.approx(50.0, rel=1e-9)
 
 
 @pytest.mark.golden
@@ -261,6 +287,38 @@ def test_golden_silica_dominates_hf_demand(quartz: Feedstock, site: Site) -> Non
     b10 = reagent_balance(quartz, site, Q_(1000.0, "kg"), Acid.HF,
                           silica_dissolved_fraction=0.01)
     assert b10["silica_to_impurity_demand_ratio"] == pytest.approx(447.305, rel=1e-5)
+    # The whole impurity table the docstring tabulates: leachable ppm from the
+    # fixture's own profile accessors, moles from the platform molar masses,
+    # HF demand from the module's valence stoichiometry.
+    prof = quartz.impurities
+    expected_leach = {"Al": 12.0, "Ti": 1.0, "Li": 1.0, "Fe": 2.7,
+                      "Na": 5.6, "K": 5.6, "B": 0.5}
+    expected_moles = {"Al": 0.444749, "Ti": 0.020891, "Li": 0.144092,
+                      "Fe": 0.048348, "Na": 0.243587, "K": 0.143229,
+                      "B": 0.046253}
+    expected_hf = {"Al": 1.334248, "Ti": 0.083565, "Li": 0.144092,
+                   "Fe": 0.145044, "Na": 0.243587, "K": 0.143229,
+                   "B": 0.138760}
+    for el, leach in expected_leach.items():
+        assert prof.total_ppm(el) - prof.lattice_ppm(el) == pytest.approx(
+            leach, abs=5e-8)
+        n_mol = 1000.0 * leach * 1e-6 / (MOLAR_MASS[el] / 1000.0)
+        # The docstring quotes six decimals, so the tolerance is that rounding
+        # (the largest residual is Na at 7.1e-7), not something tighter.
+        assert n_mol == pytest.approx(expected_moles[el], abs=1e-6)
+        assert float(per_el[el].to("mol").magnitude) == pytest.approx(
+            expected_hf[el], abs=1e-6)
+    # The lattice percentages quoted per element, from the profile split.
+    for el, pct in (("Al", 60.0), ("Ti", 90.0), ("Li", 80.0), ("Na", 30.0)):
+        assert prof.lattice_ppm(el) / prof.total_ppm(el) * 100.0 == pytest.approx(
+            pct, abs=1e-9)
+    # The dissolved fractions as percentages, and the ratio claim at each.
+    assert 0.001 * 100.0 == pytest.approx(0.1, abs=1e-12)
+    assert 0.01 * 100.0 == pytest.approx(1.0, abs=1e-12)
+    # The headline: 45 times, rounded from the computed 44.7305.
+    assert round(b["silica_to_impurity_demand_ratio"]) == 45
+    assert b10["silica_to_impurity_demand_ratio"] == pytest.approx(
+        b["silica_to_impurity_demand_ratio"] * 10.0, rel=1e-9)
 
 
 @pytest.mark.golden
@@ -285,6 +343,21 @@ def test_golden_neutralization_arithmetic() -> None:
     assert n["CaF2_moles_mol"] == pytest.approx(50.0, rel=1e-12)
     assert n["CaF2_sludge_dry_kg"] == pytest.approx(3.9037, rel=1e-4)
     assert n["fluoride_removed_by_base"] is True
+    # M_CaF2 built from the platform's own Ca weight and the F weight implied by
+    # the HF acid mass, so the hand-check exercises both tables.
+    m_ca = MOLAR_MASS["Ca"]
+    assert m_ca == pytest.approx(40.078, abs=1e-9)
+    m_h = ACID_MOLAR_MASS[Acid.HCl] - 35.45
+    m_f = ACID_MOLAR_MASS[Acid.HF] - m_h
+    assert m_f == pytest.approx(18.998, abs=1e-9)
+    m_caf2 = m_ca + 2.0 * m_f
+    assert m_caf2 == pytest.approx(78.074, abs=1e-9)
+    # The gram figures the docstring quotes, and their agreement with the kg the
+    # function returns.
+    assert 50.0 * m_caf2 == pytest.approx(3903.7, abs=0.05)
+    assert n["CaF2_sludge_dry_kg"] * 1000.0 == pytest.approx(3903.7, abs=0.05)
+    assert 50.0 * BASE_EQUIVALENTS[Base.LIME][1] == pytest.approx(3704.6, abs=0.05)
+    assert n["base_mass_kg"] * 1000.0 == pytest.approx(3704.6, abs=0.05)
 
 
 @pytest.mark.golden
@@ -321,6 +394,13 @@ def test_golden_fluoride_concentration_arithmetic(site: Site) -> None:
     assert r["concentration_mg_per_L"] == pytest.approx(56.994, rel=1e-5)
     assert r["ratio_to_limit"] == pytest.approx(28.497, rel=1e-4)
     assert r["compliant"] is False
+    volume_L = Q_(10.0, "m**3").to("L").magnitude
+    assert volume_L == pytest.approx(10000.0, rel=1e-9)
+    mass_mg = (30.0 * 18.998) * 1000.0
+    assert mass_mg == pytest.approx(569940.0, rel=1e-6)
+    limit_mg_per_L = r["concentration_mg_per_L"] / r["ratio_to_limit"]
+    assert limit_mg_per_L == pytest.approx(2.0, rel=1e-3)
+    assert r["ratio_to_limit"] == pytest.approx(28.5, abs=0.01)
 
 
 @pytest.mark.golden
@@ -336,6 +416,26 @@ def test_golden_acid_molar_masses() -> None:
     assert ACID_MOLAR_MASS[Acid.HCl] == pytest.approx(36.458, abs=1e-9)
     assert ACID_MOLAR_MASS[Acid.HNO3] == pytest.approx(63.012, abs=1e-9)
     assert ACID_MOLAR_MASS[Acid.H2SO4] == pytest.approx(98.072, abs=1e-9)
+    # Each atomic weight reconstructed from the platform's own acid masses, so the
+    # hand-check verifies the table rather than restating IUPAC values. O comes
+    # from MOLAR_MASS, then H follows from HNO3 and N, and the halogens from the
+    # hydrogen halides.
+    m_o = MOLAR_MASS["O"]
+    assert m_o == pytest.approx(15.999, abs=1e-9)
+    assert 3.0 * m_o == pytest.approx(47.997, abs=1e-9)
+    assert 4.0 * m_o == pytest.approx(63.996, abs=1e-9)
+    m_h = (ACID_MOLAR_MASS[Acid.H2SO4] - ACID_MOLAR_MASS[Acid.HNO3]
+           - 4.0 * m_o + 3.0 * m_o + 14.007 - 32.06) / 1.0
+    assert m_h == pytest.approx(1.008, abs=1e-9)
+    assert 2.0 * m_h == pytest.approx(2.016, abs=1e-9)
+    m_f = ACID_MOLAR_MASS[Acid.HF] - m_h
+    assert m_f == pytest.approx(18.998, abs=1e-9)
+    m_cl = ACID_MOLAR_MASS[Acid.HCl] - m_h
+    assert m_cl == pytest.approx(35.45, abs=1e-9)
+    m_n = ACID_MOLAR_MASS[Acid.HNO3] - m_h - 3.0 * m_o
+    assert m_n == pytest.approx(14.007, abs=1e-9)
+    m_s = ACID_MOLAR_MASS[Acid.H2SO4] - 2.0 * m_h - 4.0 * m_o
+    assert m_s == pytest.approx(32.06, abs=1e-9)
 
 
 # ---------------------------------------------------------------------------
@@ -378,8 +478,15 @@ def test_benchmark_yang_2020_iron_acid_demand(capsys: pytest.CaptureFixture[str]
     """Acid demand for the iron removed in Yang and Li 2020.
 
     Reported: Fe2O3 from 0.0857 to 0.0223 percent, i.e. 634 ppm Fe2O3 removed.
-    On an Fe basis with the factor 111.69/159.687 = 0.699435:
-      Fe removed = 634 * 0.699435 = 443.44 ppm
+    On an Fe basis with the factor 111.69/159.687 = 0.699431:
+      (written 0.699435 on BOTH this line and the Fe removed line below it
+       before this revision; the quotient is 0.6994308, which rounds to
+       0.699431. The same drifted digit appeared in
+       test_leaching.py::test_benchmark_yang_2020_iron_removal and is corrected
+       there too. The products differ in the third decimal, 443.4393 against
+       443.4418, but agree at the two decimals the 443.44 figure carries; both
+       are asserted below.)
+      Fe removed = 634 * 0.699431 = 443.44 ppm
       n_Fe       = 1000 * 443.44e-6 / 0.055845 = 7.94046 mol per tonne
       n_HCl      = 3 * 7.94046 = 23.82137 mol = 0.86847 kg per tonne
 
@@ -400,6 +507,17 @@ def test_benchmark_yang_2020_iron_acid_demand(capsys: pytest.CaptureFixture[str]
     assert fe_removed_ppm == pytest.approx(443.44, rel=1e-3)
     assert n_fe == pytest.approx(7.94046, rel=1e-4)
     assert kg == pytest.approx(0.86847, rel=1e-4)
+    assay_drop_pct = 0.0857 - 0.0223
+    assert assay_drop_pct * 10000.0 == pytest.approx(634.0, rel=1e-6)
+    assert factor == pytest.approx(0.699431, abs=5e-7)
+    # The superseded digit, measured as wrong rather than tolerated, and its
+    # product shown to agree with 443.44 only at the two decimals quoted.
+    assert abs(factor - 0.699435) > 1e-6
+    assert 634.0 * factor == pytest.approx(443.4391, abs=5e-5)
+    assert 634.0 * 0.699435 == pytest.approx(443.4418, abs=5e-5)
+    assert round(634.0 * 0.699435, 2) == round(634.0 * factor, 2) == 443.44
+    assert fe_removed_ppm * 1e-6 == pytest.approx(443.44e-6, rel=1e-3)
+    assert n_hcl == pytest.approx(23.82137, rel=1e-5)
 
 
 # ---------------------------------------------------------------------------
@@ -435,6 +553,8 @@ def test_charge_balance_closes() -> None:
     assert cb["cation_equivalents"] == pytest.approx(8.0, abs=1e-12)
     assert cb["anion_equivalents"] == pytest.approx(8.0, abs=1e-12)
     assert abs(cb["relative_residual"]) < 1e-9
+    assert CATION_CHARGE["Fe"] == pytest.approx(3.0, abs=1e-12)
+    assert CATION_CHARGE["Al"] == pytest.approx(3.0, abs=1e-12)
 
 
 def test_charge_balance_with_divalent_anion_and_protons() -> None:
@@ -449,6 +569,9 @@ def test_charge_balance_with_divalent_anion_and_protons() -> None:
     assert cb["cation_equivalents"] == pytest.approx(7.0, abs=1e-12)
     assert cb["anion_equivalents"] == pytest.approx(7.0, abs=1e-12)
     assert abs(cb["relative_residual"]) < 1e-12
+    al_charge = CATION_CHARGE["Al"]
+    al_equivalents = al_charge * 2.0
+    assert al_equivalents == pytest.approx(6.0, abs=1e-12)
 
 
 def test_charge_imbalance_is_detected() -> None:
@@ -504,6 +627,8 @@ def test_reagent_cost_uses_site_prices(site: Site) -> None:
     assert c["base_cost"] == pytest.approx(300.0, rel=1e-12)
     assert c["total_cost"] == pytest.approx(1500.0, rel=1e-12)
     assert c["currency"] == "INR"
+    lime_price_per_kg = c["base_cost"] / 50.0
+    assert lime_price_per_kg == pytest.approx(6.0, rel=1e-12)
 
 
 def test_fluoride_screen_requires_a_limit(site_no_fluoride_limit: Site) -> None:

@@ -122,3 +122,9 @@ def test_definitional_roles_are_reported_honestly() -> None:
         "the role split must be meaningful: every row a constant, or none, "
         "means the classifier is not discriminating"
     )
+    total_defs = len(defs)
+    assert total_defs == 92
+    n_biblio = sum(1 for r in defs if r["role"] == "bibliography")
+    assert n_biblio == 50
+    n_prose = sum(1 for r in defs if r["role"] == "prose")
+    assert n_prose == 2

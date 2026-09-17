@@ -147,6 +147,8 @@ def test_littles_law_identity_holds_in_the_simulation():
           f"error {chk['relative_error'] * 100:.2f} percent "
           f"(untrimmed reconstruction {untrimmed_err_pct:.3f} percent)")
     assert chk["relative_error"] < 0.005
+    withdrawn_ratio_pct = (horizon_h / (horizon_h - warmup_h) - 1) * 100
+    assert withdrawn_ratio_pct == pytest.approx(5.26, abs=0.01), ("this is the withdrawn explanation's arithmetic on this test's window, not a measurement of the old defect")
 
 
 def test_all_statistics_share_one_measurement_window():

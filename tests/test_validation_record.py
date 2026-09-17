@@ -146,6 +146,16 @@ def test_no_analytic_check_is_reported_as_literature() -> None:
         "these declare an exact reference value yet are counted as literature "
         f"validation:\n  " + "\n  ".join(mislabelled)
     )
+    # The 27 to 36 inflation the DOI-first rule produced. Absolute counts are
+    # not pinned (the comment above explains why), so the historical pair is
+    # used only as a floor on the MEASURED overcount: the analytic and
+    # self-consistency checks that caused it are all still present, so the
+    # measured inflation cannot have fallen below the 9 rows it was then, and
+    # every overcounted row must be one the corrected rule reclassifies.
+    historical_inflation = 36 - 27
+    assert inflated - n_lit >= historical_inflation
+    assert len(over) == inflated - n_lit
+    assert len(over) >= historical_inflation
 
 
 @pytest.mark.benchmark

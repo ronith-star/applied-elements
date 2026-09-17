@@ -159,6 +159,7 @@ def test_perfect_flowsheet_floor_is_the_lattice_inventory():
     floor = floor_concentration(f, "Al", model=model)
     assert floor == pytest.approx(54.0, abs=1e-12)
     assert floor > HPQ_SINGLE_GRAIN_LIMITS_PPM["Al"]
+    assert HPQ_SINGLE_GRAIN_LIMITS_PPM["Al"] == pytest.approx(30.0, abs=1e-12)
 
 
 @pytest.mark.golden
@@ -178,6 +179,20 @@ def test_imperfect_flowsheet_floor_worked_example():
                                 efficiencies={"surface": 0.9, "fluid": 0.5,
                                               "mineral": 0.8})
     assert floor == pytest.approx(68.4, abs=1e-12)
+    # Every residue line of the worked example, derived from the split and the
+    # efficiencies rather than restated.
+    surface_ppm = 120.0 * 0.05
+    fluid_ppm = 120.0 * 0.05
+    mineral_ppm = 120.0 * 0.45
+    assert surface_ppm == pytest.approx(6.0, abs=1e-12)
+    assert mineral_ppm == pytest.approx(54.0, abs=1e-12)
+    assert surface_ppm * (1.0 - 0.9) == pytest.approx(0.6, abs=1e-12)
+    assert fluid_ppm * (1.0 - 0.5) == pytest.approx(3.0, abs=1e-12)
+    assert mineral_ppm * (1.0 - 0.8) == pytest.approx(10.8, abs=1e-12)
+    # The four residues must sum to the floor the model returns.
+    assert (surface_ppm * (1.0 - 0.9) + fluid_ppm * (1.0 - 0.5)
+            + mineral_ppm * (1.0 - 0.8) + mineral_ppm) == pytest.approx(
+        floor, abs=1e-12)
 
 
 @pytest.mark.golden
@@ -199,6 +214,10 @@ def test_implied_removal_rate_worked_example():
     r = implied_removal_rate(128.86, 24.23)
     assert r == pytest.approx(0.8119665, abs=1e-7)
     assert round(r * 100, 2) == 81.2
+    ratio = 24.23 / 128.86
+    assert ratio == pytest.approx(0.1880335, abs=1e-7)
+    percent = r * 100
+    assert percent == pytest.approx(81.1966, abs=1e-4)
 
 
 @pytest.mark.golden
@@ -211,6 +230,12 @@ def test_sio2_from_trace_sum_worked_example():
     s = lattice_ceiling_sio2_percent(24.23)
     assert s == pytest.approx(99.997577, abs=1e-6)
     assert round(s, 3) == 99.998
+    trace_ppm = 24.23
+    trace_percent = trace_ppm / 1e4
+    assert trace_percent == pytest.approx(24.23e-4, abs=1e-9)
+    assert trace_percent == pytest.approx(0.002423, abs=1e-9)
+    baseline = 100.0
+    assert baseline - trace_percent == pytest.approx(s, abs=1e-6)
 
 
 @pytest.mark.golden
@@ -224,6 +249,11 @@ def test_hpq_gate_worked_example_pass():
     assert passes
     assert per["Al"] == (12.0, 30.0, True)
     assert "19.00" in verdict
+    assert per["Ti"] == (4.0, 10.0, True)
+    assert per["Li"] == (2.0, 5.0, True)
+    assert HPQ_SINGLE_GRAIN_LIMITS_PPM["Ti"] == pytest.approx(10.0, abs=1e-9)
+    assert HPQ_SINGLE_GRAIN_LIMITS_PPM["Li"] == pytest.approx(5.0, abs=1e-9)
+    assert HPQ_TRACE_SUM_LIMIT_PPM == pytest.approx(50.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -242,6 +272,8 @@ def test_hpq_gate_worked_example_one_element_fails():
     assert "Al 45.00 > 30.00" in verdict
     total = 45.0 + 1.0 + 0.5 + 0.2
     assert total < HPQ_TRACE_SUM_LIMIT_PPM
+    assert total == pytest.approx(46.7, abs=1e-9)
+    assert HPQ_TRACE_SUM_LIMIT_PPM == pytest.approx(50.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -413,6 +445,24 @@ def test_benchmark_prior_floors_against_xia_residual(capsys):
               f"LA-ICP-MS measurement.")
     assert residual > 24.23, "priors are more pessimistic than Xia's real result"
     assert 10.0 < err < 40.0
+    # The prior lattice fractions the docstring names, read from the prior table.
+    assert PARTITION_PRIORS[(OreType.VEIN_QUARTZ, "Al")].fractions["lattice"] == (
+        pytest.approx(0.45, abs=1e-12))
+    assert PARTITION_PRIORS[(OreType.VEIN_QUARTZ, "Ti")].fractions["lattice"] == (
+        pytest.approx(0.60, abs=1e-12))
+    assert PARTITION_PRIORS[(OreType.VEIN_QUARTZ, "Li")].fractions["lattice"] == (
+        pytest.approx(0.75, abs=1e-12))
+    # The miss the benchmark reports, every figure derived from the computed
+    # residual rather than quoted.
+    assert residual == pytest.approx(39.58, abs=0.005)
+    # model_removal is already a percentage, so it is compared directly.
+    assert model_removal == pytest.approx(69.29, abs=0.005)
+    xia_removal_pct = (1.0 - 24.23 / feed_total) * 100.0
+    assert xia_removal_pct == pytest.approx(81.20, abs=0.005)
+    rel_err_pct = abs(model_removal - xia_removal_pct) / xia_removal_pct
+    assert rel_err_pct * 100.0 == pytest.approx(14.67, abs=0.01)
+    assert residual / 24.23 == pytest.approx(1.63, abs=0.005)
+    assert residual > 24.23
 
 
 # --- the central behaviour: raise, do not guess -----------------------------
@@ -519,6 +569,17 @@ def test_lattice_removal_allowed_when_mechanism_is_named():
         ),
     )
     assert floor == pytest.approx(30.0, abs=1e-12)
+    al_ppm = 100.0
+    lattice_fraction = 0.5
+    lattice_ppm = al_ppm * lattice_fraction
+    assert lattice_ppm == pytest.approx(50.0, abs=1e-9)
+    lattice_removal_fraction = 0.4
+    lattice_removal_pct = lattice_removal_fraction * 100.0
+    assert lattice_removal_pct == pytest.approx(40.0, abs=1e-9)
+    remaining_fraction = 1.0 - lattice_removal_fraction
+    assert remaining_fraction == pytest.approx(0.6, abs=1e-9)
+    final_check = lattice_ppm * remaining_fraction
+    assert final_check == pytest.approx(30.0, abs=1e-12)
 
 
 def test_lattice_efficiency_cannot_be_smuggled_through_efficiencies():
@@ -644,6 +705,9 @@ def test_the_sum_limit_exceeds_the_sum_of_the_element_limits():
     """
     assert math.fsum(HPQ_SINGLE_GRAIN_LIMITS_PPM.values()) == pytest.approx(72.0)
     assert math.fsum(HPQ_SINGLE_GRAIN_LIMITS_PPM.values()) > HPQ_TRACE_SUM_LIMIT_PPM
+    sorted_limits = sorted(HPQ_SINGLE_GRAIN_LIMITS_PPM.values())
+    assert sorted_limits == pytest.approx([1.0, 2.0, 3.0, 5.0, 5.0, 8.0, 8.0, 10.0, 30.0])
+    assert HPQ_TRACE_SUM_LIMIT_PPM == pytest.approx(50.0)
 
 
 def test_all_priors_are_assumed_with_a_stated_basis():

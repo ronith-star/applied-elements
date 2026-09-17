@@ -206,7 +206,10 @@ def test_golden_cp_alpha_quartz_at_298() -> None:
     Per unit mass: 43.19424998 / 0.0600843 = 718.894 J/(kg K).
 
     sqrt(298.15) was written 17.2670496 before this revision. It is 17.2670206,
-    wrong in the sixth digit, and it does not reproduce the quotient on the
+    so the two agree through six significant figures and first differ in the
+    seventh (the fifth decimal place). An earlier version of this note called
+    it the sixth digit, which was a miscount. It does not reproduce the
+    quotient on the
     same line: -716.1/17.2670496 is -41.47205322, not -41.47212290. The
     corrected root gives -41.47212290 exactly as written, so the quoted term
     was right and only the intermediate was drifted. Both are asserted below.
@@ -252,10 +255,16 @@ def test_golden_landau_excess_heat_capacity_at_298() -> None:
           = 1475.8425 / 1363.63624
           = 1.08228460 J/(mol K)
     (the denominator was written 1363.63627 before this revision. The exact
-    product 2 x 847 x Q_0^2 is 1363.636252, and the quotients are NOT equal at
-    the eight digits quoted: 1475.8425/1363.63627 gives 1.08228457 against
-    1.08228460 for the corrected denominator, which is the value the model
-    returns and the test asserts. Both quotients are computed below.)
+    product 2 x 847 x Q_0^2, with Q_0 carried at full precision, is
+    1363.6362418, so the corrected figure above is that rounded to eight
+    figures. The quotients are NOT equal at the eight digits quoted:
+    1475.8425/1363.63627 gives 1.08228457 against 1.08228460 for the exact
+    denominator, which is the value the model returns and the test asserts.
+    An earlier version of this note put the exact product at 1363.636252.
+    That was wrong and wrong in the very way the note exists to diagnose:
+    1363.636252 is 2 x 847 x (rounded Q_0)^2, so it propagated the rounding of
+    the quoted Q_0 instead of squaring Q_0 itself. Both quotients and both
+    products are computed below.)
 
     So the ordering transition contributes 2.5 percent of the total Cp at room
     temperature, and the total is 43.19424998 + 1.08228460 = 44.27653458 J/(mol K).
@@ -277,11 +286,18 @@ def test_golden_landau_excess_heat_capacity_at_298() -> None:
     numerator = 298.15 * 4.95
     assert numerator == pytest.approx(1475.8425, abs=1e-4)
     denominator = 2.0 * 847.0 * q0 * q0
-    assert denominator == pytest.approx(1363.63624, abs=5e-5)
+    assert denominator == pytest.approx(1363.6362418, abs=5e-8)
+    assert numerator / denominator == pytest.approx(1.08228460, abs=5e-9)
     # The superseded denominator, measured: it misses the asserted Cp_ex in the
     # eighth digit, which is why the digit was corrected rather than tolerated.
-    assert numerator / denominator == pytest.approx(1.08228460, abs=5e-9)
     assert numerator / 1363.63627 == pytest.approx(1.08228457, abs=5e-9)
+    # And the rounding-propagated product that an earlier revision of this note
+    # wrongly called exact: squaring the ROUNDED Q_0 gives 1363.6362519, which
+    # differs from the true product and also misses Cp_ex in the eighth digit.
+    rounded_q0_product = 2.0 * 847.0 * 0.89720682 ** 2
+    assert rounded_q0_product == pytest.approx(1363.6362519, abs=5e-8)
+    assert rounded_q0_product != pytest.approx(denominator, abs=1e-8)
+    assert numerator / rounded_q0_product == pytest.approx(1.08228459, abs=5e-9)
     baseline = float(total.magnitude) - float(cp_ex.magnitude)
     assert baseline == pytest.approx(43.19424998, abs=1e-7)
     percent_contribution = float(cp_ex.magnitude) / float(total.magnitude) * 100.0
@@ -432,6 +448,12 @@ def test_golden_fusion_path_enthalpy(ore, eta_unity) -> None:
     h_q = phase_enthalpy(Polymorph.QUARTZ, Q_(T_REF, "K"))
     assert float(h_q.magnitude) == pytest.approx(-910720.0, abs=1e-6)
     assert 82.5 * (1996.0 - 298.15) == pytest.approx(140072.6, abs=0.1)
+    # The -921080 J/mol liquid reference the docstring names is what remains of
+    # H(qL, 1996 K) once the sensible term is taken back off, so it is
+    # recovered from the model rather than restated.
+    h_liq_ref = float(h_liq.magnitude) - 82.5 * (1996.0 - 298.15)
+    assert h_liq_ref == pytest.approx(-921080.0, abs=1.0)
+    assert h_liq_ref < float(h_q.magnitude)
 
     step = ThermalStep(name="fuse", from_phase=Polymorph.QUARTZ,
                        to_phase=Polymorph.SILICA_LIQUID, t_start=Q_(298.15, "K"),
@@ -444,7 +466,6 @@ def test_golden_fusion_path_enthalpy(ore, eta_unity) -> None:
     # tabulates, derived from the phase enthalpies the model returns.
     span_k = 1996.0 - 298.15
     assert span_k == pytest.approx(1697.85, abs=1e-9)
-    assert float(h_q.magnitude) == pytest.approx(-921080.0 + 10360.0, abs=1.0)
     dh_j = float(h_liq.magnitude) - float(h_q.magnitude)
     assert dh_j == pytest.approx(129712.6, abs=1.0)
     assert dh_j / 1000.0 == pytest.approx(129.71, abs=0.01)
@@ -505,11 +526,17 @@ def test_golden_quench_heat_rejection(ore) -> None:
     # Per unit mass, through the module's molar mass.
     assert M_SIO2 == pytest.approx(0.0600843, abs=1e-9)
     assert total_j / M_SIO2 == pytest.approx(955441.0, abs=200.0)
-    # The quench span in degC and K, and the mean rate over 60 s.
-    span_k = 1173.15 - 298.15
+    # The 900 degC to 25 degC endpoints named in the summary line, converted
+    # from the Quantity arguments the function was actually called with, so the
+    # docstring's degC framing is tied to the K values under test rather than
+    # restated as literal arithmetic.
+    t_hot = Q_(1173.15, "K")
+    t_cold = Q_(298.15, "K")
+    assert float(t_hot.to("degC").magnitude) == pytest.approx(900.0, abs=0.01)
+    assert float(t_cold.to("degC").magnitude) == pytest.approx(25.0, abs=0.01)
+    span_k = float((t_hot - t_cold).to("K").magnitude)
     assert span_k == pytest.approx(875.0, abs=1e-9)
-    assert 1173.15 - 273.15 == pytest.approx(900.0, abs=1e-9)
-    assert 298.15 - 273.15 == pytest.approx(25.0, abs=1e-9)
+    assert span_k / 60.0 == pytest.approx(float(rate.to("K/s").magnitude), rel=1e-9)
 
 
 @pytest.mark.golden
