@@ -1,4 +1,6 @@
 """Surrogate validation: grouped splits, baselines, OOD refusal."""
+import pathlib
+
 import numpy as np
 import pytest
 
@@ -378,3 +380,127 @@ def test_permutation_importance_recovers_the_known_mechanism():
     # And the top feature must dominate by a clear margin, as 0.611 vs 0.182
     # implies.
     assert imp["al_ppm"] > 2.0 * imp["p80_um"]
+
+
+def _load_demo_surrogate():
+    """Load scripts/demo_surrogate.py by path.
+
+    `from scripts import demo_surrogate` was the first attempt and it cannot
+    work: scripts/ deliberately has no __init__.py because it holds runnable
+    command-line tools, not an importable package, and adding one to satisfy
+    a test would misrepresent the layout. The three tests below were reported
+    as "pinned" while failing on this ImportError, which is why the loader is
+    a named helper with this note rather than an inline try/except: a test
+    that cannot import its fixture is not a passing test.
+    """
+    import importlib.util  # noqa: PLC0415
+
+    path = pathlib.Path(__file__).resolve().parent.parent / "scripts" / "demo_surrogate.py"
+    assert path.exists(), f"{path} is missing; the demo script is the fixture source"
+    spec = importlib.util.spec_from_file_location("demo_surrogate", path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.mark.benchmark
+def test_gbm_loses_to_ridge_on_a_correctly_specified_linear_problem() -> None:
+    """A tree ensemble must not be assumed better than a line.
+
+    On grouped synthetic data whose generating function is linear in two
+    features with an additive per-deposit intercept, the gradient-boosted
+    surrogate loses to ridge regression on EVERY leave-one-deposit-out fold.
+    That is the correct outcome, not a defect: the linear model is correctly
+    specified, and the ensemble pays in variance for flexibility the problem
+    does not reward.
+
+    This is asserted rather than merely observed because the failure mode it
+    guards against is institutional. A platform that ships a gradient-boosted
+    surrogate invites the reader to assume it is the better model. With a few
+    dozen samples across a handful of deposits it frequently is not, and the
+    per-fold baseline comparison is the only thing that reveals it. If a
+    future change makes the ensemble win here, that is a finding worth
+    inspecting, not a test to silence: it would mean either the fixture has
+    stopped being linear or the baseline has broken.
+    """
+    demo = _load_demo_surrogate()
+
+    ts = demo.synthetic_deposits(seed=0)
+    res = evaluate_surrogate(ts, kind="gbm", seed=0)
+
+    beats_ridge = [f.deposit for f in res.folds
+                   if f.rmse < f.baseline_ridge_rmse]
+    beats_mean = [f.deposit for f in res.folds
+                  if f.rmse < f.baseline_mean_rmse]
+
+    assert len(beats_mean) == len(res.folds), (
+        "the surrogate must at least beat predicting the training mean on "
+        f"every fold; it failed on {set(f.deposit for f in res.folds) - set(beats_mean)}"
+    )
+    assert not beats_ridge, (
+        "the gradient-boosted model now beats ridge on "
+        f"{beats_ridge}, which contradicts the documented finding. Either "
+        "the fixture is no longer linear or the ridge baseline is broken; "
+        "inspect before changing this assertion."
+    )
+
+
+@pytest.mark.benchmark
+def test_random_kfold_is_optimistic_by_a_measured_margin() -> None:
+    """Grouped data makes random k-fold understate out-of-deposit error.
+
+    Mechanism: samples from one deposit share an intercept, so a random split
+    leaves siblings of each test sample in training and the model partly
+    memorises the offset instead of learning the chemistry. The ratio of
+    leave-one-deposit-out RMSE to random k-fold RMSE measures the size of that
+    self-deception. It must exceed 1.
+
+    The magnitude is deliberately bounded loosely (1.0 to 2.0) rather than
+    pinned: it depends on the deposit-offset standard deviation relative to
+    the noise, and pinning it would make the test a record of one fixture
+    rather than of the effect. What must hold is the SIGN.
+
+    Basis: this is an ANALYTIC check against a known generating function, not
+    a literature benchmark. The fixture's per-deposit intercept is drawn from
+    a distribution this test controls, so the direction of the inequality is
+    known by construction: at an offset standard deviation of zero the two
+    schemes must agree, and any positive offset creates leakage a random
+    split can exploit. The reference value is exact in that sense and no
+    published measurement is being reproduced.
+    """
+    demo = _load_demo_surrogate()
+
+    ts = demo.synthetic_deposits(seed=0)
+    opt = random_kfold_optimism(ts, kind="gbm", seed=0)
+    ratio = opt["optimism_ratio"]
+    assert ratio > 1.0, (
+        f"random k-fold RMSE {opt['random_kfold_rmse']:.4f} should be LOWER "
+        f"than leave-one-deposit-out {opt['leave_one_deposit_out_rmse']:.4f}; "
+        f"ratio came out {ratio:.3f}, so the grouping leak has vanished and "
+        "the fixture no longer has deposit structure"
+    )
+    assert 1.0 < ratio < 2.0, f"optimism ratio {ratio:.3f} outside expected band"
+
+
+def test_permutation_importance_has_a_working_negative_control() -> None:
+    """A feature with no causal role must rank at zero.
+
+    demo_surrogate's fixture includes li_ppm, which is drawn at random and
+    never enters the generating function. If permutation importance assigns it
+    material weight, the measure is reporting noise as signal and no
+    importance ranking from this platform can be trusted.
+    """
+    demo = _load_demo_surrogate()
+
+    ts = demo.synthetic_deposits(seed=0)
+    model = Surrogate(kind="gbm", seed=0).fit(ts)
+    imp = model.permutation_importance(ts)
+
+    causal = max(imp["al_ppm"], imp["ti_ppm"])
+    assert imp["li_ppm"] < 0.10 * causal, (
+        f"li_ppm has no causal role but scored {imp['li_ppm']:.4f} against a "
+        f"largest causal importance of {causal:.4f}; the measure is picking "
+        "up noise"
+    )
+    assert imp["al_ppm"] > imp["li_ppm"] and imp["ti_ppm"] > imp["li_ppm"]

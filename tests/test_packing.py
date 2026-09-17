@@ -83,6 +83,7 @@ def test_packing_outputs_are_dimensionless(mcgeary_classes) -> None:
     [kg/m^3]. Equation (5) is a ratio of viscosities.
     """
     r = furnas_max_packing(mcgeary_classes)
+    assert r.phi_max == pytest.approx(1.0 - (1.0 - 0.625) ** r.n_classes, abs=1e-12)
     assert isinstance(r.phi_max, float)
     assert all(isinstance(x, float) for x in r.composition)
     assert isinstance(volume_to_mass_fraction(0.65, FUSED_SILICA, EPOXY), float)
@@ -165,6 +166,7 @@ def test_golden_furnas_packing_fractions() -> None:
     assert 0.375 ** 3 == pytest.approx(0.052734375, abs=1e-9)
     assert 0.375 ** 4 == pytest.approx(0.019775391, abs=1e-9)
 
+    assert 100.0 * 0.625 == pytest.approx(62.5, abs=1e-9)
     expected = {1: 0.62500, 2: 0.85938, 3: 0.94727, 4: 0.98022}
     for n, phi in expected.items():
         classes = tuple(SizeClass(diameter=Q_(10.0 ** (4 - i), "um")) for i in range(n))
@@ -219,6 +221,9 @@ def test_golden_krieger_dougherty_viscosity_penalty() -> None:
     viscosity for a 30 percent relative gain in loading. That trade, not the geometric
     ceiling, is what sets commercial filler content.
     """
+    assert float(EINSTEIN_INTRINSIC_VISCOSITY.quantity
+                 .to("dimensionless").magnitude) == pytest.approx(2.5, abs=0.0)
+    assert -2.5 * 0.70 == pytest.approx(-1.75, abs=1e-12)
     assert 1.0 - 0.50 / 0.70 == pytest.approx(0.285714, abs=1e-6)
     assert 1.0 - 0.60 / 0.70 == pytest.approx(0.142857, abs=1e-6)
     assert 1.0 - 0.65 / 0.70 == pytest.approx(0.071429, abs=1e-6)
@@ -263,10 +268,20 @@ def test_golden_volume_to_mass_fraction() -> None:
     why an EMC datasheet weight percent cannot be compared across filler types without the
     density.
     """
+    assert float(CRYSTALLINE_SILICA.to("kg/m**3").magnitude) == pytest.approx(
+        2650.0, abs=0.0)
+    assert float(FUSED_SILICA.to("kg/m**3").magnitude) == pytest.approx(2200.0,
+                                                                        abs=0.0)
+    assert float(EPOXY.to("kg/m**3").magnitude) == pytest.approx(1200.0, abs=0.0)
     assert 0.65 * 2650.0 == pytest.approx(1722.5)
+    assert 0.35 * 1200.0 == pytest.approx(420.0)
     assert 1722.5 + 0.35 * 1200.0 == pytest.approx(2142.5)
     assert 1722.5 / 2142.5 == pytest.approx(0.80397, abs=1e-5)
+    assert 100.0 * (1722.5 / 2142.5) == pytest.approx(80.40, abs=5e-3)
+    assert 0.65 * 2200.0 == pytest.approx(1430.0)
+    assert 1430.0 + 420.0 == pytest.approx(1850.0)
     assert 1430.0 / 1850.0 == pytest.approx(0.77297, abs=1e-5)
+    assert 100.0 * (1430.0 / 1850.0) == pytest.approx(77.30, abs=5e-3)
 
     assert volume_to_mass_fraction(0.65, CRYSTALLINE_SILICA, EPOXY) == pytest.approx(
         0.80397, abs=1e-5)
@@ -295,6 +310,11 @@ def test_golden_andreasen_grading() -> None:
     The finite fine cutoff reduces the undersize fraction slightly, because the
     infinitely fine tail demanded by equation (3) is removed.
     """
+    assert 10.0 ** 0.5 == pytest.approx(3.1622777, abs=1e-7)
+    assert 0.01 ** 0.5 == pytest.approx(0.1, abs=1e-12)
+    assert 100.0 ** 0.5 == pytest.approx(10.0, abs=1e-12)
+    assert 3.1622777 - 0.1 == pytest.approx(3.0622777, abs=1e-7)
+    assert 10.0 - 0.1 == pytest.approx(9.9, abs=1e-12)
     assert 0.1 ** 0.5 == pytest.approx(0.3162278, abs=1e-7)
     assert andreasen_cumulative(Q_(10.0, "um"), Q_(100.0, "um"), 0.5) == pytest.approx(
         0.3162278, abs=1e-7)
@@ -335,12 +355,16 @@ def test_benchmark_furnas_against_mcgeary_quaternary(mcgeary_classes) -> None:
     the number a formulator needs to subtract before using any Furnas prediction.
     """
     r = furnas_max_packing(mcgeary_classes)
+    assert r.phi_max == pytest.approx(0.98022, abs=5e-6)
     lit_phi = 0.951
+    assert 100.0 * lit_phi == pytest.approx(95.1, abs=1e-9)
     err_phi = 100.0 * (r.phi_max - lit_phi) / lit_phi
 
     lit_comp = [60.7, 23.0, 10.2, 6.1]
     model_comp = [100.0 * x for x in r.composition]
+    assert model_comp[3] == pytest.approx(3.36, abs=5e-3)
     err_fine = 100.0 * (model_comp[3] - lit_comp[3]) / lit_comp[3]
+    assert err_fine == pytest.approx(-44.9, abs=0.05)
 
     print(f"\n[benchmark] Furnas vs McGeary 1961 quaternary sphere packing"
           f"\n  ratios 1:7:38:316, monomodal phi_1 = 0.625"
@@ -378,7 +402,10 @@ def test_benchmark_monomodal_against_random_close_packing() -> None:
     """
     mcgeary = float(PHI_MONOMODAL_VIBRATED.quantity.to("dimensionless").magnitude)
     scott = float(PHI_RANDOM_CLOSE.quantity.to("dimensionless").magnitude)
+    assert mcgeary == pytest.approx(0.625, abs=0.0)
+    assert scott == pytest.approx(0.6366, abs=0.0)
     err = 100.0 * (mcgeary - scott) / scott
+    assert err == pytest.approx(-1.82, abs=5e-3)
 
     classes = tuple(SizeClass(diameter=Q_(10.0 ** (4 - i), "um")) for i in range(4))
     phi_m = furnas_max_packing(classes, PHI_MONOMODAL_VIBRATED).phi_max
@@ -445,6 +472,7 @@ def test_size_classes_are_sorted_internally() -> None:
 
 def test_close_size_ratio_warns_by_default_and_can_be_made_fatal() -> None:
     """A sub-sevenfold ladder warns, because McGeary's own optimum contains a 5.43 step."""
+    assert 38.0 / 7.0 == pytest.approx(5.43, abs=5e-3)
     close = tuple(SizeClass(diameter=Q_(d, "um")) for d in (30.0, 10.0))
     r = furnas_max_packing(close)
     assert r.ratio_warning is not None
@@ -466,6 +494,8 @@ def test_mcgeary_own_ladder_would_fail_a_strict_gate(mcgeary_classes) -> None:
     """Documents why the gate is a warning: 38/7 = 5.43 is below the stated threshold."""
     r = furnas_max_packing(mcgeary_classes)
     assert min(r.size_ratios) == pytest.approx(38.0 / 7.0, rel=1e-12)
+    assert 38.0 / 7.0 == pytest.approx(5.43, abs=5e-3)
+    assert float(MIN_SIZE_RATIO.quantity.to("dimensionless").magnitude) == 7.0
     assert min(r.size_ratios) < 7.0
     with pytest.raises(ValueError):
         furnas_max_packing(mcgeary_classes, enforce_size_ratio=True)
@@ -531,7 +561,9 @@ def test_andreasen_cumulative_bounds_and_monotonicity() -> None:
 
 
 def test_modified_andreasen_endpoints_and_limit() -> None:
-    """Equation (4) must hit 0 at d_min, 1 at d_max, and approach (3) as d_min falls."""
+    """Equation (4) must hit 0 at d_min, 1 at d_max, and approach equation (3) as
+    d_min falls.
+    """
     assert andreasen_modified_cumulative(
         Q_(0.01, "um"), Q_(0.01, "um"), Q_(100.0, "um"), 0.5) == 0.0
     assert andreasen_modified_cumulative(

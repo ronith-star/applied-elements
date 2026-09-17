@@ -82,15 +82,21 @@ def test_no_analytic_check_is_reported_as_literature() -> None:
     with a keyword scan that read "identity" and "reported" too loosely,
     inflated the reported literature count.
 
-    NO ABSOLUTE COUNTS ARE STATED HERE, deliberately. Earlier revisions of
-    this docstring named 27 and 36; the measured values later moved to 28 and
-    37 when a demoted Xia benchmark was restored and a new guard was added to
-    this module, and because the assertions on those literals had by then
-    been replaced with a property check, nothing caught the drift. A reader
-    would have taken 27 as current. Numbers that change when a benchmark is
-    added do not belong in prose; the body below measures both figures at run
-    time and asserts only the relation between them, which is what the claim
-    actually is.
+    NO ABSOLUTE COUNTS ARE STATED HERE, deliberately, and this paragraph
+    states none: earlier revisions of this docstring named the literature
+    count and the DOI-first count as literals, and both went stale when a
+    demoted benchmark was restored and a guard was added to this module.
+    Because the assertions on those literals had by then been replaced with a
+    property check, nothing failed and the prose silently became wrong.
+
+    Worse, the first attempt at fixing it kept the stale pair in prose as
+    "historical" alongside the then-current pair, and widened this module's
+    historical-marker whitelist in the same commit so that both sentences
+    became permanently exempt from the guard written to catch exactly that
+    drift. Quoting the current value as context is the drift. So no count
+    appears here at all: the body below measures both figures at run time and
+    asserts only the relation between them, which is what the claim actually
+    is.
 
     The invariant: a benchmark whose docstring declares its reference value
     exact, or names a closed form, is analytic no matter what its module
@@ -219,12 +225,13 @@ def test_all_six_xia_benchmarks_are_literature() -> None:
 def test_no_docstring_in_this_module_states_an_unasserted_count() -> None:
     """Counts in prose must be asserted, or not stated.
 
-    This module's own docstrings drifted: they named a literature count of 27
-    and a DOI-first count of 36, both correct when written. Restoring a
-    demoted benchmark moved them to 28 and 37, and because the assertions on
-    those literals had been replaced by a property check, nothing failed and
-    the prose silently became wrong. A reader takes a number in a docstring as
-    current.
+    This module's own docstrings drifted: they stated the literature count
+    and the DOI-first count as literals, both correct when written. Restoring
+    a demoted benchmark moved both counts up by one, and because the
+    assertions on those literals had been replaced by a property check,
+    nothing failed and the prose silently became wrong. A reader takes a
+    number in a docstring as current. No literal is repeated here for the
+    same reason: this docstring is subject to its own rule.
 
     The rule enforced here is narrow and mechanical: any integer in the range
     where these counts live, appearing in a docstring in this file, must also
@@ -240,9 +247,16 @@ def test_no_docstring_in_this_module_states_an_unasserted_count() -> None:
 
     src = pathlib.Path(__file__).read_text()
     tree = ast.parse(src)
-    HIST = ("earlier", "once", "named", "later moved", "was inflated",
-            "historical", "previously", "drifted", "no longer",
-            "would have taken", "moved them to")
+    # Markers that a sentence is describing a PAST value. The whitelist is
+    # deliberately narrow, and two entries were REMOVED after an audit: I had
+    # added "would have taken" and "moved them to" in the same commit that
+    # widened the tokenizer, which exempted the two sentences of this module's
+    # own docstring that stated the then-current counts as literals. Whitelisting the
+    # prose you just wrote defeats the guard you wrote it for. A sentence now
+    # has to say the number is historical in terms that could not describe a
+    # current value.
+    HIST = ("earlier", "once named", "was inflated", "historical",
+            "previously", "no longer", "at the time", "since corrected")
 
     # A first version of this guard tokenised on \b\d{1,3}\b, which split
     # decimals and identifiers into spurious "counts": 128.86 ug/g became 128
@@ -251,12 +265,47 @@ def test_no_docstring_in_this_module_states_an_unasserted_count() -> None:
     # DOIs, versions and dates are masked out before tokenising. A number is
     # only a candidate count when it stands alone.
     def candidates(sentence: str) -> list[str]:
-        masked = re.sub(r"\d+\.\d+", " ", sentence)          # decimals
-        masked = re.sub(r"\b10\.\d{4,}/\S+", " ", masked)     # DOIs
-        masked = re.sub(r"\bv?\d+(\.\d+)+\b", " ", masked)    # versions
-        masked = re.sub(r"\b(19|20)\d{2}\b", " ", masked)     # years
-        masked = re.sub(r"\b[0-9a-f]{7,40}\b", " ", masked)   # git hashes
-        return re.findall(r"(?<![\w.])(\d{1,3})(?![\w.])", masked)
+        """Bare integers in a sentence that could plausibly be a count.
+
+        Two bugs were found in this helper by audit and both are recorded
+        because each made the guard silently weaker rather than noisier.
+
+        First version tokenised on a bare word-boundary digit pattern, which
+        split decimals and identifiers: a measured concentration in ug/g
+        contributed its integer and fractional parts as two separate
+        "counts", and a DOI contributed its prefix.
+
+        Second version masked those with a lookahead rejecting any digit
+        followed by a period. That cannot distinguish a decimal point from a
+        full stop, so EVERY SENTENCE-TERMINAL COUNT was exempt. The positive
+        control that was supposed to validate the guard injected a pair of
+        counts; only the mid-sentence one was reported, the sentence-final
+        one passed silently, and the partial catch was read as the guard
+        working. A control whose partial failure looks like success is worse
+        than no control.
+
+        Current version substitutes each non-count construct with a
+        DIGIT-FREE placeholder before tokenising, so the tokenizer cannot see
+        through it and needs no punctuation lookahead. Order matters:
+        scientific notation must be masked before the decimal rule, or
+        "4.82e-13" loses "4.82" and leaves a bare "4".
+        """
+        masked = re.sub(r"\b\d+(?:\.\d+)?e[-+]?\d+\b", " SCI ", sentence,
+                        flags=re.I)
+        masked = re.sub(r"\b10\.\d{4,}/\S+", " DOI ", masked)
+        masked = re.sub(r"\b\d+(?:\.\d+)+\b", " NUM ", masked)
+        masked = re.sub(r"\b(?:19|20)\d{2}\b", " YEAR ", masked)
+        masked = re.sub(r"\b(?=[0-9a-f]{7,40}\b)(?=.*[a-f])[0-9a-f]+\b",
+                        " SHA ", masked)
+        masked = re.sub(r"\bpages?\s*\d+\s*[-\u2013]\s*\d+", " PAGES ",
+                        masked, flags=re.I)
+        # A number bound to a unit is a measurement, not a count of things
+        # this module tracks.
+        masked = re.sub(
+            r"\b\d{1,4}\s*(?:pp\b|pages?\b|px\b|ppm\b|ppb\b|kwh\b|usd\b"
+            r"|t/|ug/g\b|percent\b|%|sd\b|seconds?\b|ms\b)",
+            " UNIT ", masked, flags=re.I)
+        return re.findall(r"(?<![\w.$-])(\d{1,3})(?!\w)", masked)
 
     offenders: list[str] = []
     for node in ast.walk(tree):

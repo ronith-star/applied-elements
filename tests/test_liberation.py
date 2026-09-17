@@ -80,6 +80,9 @@ def test_exposure_worked_example_ten_percent_ratio():
     Enclosed = (1 - 0.1)^3 = 0.9^3 = 0.729.
     E = 1 - 0.729 = 0.271.
     """
+    assert 10.0 / 100.0 == pytest.approx(0.1, abs=1e-15)
+    assert 1.0 - 0.1 == pytest.approx(0.9, abs=1e-15)
+    assert 0.9 ** 3 == pytest.approx(0.729, abs=1e-12)
     assert enclosed_fraction(Q_(100.0, "um"), Q_(10.0, "um")) == pytest.approx(
         0.729, abs=1e-12
     )
@@ -99,6 +102,9 @@ def test_exposure_worked_example_one_third_ratio():
     Enclosed = (2/3)^3 = 8/27 = 0.2962963.
     E = 1 - 8/27 = 19/27 = 0.7037037.
     """
+    assert (2.0 / 3.0) ** 3 == pytest.approx(8.0 / 27.0, abs=1e-15)
+    assert 8.0 / 27.0 == pytest.approx(0.2962963, abs=1e-7)
+    assert 1.0 - 8.0 / 27.0 == pytest.approx(19.0 / 27.0, abs=1e-15)
     e = exposure(Q_(30.0, "um"), Q_(10.0, "um"))
     assert e == pytest.approx(19.0 / 27.0, abs=1e-12)
     assert e == pytest.approx(0.7037037, abs=1e-7)
@@ -115,6 +121,10 @@ def test_small_ratio_expansion_gives_factor_three():
     3r = 0.003, so the ratio E/(3r) = 0.999000333, within 0.1 percent of 1.
     """
     r = 0.001
+    assert 0.999 ** 3 == pytest.approx(0.997002999, abs=1e-12)
+    assert 1.0 - 0.999 ** 3 == pytest.approx(0.002997001, abs=1e-12)
+    assert 3.0 * r == pytest.approx(0.003, abs=1e-15)
+    assert 100.0 * abs(1.0 - 0.999000333) == pytest.approx(0.1, abs=0.01)
     e = exposure(Q_(1000.0, "um"), Q_(1.0, "um"))
     assert e == pytest.approx(0.002997001, abs=1e-9)
     assert e / (3.0 * r) == pytest.approx(0.999000333, abs=1e-9)
@@ -131,6 +141,9 @@ def test_liberation_size_half_exposure():
 
     d_p* = 20 / 0.2062995 = 96.94644 um, i.e. 4.847322 times the inclusion size.
     """
+    assert 0.5 ** (1.0 / 3.0) == pytest.approx(0.7937005, abs=1e-7)
+    assert 1.0 - 0.5 ** (1.0 / 3.0) == pytest.approx(0.2062995, abs=1e-7)
+    assert 20.0 / 0.2062995 == pytest.approx(96.94644, abs=1e-4)
     d = liberation_size(Q_(20.0, "um"), 0.5)
     assert d.magnitude == pytest.approx(96.94644, abs=1e-5)
     assert d.magnitude / 20.0 == pytest.approx(4.847322, abs=1e-6)
@@ -149,6 +162,11 @@ def test_liberation_size_ninety_percent_exposure():
     fold finer grind, which by Bond's law costs sqrt(2.597394) = 1.611643,
     about 61 percent more grinding energy per tonne.
     """
+    assert 0.1 ** (1.0 / 3.0) == pytest.approx(0.4641589, abs=1e-7)
+    assert 1.0 - 0.1 ** (1.0 / 3.0) == pytest.approx(0.5358411, abs=1e-7)
+    assert 20.0 / 0.5358411 == pytest.approx(37.32450, abs=1e-4)
+    assert 37.32450 / 20.0 == pytest.approx(1.866225, abs=1e-6)
+    assert 96.94644 / 37.32450 == pytest.approx(2.597394, abs=1e-5)
     d90 = liberation_size(Q_(20.0, "um"), 0.9)
     d50 = liberation_size(Q_(20.0, "um"), 0.5)
     assert d90.magnitude == pytest.approx(37.32450, abs=1e-5)
@@ -197,6 +215,15 @@ def test_polydisperse_worked_example():
         [0.5, 0.3, 0.2],
         InclusionWeighting.VOLUME,
     )
+    assert 0.98 ** 3 == pytest.approx(0.941192, abs=1e-12)
+    assert 1.0 - 0.941192 == pytest.approx(0.058808, abs=1e-12)
+    assert 1.0 - 0.9 ** 3 == pytest.approx(0.271, abs=1e-12)
+    assert 0.6 ** 3 == pytest.approx(0.216, abs=1e-12)
+    assert 1.0 - 0.216 == pytest.approx(0.784, abs=1e-12)
+    assert 0.5 * 0.058808 == pytest.approx(0.029404, abs=1e-12)
+    assert 0.3 * 0.271 == pytest.approx(0.0813, abs=1e-12)
+    assert 0.2 * 0.784 == pytest.approx(0.1568, abs=1e-12)
+    assert 0.029404 + 0.0813 + 0.1568 == pytest.approx(0.267504, abs=1e-12)
     assert e == pytest.approx(0.267504, abs=1e-9)
     ratio2 = 1.0 - (2.0 / 100.0)
     assert ratio2 == pytest.approx(0.98, rel=1e-9)
@@ -241,7 +268,17 @@ def test_leachable_fraction_worked_example():
         {"surface": 0.05, "fluid": 0.20, "mineral": 0.30, "lattice": 0.45},
         Q_(100.0, "um"), Q_(5.0, "um"), Q_(20.0, "um"),
     )
+    assert 0.95 ** 3 == pytest.approx(0.857375, abs=1e-12)
+    assert 1.0 - 0.857375 == pytest.approx(0.142625, abs=1e-12)
+    assert 0.8 ** 3 == pytest.approx(0.512, abs=1e-12)
+    assert 1.0 - 0.512 == pytest.approx(0.488, abs=1e-12)
+    assert 0.20 * 0.142625 == pytest.approx(0.028525, abs=1e-12)
+    assert 0.30 * 0.488 == pytest.approx(0.1464, abs=1e-12)
+    assert 0.05 + 0.028525 + 0.1464 == pytest.approx(0.224925, abs=1e-12)
+    assert 1.0 - 0.45 == pytest.approx(0.55, abs=1e-12)
     assert f == pytest.approx(0.224925, abs=1e-9)
+    assert 100.0 * f == pytest.approx(22.5, abs=0.01)  # 22.4925, quoted to 3 s.f.
+    assert 100.0 * (1.0 - 0.45) == pytest.approx(55.0, abs=1e-9)
     assert f < 1.0 - 0.45
     d_fluid_ratio = 0.95
     pow3_fluid = d_fluid_ratio ** 3
@@ -278,6 +315,11 @@ def test_energy_to_exposure_worked_example():
     gain, ratio, per_energy = energy_to_exposure_ratio(
         Q_(200.0, "um"), Q_(50.0, "um"), Q_(10.0, "um")
     )
+    assert 1.0 - 0.95 ** 3 == pytest.approx(0.142625, abs=1e-12)
+    assert 1.0 - 0.8 ** 3 == pytest.approx(0.488, abs=1e-12)
+    assert 0.488 - 0.142625 == pytest.approx(0.345375, abs=1e-12)
+    assert math.sqrt(200.0 / 50.0) == pytest.approx(2.0, abs=1e-12)
+    assert 0.345375 / 2.0 == pytest.approx(0.1726875, abs=1e-12)
     assert gain == pytest.approx(0.345375, abs=1e-9)
     assert ratio == pytest.approx(2.0, abs=1e-12)
     assert per_energy == pytest.approx(0.1726875, abs=1e-9)
@@ -311,13 +353,21 @@ def test_benchmark_grind_implied_by_xia_removal(capsys):
     E* = 0.8120 gives the required particle-to-inclusion size ratio:
     1 - (1 - 0.8120)^(1/3) = 1 - 0.188^(1/3) = 1 - 0.5728654 = 0.4271346, so
     d_p* = 2.3412 d_inc (the test's own f-string prints 2.3414, computed from
-    the unrounded removal fraction 0.81196648 rather than the rounded 0.8120). The paper's flowsheet includes calcination and water
+    the unrounded removal fraction 0.81196648 rather than the rounded 0.8120).
+    Both ratios are asserted below so the 2-in-the-last-place difference is
+    pinned to its cause. The paper's flowsheet includes calcination and water
     quenching, which opens fluid inclusions thermally rather than geometrically,
     so the real flowsheet is NOT bound by this ratio. The test therefore reports
     the ratio as the grinding-only requirement and flags the discrepancy, rather
     than claiming agreement.
     """
+    assert 1.0 - 0.8120 == pytest.approx(0.188, abs=1e-12)
+    assert 0.188 ** (1.0 / 3.0) == pytest.approx(0.5728654, abs=1e-7)
+    assert 1.0 - 0.188 ** (1.0 / 3.0) == pytest.approx(0.4271346, abs=1e-7)
+    assert 1.0 / 0.4271346 == pytest.approx(2.3412, abs=5e-5)
     removal = 1.0 - 24.23 / 128.86
+    assert removal == pytest.approx(0.81196648, abs=5e-9)
+    assert 100.0 * removal == pytest.approx(81.20, abs=5e-3)
     d_inc = Q_(10.0, "um")
     d_required = liberation_size(d_inc, removal)
     ratio = d_required.magnitude / 10.0
@@ -335,6 +385,7 @@ def test_benchmark_grind_implied_by_xia_removal(capsys):
               f"inversion, not the physics of that campaign.")
     assert err < 1e-9
     assert removal == pytest.approx(0.8120, abs=5e-5)
+    assert ratio == pytest.approx(2.3414, abs=5e-5)
     assert 2.0 < ratio < 3.0
     # The inversion the docstring tabulates, step by step, from the unrounded
     # removal fraction the test actually computes.
@@ -391,6 +442,8 @@ def test_benchmark_qu_2025_removal_requires_finer_grind(capsys):
               "doi:10.3390/min14070727 (Xia). All three flowsheets include "
               "calcination, so these ratios are upper bounds on the grind needed, "
               "not predictions of it.")
+    assert 100.0 * (1.0 - 18.72 / 322.96) == pytest.approx(94.20, abs=5e-3)
+    assert 100.0 * (1.0 - 114.56 / 4944.73) == pytest.approx(97.68, abs=5e-3)
     by_removal = sorted(rows, key=lambda r: r[1])
     ratios = [r[2] for r in by_removal]
     assert ratios == sorted(ratios, reverse=True), (
@@ -536,7 +589,9 @@ def test_exposure_per_energy_has_an_interior_optimum():
         for f in fines
     ]
     assert per_energy[0] == pytest.approx(0.090775, abs=1e-6)
+    assert per_energy[1] == pytest.approx(0.172687, abs=1e-6)
     assert per_energy[2] == pytest.approx(0.226760, abs=1e-6)
+    assert per_energy[3] == pytest.approx(0.212344, abs=1e-6)
     assert per_energy[-1] == pytest.approx(0.196425, abs=1e-6)
     peak = max(range(len(per_energy)), key=lambda i: per_energy[i])
     assert 0 < peak < len(per_energy) - 1, "the optimum must be interior"
@@ -558,7 +613,10 @@ def test_marginal_exposure_per_halving_eventually_falls():
         energy_to_exposure_ratio(Q_(a, "um"), Q_(b, "um"), Q_(10.0, "um"))[0]
         for a, b in itertools.pairwise(sizes)
     ]
+    assert math.sqrt(2.0) == pytest.approx(1.414214, abs=1e-6)
     assert gains[0] == pytest.approx(0.069484, abs=1e-6)
+    assert gains[1] == pytest.approx(0.128375, abs=1e-6)
+    assert gains[2] == pytest.approx(0.217000, abs=1e-6)
     assert gains[3] == pytest.approx(0.296000, abs=1e-6)
     assert gains[-1] == pytest.approx(0.208000, abs=1e-6)
     assert gains[-1] < gains[-2], "exposure gain per halving must eventually fall"
