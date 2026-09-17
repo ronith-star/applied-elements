@@ -587,13 +587,19 @@ def test_pin_exposure_is_one_when_the_particle_is_no_larger_than_the_inclusion()
     WITHDRAWN FINDING, pinned so it is not re-raised. This audit first read
     enclosed_fraction's early return (0.0 whenever d_inc >= d_p, hence E = 1.0)
     as a silent clamp hiding an out-of-domain call, on the grounds that
-    exposure(10 um, 1e9 um) = 1.0 reports a 1 m inclusion as fully exposed
-    inside a 10 um particle. A guard rejecting d_inc > d_p was written and it
-    broke four existing tests in tests/test_liberation.py. Those tests were
-    right and the finding was wrong: exposure is the fraction of inclusions
-    intersecting a particle surface, and grinding finer than the inclusion
-    population shatters every inclusion, which IS full exposure. The 1 m case is
-    not a false positive, it is the same statement at an absurd scale.
+    exposure(10 um, 1e9 um) = 1.0 reports a 1.0e9 um inclusion, i.e. 1.0e3 m,
+    as fully exposed inside a 10 um particle. Two guards were written and both
+    were wrong. The first rejected d_inc >= d_p and broke FOUR existing tests in
+    tests/test_liberation.py (test_exposure_bounds,
+    test_exposure_is_monotonic_decreasing_in_particle_size,
+    test_leachable_fraction_never_exceeds_the_non_lattice_inventory,
+    test_all_lattice_means_nothing_is_leachable). Narrowing it to strict
+    d_inc > d_p still broke THREE of those four, the monotonicity test being the
+    one that recovered. Those tests were right and the finding was wrong:
+    exposure is the fraction of inclusions intersecting a particle surface, and
+    grinding finer than the inclusion population shatters every inclusion,
+    which IS full exposure. The 1.0e3 m case is not a false positive, it is the
+    same correct statement at an absurd scale.
 
     Retained as a pin because the behaviour is load-bearing for
     leachable_fraction's "even at infinite fineness the lattice bounds the
