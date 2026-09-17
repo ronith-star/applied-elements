@@ -384,9 +384,29 @@ def test_reconciles_tolerance_is_relative_not_absolute():
     ever see a non-zero residual is one that builds a CapexEstimate directly,
     which is exactly where a real reconciliation error would come from.
     """
-    # 2.2e-16 relative on 4.5e9 is about 1e-6, the point where an absolute
-    # 1e-6 tolerance starts rejecting correct sums.
-    assert 2.2e-16 * 4.5e9 == pytest.approx(1e-6, rel=0.05)
+    # The crossover: 2.2e-16 relative error on a total of 4.5e9 currency units
+    # is about 1e-6 absolute, which is where the old tolerance begins
+    # rejecting correct sums. Demonstrated on the estimate itself rather than
+    # asserted as arithmetic between two literals.
+    at_crossover = CapexEstimate(
+        equipment=[], total_purchased=Q_(0.0, "USD"),
+        total_installed=Q_(4.5e9 / 3.0, "USD"),
+        indirect_cost=Q_(4.5e9 / 7.0, "USD"),
+        contingency=Q_(4.5e9 / 11.0, "USD"),
+        total_project_cost=Q_((4.5e9 / 11.0 + 4.5e9 / 7.0) + 4.5e9 / 3.0,
+                              "USD"),
+        location_factor=1.0, index_ratio=1.0, currency="USD",
+    )
+    crossover_residual = abs(float(
+        ((at_crossover.total_installed + at_crossover.indirect_cost
+          + at_crossover.contingency)
+         - at_crossover.total_project_cost).magnitude))
+    # At this scale the float residue is already within an order of magnitude
+    # of the old absolute tolerance, and the relative residue is not.
+    assert crossover_residual < 1e-5
+    assert (crossover_residual
+            / at_crossover.total_project_cost.magnitude) < 1e-15
+    assert at_crossover.reconciles()
 
     # mag is the scale of the three components, not the total: 2.835e10 is the
     # TOTAL they sum to. A first draft set mag = 8.3e10, whose total of

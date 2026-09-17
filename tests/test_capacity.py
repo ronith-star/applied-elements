@@ -250,9 +250,16 @@ def test_a_tie_is_reported_as_a_tie_rather_than_as_a_float_accident():
       arbitrary-but-deterministic, it is selected by rounding noise, and which
       unit wins changes with the planned hours.
 
-    The existing tie test passes only because it asserts
-    pytest.approx(0.0, abs=1e-12), which a 1e-16 margin satisfies; nothing
-    pinned the exact-equality claim the docstring made.
+    The existing tie test does not catch this, and not for the reason a first
+    draft of this docstring gave. That draft said the test "passes only
+    because it asserts pytest.approx(0.0, abs=1e-12), which a 1e-16 margin
+    satisfies". Wrong: that test builds its fixture at 7000 planned hours,
+    where the same pair of units ties EXACTLY (margin 0.0, capacities bitwise
+    equal, bottleneck 'mill'), so it passes on exact equality and its
+    tolerance is never exercised. The claim fails at 8000 hours instead. That
+    is the more troubling version of the defect: whether a tie registers as
+    exact depends on the planned hours, so a test written at one schedule
+    certifies nothing about another.
 
     Neither half matters for the capacity NUMBER, which is right either way.
     Both matter for the reading: a capital plan that expands the named unit
@@ -285,6 +292,23 @@ def test_a_tie_is_reported_as_a_tie_rather_than_as_a_float_accident():
     # What the reader actually needs: a tie predicate with a tolerance.
     assert r.is_tied()
     assert sorted(r.tied_units()) == ["leach", "mill"]
+
+    # The 7000-hour schedule where the same pair ties EXACTLY, which is why
+    # the pre-existing test never exercised its own tolerance.
+    at_7000 = assess_line([
+        UnitCapacity("mill", Q_(10.0, "tonne/hour"), 7000.0, o, 1.25),
+        UnitCapacity("leach", Q_(8.0, "tonne/hour"), 7000.0, o, 1.0),
+    ])
+    caps_7000 = sorted(q.to("tonne").magnitude
+                       for q in at_7000.product_capacity.values())
+    assert caps_7000[0] == caps_7000[1], (
+        "at 7000 hours the two capacities are bitwise equal, which is why the "
+        "pre-existing tie test passes on exact equality rather than on its "
+        "1e-12 tolerance"
+    )
+    assert at_7000.bottleneck_margin == 0.0
+    assert at_7000.bottleneck == "mill"
+    assert at_7000.is_tied()
 
     # A real single bottleneck is not reported as a tie.
     single = assess_line([

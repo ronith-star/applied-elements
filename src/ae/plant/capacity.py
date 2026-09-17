@@ -72,11 +72,12 @@ __all__ = ["OEE", "LineCapacity", "UnitCapacity", "assess_line"]
 HOURS_PER_YEAR = 8760.0
 
 #: Relative gap below which two units count as binding simultaneously. Set at
-#: 1e-9, which is nine orders of magnitude above the 1.343102e-16 float
+#: 1e-9, which is SEVEN orders of magnitude above the 1.343102e-16 float
 #: residue measured on an exact real-arithmetic tie (10 t/h at 1.25 t/t
-#: against 8 t/h at 1.0 t/t, 8000 planned hours) and six orders below any
-#: capacity difference an engineer would act on: a 1e-9 relative gap on a
-#: 50,000 t/yr line is 0.00005 t/yr.
+#: against 8 t/h at 1.0 t/t, 8000 planned hours): 1e-9 / 1.343102e-16 is
+#: 7.4e6, so 6.87 orders. An earlier version of this comment said "nine",
+#: which was wrong. It sits far below any capacity difference an engineer
+#: would act on: a 1e-9 relative gap on a 50,000 t/yr line is 0.00005 t/yr.
 TIE_TOLERANCE = 1e-9
 
 
