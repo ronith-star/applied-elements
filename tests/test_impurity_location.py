@@ -239,9 +239,13 @@ def test_sio2_from_trace_sum_worked_example():
     100 - 0.002423 = 99.997577 wt percent SiO2, which rounds to the 99.998 wt
     percent the paper reports.
     """
-    assert 24.23 * 1e-4 == pytest.approx(24.23e-4, abs=1e-12)
-    assert 24.23e-4 == pytest.approx(0.002423, abs=1e-12)
-    assert 100.0 - 0.002423 == pytest.approx(99.997577, abs=1e-9)
+    # ppm to wt percent is a division by 1e4 by definition (1 percent = 1e4
+    # ppm). The percent figure is DERIVED from the ppm figure, not restated:
+    # an assertion of 24.23e-4 against 0.002423 compares one literal with
+    # itself in different notation and verifies nothing.
+    trace_wt_percent = 24.23 / 1e4
+    assert trace_wt_percent == pytest.approx(0.002423, abs=1e-12)
+    assert 100.0 - trace_wt_percent == pytest.approx(99.997577, abs=1e-9)
     s = lattice_ceiling_sio2_percent(24.23)
     assert s == pytest.approx(99.997577, abs=1e-6)
     assert round(s, 3) == 99.998
@@ -476,7 +480,15 @@ def test_benchmark_prior_floors_against_xia_residual(capsys):
     # and the four reported figures
     assert residual == pytest.approx(39.58, abs=5e-3)
     assert model_removal == pytest.approx(69.29, abs=5e-3)
-    assert published_removal == pytest.approx(81.1966, abs=1e-4)
+    # Recomputed from the paper's endpoints, not restated: 128.86 to 24.23
+    # ug/g is a removal of (128.86 - 24.23) / 128.86 = 81.19664752... percent.
+    # The variable holds the figure at the four-decimal precision the paper
+    # states it, so the tolerance is half a unit in its last reported place,
+    # not floating-point epsilon: the check is that the paper's rounding is
+    # consistent with its own endpoints, which is exactly what a hand-check
+    # can verify.
+    assert published_removal == pytest.approx(
+        (128.86 - 24.23) / 128.86 * 100.0, abs=5e-5)
     assert round(published_removal, 2) == pytest.approx(81.20, abs=1e-9)
     assert err == pytest.approx(14.67, abs=5e-3)
     assert residual / 24.23 == pytest.approx(1.63, abs=5e-3)

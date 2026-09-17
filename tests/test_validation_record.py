@@ -333,19 +333,27 @@ def test_no_docstring_in_this_module_states_an_unasserted_count() -> None:
         "nothing behind them:\n  " + "\n  ".join(offenders)
     )
 
-    # This guard's OWN docstring names 27, 36, 28 and 37 as the drifted count
-    # pairs. They are exempt above only because their sentences are marked
-    # historical, so that exemption is exercised here on those exact numbers
-    # rather than trusted: each must be extracted as a candidate count, must
-    # fall in the guarded range, and must be suppressed by a HIST marker.
-    hist_sentence = "they named a literature count of 27 and a DOI-first count of 36"
-    moved_sentence = "Restoring a demoted benchmark moved them to 28 and 37"
-    assert candidates(hist_sentence) == ["27", "36"]
-    assert candidates(moved_sentence) == ["28", "37"]
-    for lit in ("27", "36", "28", "37"):
-        assert 5 <= int(lit) <= 200
-    assert any(h in hist_sentence.lower() for h in HIST)
-    assert any(h in moved_sentence.lower() for h in HIST)
-    # And the inflation is the same size at both snapshots, which is the claim
-    # the pairs are there to support.
-    assert 36 - 27 == 37 - 28 == 9
+    # The historical exemption is EXERCISED here rather than trusted, in both
+    # directions. This block replaced an earlier one, written against a wider
+    # HIST list, that asserted counts stated in this module's own prose were
+    # exempt because their sentences carried the markers "named" and "moved
+    # them to". An audit removed both markers: they had been added in the
+    # same commit as the prose they exempted, and whitelisting the sentence
+    # you just wrote defeats the guard you wrote it for. The literals are
+    # gone from the docstrings, so the exemption is now exercised on
+    # fixtures instead, which is where a positive control belongs: a control
+    # built from the module's own prose goes stale the moment the prose is
+    # edited, and a control that requires specific whitelist entries blocks
+    # their removal.
+    marked = "earlier revisions of this module stated the count as 27"
+    unmarked = "this module states the count as 27"
+    assert candidates(marked) == ["27"], "the count must be extracted"
+    assert candidates(unmarked) == ["27"]
+    assert any(h in marked.lower() for h in HIST), (
+        "the marked fixture must carry a current HIST marker; if this fails, "
+        "the fixture and the whitelist have drifted apart"
+    )
+    assert not any(h in unmarked.lower() for h in HIST), (
+        "the unmarked fixture must NOT be exempt; if this fails the "
+        "whitelist has grown a word that appears in ordinary prose"
+    )
