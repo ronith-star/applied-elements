@@ -174,7 +174,6 @@ diverging from it for a clean checker run.
 from __future__ import annotations
 
 import datetime as _dt
-import math
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -184,27 +183,27 @@ from ae.core.provenance import Source, Tag, Tier, Value
 from ae.core.units import Q_, Quantity, require_dimensionality, require_fraction
 
 __all__ = [
-    "SRC_FURNAS",
-    "SRC_MCGEARY",
-    "SRC_ANDREASEN",
-    "SRC_FUNK_DINGER",
-    "SRC_KRIEGER",
-    "SRC_SCOTT_KILGOUR",
-    "PHI_MONOMODAL_VIBRATED",
-    "PHI_RANDOM_CLOSE",
     "EINSTEIN_INTRINSIC_VISCOSITY",
     "MIN_SIZE_RATIO",
-    "SizeClass",
+    "PHI_MONOMODAL_VIBRATED",
+    "PHI_RANDOM_CLOSE",
+    "SRC_ANDREASEN",
+    "SRC_FUNK_DINGER",
+    "SRC_FURNAS",
+    "SRC_KRIEGER",
+    "SRC_MCGEARY",
+    "SRC_SCOTT_KILGOUR",
+    "FillerLoading",
     "FurnasResult",
-    "furnas_max_packing",
-    "furnas_optimal_composition",
+    "SizeClass",
     "andreasen_cumulative",
     "andreasen_modified_cumulative",
-    "krieger_dougherty_relative_viscosity",
-    "volume_to_mass_fraction",
-    "mass_to_volume_fraction",
-    "FillerLoading",
     "emc_filler_loading",
+    "furnas_max_packing",
+    "furnas_optimal_composition",
+    "krieger_dougherty_relative_viscosity",
+    "mass_to_volume_fraction",
+    "volume_to_mass_fraction",
 ]
 
 _ACCESSED: Final[_dt.date] = _dt.date(2026, 9, 16)
@@ -345,7 +344,7 @@ class SizeClass(BaseModel):
     label: str | None = None
 
     @model_validator(mode="after")
-    def _checks(self) -> "SizeClass":
+    def _checks(self) -> SizeClass:
         require_dimensionality(self.diameter, "length", "diameter")
         if float(self.diameter.to("m").magnitude) <= 0.0:
             raise ValueError("size class diameter must be positive")
@@ -376,7 +375,7 @@ class FurnasResult(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _checks(self) -> "FurnasResult":
+    def _checks(self) -> FurnasResult:
         require_fraction(self.phi_max, "phi_max", lo=1e-9, hi=1.0)
         require_fraction(self.phi_monomodal, "phi_monomodal", lo=1e-9, hi=1.0)
         if len(self.composition) != self.n_classes:
@@ -651,7 +650,7 @@ class FillerLoading(BaseModel):
     notes: tuple[str, ...] = ()
 
     @model_validator(mode="after")
-    def _checks(self) -> "FillerLoading":
+    def _checks(self) -> FillerLoading:
         require_fraction(self.phi_max_geometric, "phi_max_geometric", lo=1e-9, hi=1.0)
         require_fraction(self.phi_selected, "phi_selected", lo=0.0, hi=1.0)
         require_fraction(self.mass_fraction_selected, "mass_fraction_selected")

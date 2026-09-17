@@ -74,8 +74,9 @@ LIMITATIONS
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Iterable, Literal, Sequence
+from typing import Literal
 
 import numpy as np
 from scipy import stats
@@ -83,14 +84,14 @@ from scipy import stats
 from ae.core.units import require_fraction
 
 __all__ = [
-    "cascade_yield",
-    "stage_throughput_factors",
-    "capability",
     "Capability",
+    "capability",
+    "cascade_yield",
+    "joint_off_spec_fraction",
     "off_spec_fraction",
     "off_spec_fraction_empirical",
     "required_process_mean",
-    "joint_off_spec_fraction",
+    "stage_throughput_factors",
 ]
 
 

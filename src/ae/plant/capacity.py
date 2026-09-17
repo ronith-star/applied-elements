@@ -61,12 +61,12 @@ LIMITATIONS
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from ae.core.units import Q_, Quantity, require_dimensionality, require_fraction
 
-__all__ = ["OEE", "UnitCapacity", "LineCapacity", "assess_line"]
+__all__ = ["OEE", "LineCapacity", "UnitCapacity", "assess_line"]
 
 #: Hours in a calendar year, used when planned time is quoted as a utilisation.
 HOURS_PER_YEAR = 8760.0
@@ -117,7 +117,7 @@ class OEE:
         nameplate_rate: Quantity,
         actual_output: Quantity,
         good_output: Quantity,
-    ) -> "OEE":
+    ) -> OEE:
         """Build OEE from measured times and tonnages.
 
         Parameters

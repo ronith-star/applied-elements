@@ -14,7 +14,7 @@ import pytest
 
 from ae.core.feedstock import Feedstock, OreType
 from ae.core.provenance import Tag, Tier, Value
-from ae.core.units import DimensionalityError, Q_
+from ae.core.units import Q_, DimensionalityError
 from ae.physics import psd as psd_mod
 from ae.physics.psd import (
     Z_10,

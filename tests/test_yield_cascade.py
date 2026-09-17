@@ -2,9 +2,15 @@
 import numpy as np
 import pytest
 from scipy import stats
+
 from ae.plant.yield_cascade import (
-    cascade_yield, stage_throughput_factors, capability, off_spec_fraction,
-    off_spec_fraction_empirical, required_process_mean, joint_off_spec_fraction,
+    capability,
+    cascade_yield,
+    joint_off_spec_fraction,
+    off_spec_fraction,
+    off_spec_fraction_empirical,
+    required_process_mean,
+    stage_throughput_factors,
 )
 
 

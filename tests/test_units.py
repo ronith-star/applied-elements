@@ -1,8 +1,16 @@
 """Dimensional-analysis harness. Every equation module must add cases here."""
 import pytest
-from ae.core.units import (UREG, Q_, DimensionalityError, ratio_basis, to_ppm_mass,
-                           to_ppb_mass, require_dimensionality, require_fraction,
-                           as_dimensionless)
+
+from ae.core.units import (
+    Q_,
+    DimensionalityError,
+    as_dimensionless,
+    ratio_basis,
+    require_dimensionality,
+    require_fraction,
+    to_ppb_mass,
+    to_ppm_mass,
+)
 
 
 def test_mass_ratio_aliases_agree():

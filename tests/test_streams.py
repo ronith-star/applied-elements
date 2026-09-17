@@ -2,8 +2,9 @@
 import math
 
 import pytest
+
 from ae.core.units import Q_, DimensionalityError
-from ae.plant.streams import Stream, UnitOp, Flowsheet, MassBalanceError
+from ae.plant.streams import Flowsheet, MassBalanceError, Stream, UnitOp
 
 
 def feed(m=10.0, **comp):
@@ -304,7 +305,10 @@ def test_realistic_units_are_unaffected_by_the_new_check():
     0.125/0.001164 = 107.4x. Every figure above is recomputed in the
     assertions below rather than quoted.
     """
-    assert 1164e-6 == pytest.approx(0.001164, abs=1e-12)
+    # The docstring writes the feed as 0.001164 and the fixture as 1164e-6.
+    # Derive one from the other through the ppm definition rather than
+    # asserting the literal against itself.
+    assert 1164.0 / 1e6 == pytest.approx(0.001164, abs=1e-12)
     u = UnitOp(name="leach", mass_yield=0.90, element_removal={"Al": 0.80})
     feed = Stream(name="f", mass_flow=Q_(10.0, "tonne/hour"),
                   composition={"Al": 1164e-6, "Fe": 140e-6})

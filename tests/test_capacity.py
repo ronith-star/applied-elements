@@ -1,7 +1,8 @@
 """OEE decomposition, capacity and bottleneck identification."""
 import pytest
+
 from ae.core.units import Q_, DimensionalityError
-from ae.plant.capacity import OEE, UnitCapacity, LineCapacity, assess_line, HOURS_PER_YEAR
+from ae.plant.capacity import HOURS_PER_YEAR, OEE, UnitCapacity, assess_line
 
 
 @pytest.mark.golden

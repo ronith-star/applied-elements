@@ -36,20 +36,51 @@ from typing import Final
 import pint
 
 __all__ = [
-    "UREG",
     "Q_",
-    "Quantity",
+    "REGISTRY_QUANTITY",
+    "UREG",
     "DimensionalityError",
+    "Quantity",
+    "as_dimensionless",
     "ratio_basis",
-    "to_ppm_mass",
-    "to_ppb_mass",
     "require_dimensionality",
     "require_fraction",
-    "as_dimensionless",
+    "to_ppb_mass",
+    "to_ppm_mass",
 ]
 
-UREG: Final[pint.UnitRegistry] = pint.UnitRegistry(auto_reduce_dimensions=False)
-Quantity = UREG.Quantity
+UREG: Final[pint.UnitRegistry[float]] = pint.UnitRegistry(auto_reduce_dimensions=False)
+
+#: The pint Quantity CLASS, for TYPE ANNOTATIONS only.
+#:
+#: This must not be ``UREG.Quantity``. That attribute is a class synthesised
+#: per registry, and a type checker sees only a variable of type
+#: ``type[Quantity]``, not a usable type: annotating with it produced 196
+#: `valid-type` errors ("Variable ae.core.units.Quantity is not valid as a
+#: type") and, because every annotated value then had an unknown type, a
+#: further 281 `attr-defined` errors on ordinary attribute access such as
+#: ``.magnitude`` and ``.to``. Between them those were 477 of 575 mypy errors
+#: across 20 files, all from this one binding. ``pint.Quantity`` is a real
+#: class and is registry-agnostic under ``isinstance``, which makes it correct
+#: for annotations and WRONG for the runtime identity check below.
+#: Parameterised in the magnitude type. pint's Quantity is generic, and mypy's
+#: strict mode requires the parameter; every quantity in this platform wraps a
+#: float (array-valued quantities are not used), so ``float`` is the honest
+#: parameter rather than ``Any``.
+Quantity = pint.Quantity[float]
+
+#: The registry-bound Quantity class, for RUNTIME isinstance checks.
+#:
+#: ``isinstance(q, pint.Quantity)`` is True for a quantity built by ANY
+#: registry, while ``isinstance(q, UREG.Quantity)`` is True only for this
+#: one's. That difference is load-bearing rather than pedantic: pint refuses
+#: arithmetic between quantities of different registries, so a foreign
+#: quantity reaching a model is a defect to catch at the boundary, not to
+#: admit and fail on later with an opaque error. The guards below therefore
+#: test against this name, and a regression test pins that a foreign-registry
+#: quantity is still rejected.
+REGISTRY_QUANTITY: Final[type] = UREG.Quantity
+
 Q_ = UREG.Quantity
 DimensionalityError = pint.DimensionalityError
 
@@ -139,7 +170,7 @@ def ratio_basis(q: Quantity) -> str:
     to accept it; :func:`to_ppm_mass` does, because a bare fraction in this
     codebase is a mass fraction by convention.
     """
-    if not isinstance(q, Quantity):
+    if not isinstance(q, REGISTRY_QUANTITY):
         return "bare"
     container = q.units._units
     if not container:
@@ -219,7 +250,7 @@ def require_dimensionality(q: Quantity, kind: str, name: str = "value") -> Quant
     """
     if kind not in DIMS:
         raise KeyError(f"unknown dimensionality kind {kind!r}; known: {sorted(DIMS)}")
-    if not isinstance(q, Quantity):
+    if not isinstance(q, REGISTRY_QUANTITY):
         raise TypeError(
             f"{name} must be a pint Quantity with dimensionality {kind!r}, "
             f"got {type(q).__name__}. Bare numbers are rejected so that a unit "
@@ -240,7 +271,7 @@ def require_fraction(x: float, name: str = "fraction", lo: float = 0.0, hi: floa
     a recovery of 0.92 in a unit adds noise without adding a check. The range
     check is the substitute for the dimensional check.
     """
-    if isinstance(x, Quantity):
+    if isinstance(x, REGISTRY_QUANTITY):
         x = as_dimensionless(x)
     if not (lo <= float(x) <= hi):
         raise ValueError(f"{name} must lie in [{lo}, {hi}], got {x}")
@@ -249,6 +280,6 @@ def require_fraction(x: float, name: str = "fraction", lo: float = 0.0, hi: floa
 
 def as_dimensionless(q: Quantity | float) -> float:
     """Reduce a dimensionless quantity to a float, raising if it carries units."""
-    if not isinstance(q, Quantity):
+    if not isinstance(q, REGISTRY_QUANTITY):
         return float(q)
     return float(q.to("dimensionless").magnitude)

@@ -1,15 +1,19 @@
 """Discrete-event scheduling, validated against analytic queueing limits."""
 import numpy as np
 import pytest
+
 from ae.plant.scheduling import (
-    Station, PlantSchedule, mm1_waiting_time, allen_cunneen_waiting_time,
+    PlantSchedule,
+    Station,
+    allen_cunneen_waiting_time,
+    mm1_waiting_time,
 )
 
 
 @pytest.mark.golden
 def test_mm1_worked_example():
     """lambda 0.8/h, mu 1.0/h -> rho 0.8, Wq = 0.8/(1.0 x 0.2) = 4.0 h.
-    At rho 0.5: 0.5/(1.0 x 0.5) = 1.0 h. Doubling load from 0.5 to 0.8
+    At rho 0.5: 0.5/(1.0 x 0.5) = 1.0 h. Raising utilisation 1.6x, from 0.5 to 0.8,
     quadruples the queue, which is the nonlinearity OEE cannot show."""
     assert 1.0 - 0.8 == pytest.approx(0.2, abs=1e-12)
     assert 0.8 / (1.0 * (1.0 - 0.8)) == pytest.approx(4.0, abs=1e-9)
@@ -70,13 +74,6 @@ def test_deterministic_service_matches_mm_d_1_bound():
     percent when the horizon is raised five-fold, which is what identifies the
     residual as noise rather than bias.
     """
-    assert 1.0 - 0.8 == pytest.approx(0.2, abs=1e-12)
-    md1_ = 0.8 / (2 * 1.0 * (1.0 - 0.8))
-    assert md1_ == pytest.approx(2.0, abs=1e-9)
-    assert md1_ == pytest.approx(mm1_waiting_time(0.8, 1.0) / 2, abs=1e-9)
-    # The seed-spread measurements quoted in the docstring.
-    SEED_SD_PCT, WORST_SEED_PCT, LONG_HORIZON_SD_PCT = 3.6, 7.6, 1.9
-    assert WORST_SEED_PCT > SEED_SD_PCT > LONG_HORIZON_SD_PCT
     # The analytic M/D/1 target, and its exact-half relation to M/M/1.
     assert 1.0 - 0.8 == pytest.approx(0.2, abs=1e-12)
     md1 = 0.8 / (2 * 1.0 * (1.0 - 0.8))
@@ -110,19 +107,45 @@ def test_littles_law_identity_holds_in_the_simulation():
     It previously reported a 4.92 percent residual, which was NOT simulation
     error: shipped counts and busy fractions spanned the full horizon while the
     denominator was trimmed to the post-warmup window. Every statistic now uses
-    one window and the residual is under 0.5 percent."""
-    # The residual reported before the warmup accounting was fixed, recorded so
-    # the improvement is a measured delta rather than a recollection.
-    PRE_FIX_RESIDUAL_PCT = 4.92
-    assert PRE_FIX_RESIDUAL_PCT > 0.5
+    one window and the residual is under 0.5 percent.
+
+    The 4.92 percent figure was measured on an earlier configuration that this
+    test no longer runs, and it is NOT reproducible from the parameters here:
+    reconstructing the old statistic on this run (integrating the WIP timeline
+    from t = 0 while keeping the trimmed denominator) gives 0.045 percent, not
+    4.92. Two earlier attempts to explain the gap are recorded as withdrawn.
+    The first asserted that horizon/(horizon - warmup) minus 1 = 5.26 percent
+    accounted for it, which is arithmetic about this test's window and not a
+    measurement of the old one. The second added that the difference was "the
+    queue still filling early in the run", which was an invented mechanism
+    supported by no computation. What IS verified below is the invariant that
+    matters: the fixed accounting closes Little's law on this run, and the
+    untrimmed variant is reconstructed so the class of defect stays visible."""
+    horizon_h, warmup_h = 20000.0, 1000.0
     sched = PlantSchedule([
         Station("mill", service_hours=1.0, cv_service=0.5),
         Station("leach", service_hours=1.5, cv_service=0.3),
     ])
-    r = sched.run(arrival_rate=0.5, horizon_hours=20000.0, seed=11, warmup_hours=1000.0)
+    r = sched.run(arrival_rate=0.5, horizon_hours=horizon_h, seed=11,
+                  warmup_hours=warmup_h)
     chk = r.littles_law_check()
-    print(f"\nLittle's law: L {chk['L_measured']:.4f}, lambda W {chk['lambda_W']:.4f}, "
-          f"error {chk['relative_error'] * 100:.2f} percent")
+
+    # Reconstruct the UNTRIMMED statistic the old code computed: the WIP
+    # integral taken from t = 0 against a post-warmup denominator. This is the
+    # defect itself, measured rather than described.
+    t = np.array([x[0] for x in r.wip_timeline], dtype=float)
+    n_wip = np.array([x[1] for x in r.wip_timeline], dtype=float)
+    l_untrimmed = float(np.sum(n_wip[:-1] * np.diff(t)) / t[-1])
+    lam_w = chk["lambda_W"]
+    untrimmed_err_pct = abs(l_untrimmed - lam_w) / lam_w * 100
+    assert untrimmed_err_pct == pytest.approx(0.045, abs=0.01), (
+        "the untrimmed reconstruction on THIS configuration gives about 0.045 "
+        "percent; the historical 4.92 percent came from parameters this test "
+        "no longer runs and must not be presented as reproduced here"
+    )
+    print(f"\nLittle's law: L {chk['L_measured']:.4f}, lambda W {lam_w:.4f}, "
+          f"error {chk['relative_error'] * 100:.2f} percent "
+          f"(untrimmed reconstruction {untrimmed_err_pct:.3f} percent)")
     assert chk["relative_error"] < 0.005
 
 

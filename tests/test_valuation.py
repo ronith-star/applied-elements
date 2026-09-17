@@ -1,8 +1,15 @@
 """DCF, IRR, LCOP: timing discipline and the failure modes of each metric."""
 import numpy as np
 import pytest
+
 from ae.econ.valuation import (
-    Project, npv, irr, modified_irr, payback_period, levelized_cost, breakeven_price,
+    Project,
+    breakeven_price,
+    irr,
+    levelized_cost,
+    modified_irr,
+    npv,
+    payback_period,
 )
 
 

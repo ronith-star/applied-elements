@@ -1,10 +1,12 @@
 """Registry tests: exact lookup, unit discipline, coverage honesty, round-trip."""
 import datetime as dt
+
 import numpy as np
 import pytest
+
+from ae.core.provenance import Distribution, Source, Tag, Tier, Value
+from ae.core.registry import DuplicateParameter, ParameterNotFound, Registry
 from ae.core.units import Q_, DimensionalityError
-from ae.core.provenance import Tag, Tier, Source, Distribution, Value
-from ae.core.registry import Registry, ParameterNotFound, DuplicateParameter
 
 # Deliberately synthetic. This file tests the registry MACHINERY, so its fixture
 # must not assert a real-world claim: an earlier version cited a real comminution

@@ -61,7 +61,7 @@ from ae.core.provenance import Tag, Value
 from ae.core.site import Site
 from ae.core.units import Q_, Quantity, require_dimensionality, require_fraction
 
-__all__ = ["InputDemand", "CostLine", "CostBuild", "cash_cost"]
+__all__ = ["CostBuild", "CostLine", "InputDemand", "cash_cost"]
 
 
 def _require_currency(q: Quantity, site: Site, what: str) -> Quantity:

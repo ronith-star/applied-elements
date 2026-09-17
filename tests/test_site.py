@@ -1,10 +1,21 @@
 """SITE schema tests: currency discipline, uncertain policy, contract-rate flags."""
 import datetime as dt
+
 import pytest
+
+from ae.core.provenance import Source, Tag, Tier, Value
+from ae.core.site import (
+    Currency,
+    ExchangeRate,
+    Incentive,
+    LabourRates,
+    LogisticsLink,
+    PowerSupply,
+    ReagentPrices,
+    Site,
+    TradeMeasure,
+)
 from ae.core.units import Q_, DimensionalityError
-from ae.core.provenance import Tag, Tier, Source, Value, MISSING
-from ae.core.site import (Currency, ExchangeRate, PowerSupply, LabourRates, ReagentPrices,
-                          TradeMeasure, Incentive, Site, LogisticsLink)
 
 SRC = Source(citation="EIA Electric Power Monthly Table 5.6.B", tier=Tier.T1,
              url="https://www.eia.gov/electricity/monthly/", accessed=dt.date(2026, 9, 16))

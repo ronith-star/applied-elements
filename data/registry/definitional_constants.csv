@@ -1,0 +1,93 @@
+module,name,role,definition,provenance_values_found
+ae.core.feedstock.py,MOLAR_MASS,numeric_table,"{'Al': 26.9815, 'Ti': 47.867, 'Fe': 55.845, 'Li': 6.94, 'Na': 22.9898, 'K': 39.0983, 'Ca': 40.078, 'B': 10.81, 'P': 30.9738, 'Ge': 72.63, 'Mg': 24.305, 'Mn': 54.938, 'Cr': 51.996, 'Cu': 63.546, 'Zr': ",0
+ae.core.feedstock.py,OXIDE_STOICH,numeric_table,"{'Al2O3': ('Al', 2, 3), 'Fe2O3': ('Fe', 2, 3), 'FeO': ('Fe', 1, 1), 'TiO2': ('Ti', 1, 2), 'CaO': ('Ca', 1, 1), 'MgO': ('Mg', 1, 1), 'Na2O': ('Na', 2, 1), 'K2O': ('K', 2, 1), 'Li2O': ('Li', 2, 1), 'B2O",0
+ae.core.units.py,_REF_UNITS,numeric_table,"{'mass': 'kg', 'mass_flow': 'kg/s', 'length': 'm', 'temperature': 'K', 'energy': 'J', 'specific_energy_mass': 'J/kg', 'power': 'W', 'pressure': 'Pa', 'molar_energy': 'J/mol', 'concentration_mass_ratio",0
+ae.core.units.py,DIMS,numeric_table,"{kind: UREG.Quantity(1.0, unit).dimensionality for kind, unit in _REF_UNITS.items()}",0
+ae.econ.capex.py,SCALING_RANGE,numeric_table,"(0.4, 0.9)",0
+ae.econ.capex.py,_WARN_RATIO,numeric_constant,10.0,0
+ae.econ.capex.py,_FAIL_RATIO,numeric_constant,100.0,0
+ae.econ.capex.py,AACE_ACCURACY,numeric_table,"{5: (0.5, 2.0), 4: (0.7, 1.5), 3: (0.8, 1.3), 2: (0.85, 1.2), 1: (0.9, 1.15)}",0
+ae.econ.capex.py,AACE_BASIS,numeric_table,"{5: 'concept screening, 0 to 2 percent project definition: capacity and an equipment list, no flowsheet engineering or quotes', 4: 'study or feasibility, 1 to 15 percent definition: preliminary flowsh",0
+ae.physics.chlorination.py,GAS_CONSTANT,numeric_constant,"Q_(8.314462618, 'J/(mol*K)')",0
+ae.physics.chlorination.py,P_REFERENCE,numeric_constant,"Q_(101325.0, 'Pa')",0
+ae.physics.chlorination.py,SOURCE_LIU_2026,bibliography,"Source(citation='Liu, L., Liu, H., Li, J., Peng, T., Wang, W. and Wang, F. (2026) Mechanism Study on Deep Removal of Lattice Impurities from High-Purity Quartz by Chlorination Roasting, Minerals 16(8)",0
+ae.physics.chlorination.py,SOURCE_PUBCHEM,bibliography,"Source(citation='PubChem compound records, National Library of Medicine, retrieved via the PUG-View REST API', tier=Tier.T1, url='https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/', access",0
+ae.physics.chlorination.py,THERMO_MISSING,numeric_table,"{'Al2O3(s)': ""NIST-JANAF Thermochemical Tables (janaf.nist.gov) or NIST Chemistry WebBook (webbook.nist.gov), both outside this sandbox's network allowlist on 2026-09-16. PubChem returned a value labe",0
+ae.physics.comminution.py,SHORT_TON_KG,numeric_constant,907.18474,0
+ae.physics.comminution.py,METRIC_TON_KG,numeric_constant,1000.0,0
+ae.physics.comminution.py,BOND_REFERENCE_P80_UM,numeric_constant,100.0,0
+ae.physics.comminution.py,BOND_GRINDABILITY_ALPHA,numeric_constant,0.23,0
+ae.physics.comminution.py,BOND_GRINDABILITY_BETA,numeric_constant,0.82,0
+ae.physics.comminution.py,BOND_GRINDABILITY_GAMMA,numeric_constant,44.5,0
+ae.physics.comminution.py,_ACCESSED,bibliography,"_dt.date(2026, 9, 16)",0
+ae.physics.comminution.py,SRC_PPMP_BOND,bibliography,"Source(citation=""Arellano-Pina R., Sanchez-Ramirez E., Perez-Garibay R. et al. 2023, Bond's work index estimation using non-standard ball mills, Physicochemical Problems of Mineral Processing 59(6):17",0
+ae.physics.comminution.py,SRC_NIST_SP811,bibliography,"Source(citation='Thompson A. and Taylor B. N. 2008, Guide for the Use of the International System of Units (SI), NIST Special Publication 811, Appendix B.8', tier=Tier.T1, url='https://www.nist.gov/pm",0
+ae.physics.comminution.py,SRC_AUSTIN_1973,bibliography,"Source(citation='Austin L. G. 1973, A commentary on the Kick, Bond and Rittinger laws of grinding, Powder Technology 7(6):315-317', tier=Tier.T1, doi='10.1016/0032-5910(73)80042-7', accessed=_ACCESSED",0
+ae.physics.comminution.py,SRC_WILLS_COMMINUTION,bibliography,"Source(citation=""Wills B. A. and Finch J. A. 2016, Comminution, in Wills' Mineral Processing Technology, 8th edition, Elsevier, pp. 109-122"", tier=Tier.T1, doi='10.1016/b978-0-08-097053-0.00005-4', ac",0
+ae.physics.comminution.py,SRC_MET_VARIABILITY,bibliography,"Source(citation='Rodriguez B. A., Menendez-Aguado J. M. et al. 2021, Variability Study of Bond Work Index and Grindability Index on Various Critical Metal Ores, Metals 11(6):970', tier=Tier.T1, doi='1",0
+ae.physics.diffusion.py,GAS_CONSTANT,numeric_constant,"Q_(8.314462618, 'J/(mol*K)')",0
+ae.physics.diffusion.py,ERF_HALF,numeric_constant,0.5204998778130465,0
+ae.physics.diffusion.py,SOURCE_LIU_2026,bibliography,"Source(citation='Liu, L., Liu, H., Li, J., Peng, T., Wang, W. and Wang, F. (2026) Mechanism Study on Deep Removal of Lattice Impurities from High-Purity Quartz by Chlorination Roasting, Minerals 16(8)",0
+ae.physics.diffusion.py,SOURCE_XIA_2024,bibliography,"Source(citation='Xia, M., Yang, X. and Hou, Z. (2024) Preparation of High-Purity Quartz Sand by Vein Quartz Purification and Characteristics: A Case Study of Pakistan Vein Quartz, Minerals 14(7), 727'",0
+ae.physics.diffusion.py,DIFFUSIVITY_STATUS,numeric_table,"{'Al': {'arrhenius': MISSING, 'would_be_supplied_by': 'Pankrath, R. (1994) Kinetics of Al-Si exchange in low and high quartz: calculation of Al diffusion coefficients, European Journal of Mineralogy 6",0
+ae.physics.diffusion.py,FO_SHORT_TIME_SWITCH,numeric_constant,0.0001,0
+ae.physics.impurity_location.py,_ACCESSED,bibliography,"_dt.date(2026, 9, 16)",0
+ae.physics.impurity_location.py,SRC_MULLER_2012,bibliography,"Source(citation='Muller A., Wanvik J. E., Ihlen P. M. 2012, Petrological and Chemical Characterisation of High-Purity Quartz Deposits with Examples from Norway, in Gotze J. and Mockel R. eds., Quartz:",0
+ae.physics.impurity_location.py,SRC_LIN_2020,bibliography,"Source(citation='Lin M., Liu Z., Wei Y. et al. 2020, A Critical Review on the Mineralogy and Processing for High-Grade Quartz, Mining, Metallurgy and Exploration 37:1627-1639', tier=Tier.T1, doi='10.1",0
+ae.physics.impurity_location.py,SRC_XIA_2024,bibliography,"Source(citation='Xia M., Yang X., Hou Z. 2024, Preparation of High-Purity Quartz Sand by Vein Quartz Purification and Characteristics: A Case Study of Pakistan Vein Quartz, Minerals 14(7):727', tier=T",0
+ae.physics.impurity_location.py,SRC_QU_2025,bibliography,"Source(citation='Qu S., Yang X., Xia M. et al. 2025, Analyzing trace element distribution and purification of vein quartz: a case study of Qianqi Furong mine in Inner Mongolia, European Journal of Min",0
+ae.physics.impurity_location.py,SRC_LIU_2026,bibliography,"Source(citation='Liu L., Liu H., Li J. et al. 2026, Mechanism Study on Deep Removal of Lattice Impurities from High-Purity Quartz by Chlorination Roasting, Minerals 16(8):836', tier=Tier.T1, doi='10.3",0
+ae.physics.impurity_location.py,HPQ_SINGLE_GRAIN_LIMITS_PPM,numeric_table,"{'Al': 30.0, 'Ti': 10.0, 'Li': 5.0, 'Na': 8.0, 'K': 8.0, 'Ca': 5.0, 'Fe': 3.0, 'P': 2.0, 'B': 1.0}",0
+ae.physics.impurity_location.py,HPQ_TRACE_SUM_LIMIT_PPM,numeric_constant,50.0,0
+ae.physics.leaching.py,GAS_CONSTANT,numeric_constant,"Q_(8.314462618, 'J/(mol*K)')",0
+ae.physics.leaching.py,SOURCE_YANG_2020,bibliography,"Source(citation='Yang, C. and Li, S. (2020) Kinetics of iron removal from quartz under ultrasound-assisted leaching, High Temperature Materials and Processes 39(1), 395-404', tier=Tier.T1, doi='10.151",0
+ae.physics.leaching.py,SOURCE_XIA_2024,bibliography,"Source(citation='Xia, M., Yang, X. and Hou, Z. (2024) Preparation of High-Purity Quartz Sand by Vein Quartz Purification and Characteristics: A Case Study of Pakistan Vein Quartz, Minerals 14(7), 727'",0
+ae.physics.liberation.py,_ACCESSED,bibliography,"_dt.date(2026, 9, 16)",0
+ae.physics.liberation.py,SRC_LIN_2020,bibliography,"Source(citation='Lin M., Liu Z., Wei Y. et al. 2020, A Critical Review on the Mineralogy and Processing for High-Grade Quartz, Mining, Metallurgy and Exploration 37:1627-1639', tier=Tier.T1, doi='10.1",0
+ae.physics.liberation.py,SRC_KING_1979,bibliography,"Source(citation='King R. P. 1979, A model for the quantitative estimation of mineral liberation by grinding, International Journal of Mineral Processing 6:207-220', tier=Tier.T1, doi='10.1016/0301-751",0
+ae.physics.liberation.py,SRC_XIA_2024,bibliography,"Source(citation='Xia M., Yang X., Hou Z. 2024, Preparation of High-Purity Quartz Sand by Vein Quartz Purification and Characteristics: A Case Study of Pakistan Vein Quartz, Minerals 14(7):727', tier=T",0
+ae.physics.packing.py,_ACCESSED,bibliography,"_dt.date(2026, 9, 16)",0
+ae.physics.packing.py,SRC_FURNAS,bibliography,"Source(citation='Furnas, C.C. 1931, Grading Aggregates: I. Mathematical Relations for Beds of Broken Solids of Maximum Density, Industrial and Engineering Chemistry 23:1052-1058', tier=Tier.T1, doi='1",0
+ae.physics.packing.py,SRC_MCGEARY,bibliography,"Source(citation='McGeary, R.K. 1961, Mechanical Packing of Spherical Particles, Journal of the American Ceramic Society 44:513-522', tier=Tier.T1, doi='10.1111/j.1151-2916.1961.tb13716.x', accessed=_A",0
+ae.physics.packing.py,SRC_ANDREASEN,bibliography,"Source(citation='Andreasen, A.H.M. and Andersen, J. 1930, Ueber die Beziehung zwischen Kornabstufung und Zwischenraum in Produkten aus losen Koernern (mit einigen Experimenten), Kolloid-Zeitschrift 50",0
+ae.physics.packing.py,SRC_FUNK_DINGER,bibliography,"Source(citation='Funk, J.E. and Dinger, D.R. 1994, Predictive Process Control of Crowded Particulate Suspensions Applied to Ceramic Manufacturing, Springer', tier=Tier.T1, doi='10.1007/978-1-4615-3118",0
+ae.physics.packing.py,SRC_KRIEGER,bibliography,"Source(citation='Krieger, I.M. and Dougherty, T.J. 1959, A Mechanism for Non-Newtonian Flow in Suspensions of Rigid Spheres, Transactions of the Society of Rheology 3:137-152', tier=Tier.T1, doi='10.1",0
+ae.physics.packing.py,SRC_SCOTT_KILGOUR,bibliography,"Source(citation='Scott, G.D. and Kilgour, D.M. 1969, The density of random close packing of spheres, Journal of Physics D: Applied Physics 2:863-866', tier=Tier.T1, doi='10.1088/0022-3727/2/6/311', ac",0
+ae.physics.phases.py,R_GAS,numeric_constant,8.31446261815324,0
+ae.physics.phases.py,_MOLAR_VOLUME_REF,prose,'m**3/mol',0
+ae.physics.phases.py,_ACCESSED,bibliography,"__import__('datetime').date(2026, 9, 16)",0
+ae.physics.phases.py,SRC_HP2011,bibliography,"Source(citation='Holland, T.J.B. and Powell, R. 2011, An improved and extended internally consistent thermodynamic dataset for phases of petrological interest, involving a new equation of state for so",0
+ae.physics.phases.py,SRC_CARPENTER,bibliography,"Source(citation='Carpenter, M.A., Salje, E.K.H., Graeme-Barber, A., Wruck, B., Dove, M.T. and Knight, K.S. 1998, Calibration of excess thermodynamic properties and elastic constant variations associat",0
+ae.physics.phases.py,SRC_RINGDALEN,bibliography,"Source(citation='Ringdalen, E. 2015, Changes in Quartz During Heating and the Possible Effects on Si Production, JOM 67:484-492', tier=Tier.T1, doi='10.1007/s11837-014-1149-y', accessed=_ACCESSED, ext",0
+ae.physics.phases.py,SRC_WARDEN,bibliography,"Source(citation='Warden, G.K., Gawel, B.A., Juel, M., Erbe, A. and Di Sabatino, M. 2024, Cristobalite Formation in Fused Quartz Crucibles for Czochralski Silicon Production in Different Conditions, Si",0
+ae.physics.phases.py,SRC_ZHANG,bibliography,"Source(citation='Zhang, Y., Mavrogenes, J.A. and others 2014, Kinetics of Cristobalite Formation in Sintered Silica, Journal of the American Ceramic Society 97:3378-3384', tier=Tier.T1, doi='10.1111/j",0
+ae.physics.phases.py,SRC_WENK,bibliography,"Source(citation='Wenk, H.-R., Brunini, A. and others 1998, Quartz and Cristobalite: high-temperature cell parameters and volumes of fusion, Geophysical Research Letters 25:2261-2264', tier=Tier.T1, do",0
+ae.physics.psd.py,_ACCESSED,bibliography,"_dt.date(2026, 9, 16)",0
+ae.physics.psd.py,Z_10,numeric_constant,-1.2815515655446004,0
+ae.physics.psd.py,Z_90,numeric_constant,1.2815515655446004,0
+ae.physics.psd.py,SRC_HATCH_CHOATE,bibliography,"Source(citation='Hatch, T. and Choate, S.P. 1929, Statistical description of the size properties of non-uniform particulate substances, Journal of the Franklin Institute 207:369-387', tier=Tier.T1, do",0
+ae.physics.psd.py,SRC_ALDERLIESTEN,bibliography,"Source(citation='Alderliesten, M. 2013, Mean Particle Diameters. Part VII. The Rosin-Rammler Size Distribution: Physical and Mathematical Properties and Relationships to Moment-Ratio Defined Mean Part",0
+ae.physics.psd.py,SRC_RINGDALEN_SSA,bibliography,"Source(citation='Ringdalen, E. 2015, Changes in Quartz During Heating and the Possible Effects on Si Production, JOM 67:484-492', tier=Tier.T1, doi='10.1007/s11837-014-1149-y', accessed=_ACCESSED, ext",0
+ae.physics.reagents.py,ACID_PROTONS,numeric_table,"{Acid.HF: 1, Acid.HCl: 1, Acid.HNO3: 1, Acid.H2SO4: 2}",0
+ae.physics.reagents.py,ACID_MOLAR_MASS,numeric_table,"{Acid.HF: 1.008 + 18.998, Acid.HCl: 1.008 + 35.45, Acid.HNO3: 1.008 + 14.007 + 3 * 15.999, Acid.H2SO4: 2 * 1.008 + 32.06 + 4 * 15.999}",0
+ae.physics.reagents.py,BASE_EQUIVALENTS,numeric_table,"{Base.LIME: (2, 40.078 + 2 * (15.999 + 1.008)), Base.CAUSTIC: (1, 22.9898 + 15.999 + 1.008)}",0
+ae.physics.reagents.py,CATION_CHARGE,numeric_table,"{'Al': 3, 'Ti': 4, 'Fe': 3, 'Li': 1, 'Na': 1, 'K': 1, 'Ca': 2, 'B': 3, 'Mg': 2, 'Mn': 2, 'Cr': 3, 'Cu': 2, 'Zr': 4, 'P': 5, 'Ge': 4, 'U': 6, 'Th': 4}",0
+ae.physics.reagents.py,SILICA_HF_STOICH,numeric_table,"{'H2SiF6_solution': 6, 'SiF4_gas': 4}",0
+ae.physics.reagents.py,M_SIO2,numeric_constant,(MOLAR_MASS['Si'] + 2 * MOLAR_MASS['O']) / 1000.0,0
+ae.physics.reagents.py,LEACH_REACTIONS,numeric_table,"{'hematite_HCl': Reaction(name='Fe2O3 + 6 HCl -> 2 FeCl3 + 3 H2O', reactants={'Fe2O3': _sp(1, 0, {'Fe': 2, 'O': 3}), 'HCl': _sp(6, 0, {'H': 1, 'Cl': 1})}, products={'FeCl3': _sp(2, 0, {'Fe': 1, 'Cl': ",0
+ae.physics.reagents.py,_ANION_CHARGE,numeric_table,"{'Cl': -1, 'F': -1, 'NO3': -1, 'SO4': -2, 'SiF6': -2, 'OH': -1}",0
+ae.physics.separation.py,_ACCESSED,bibliography,"_dt.date(2026, 9, 16)",0
+ae.physics.separation.py,SRC_POLAT_CHANDER,bibliography,"Source(citation='Polat M. and Chander S. 2000, First-order flotation kinetics models and methods for estimation of the true distribution of flotation rate constants, International Journal of Mineral P",0
+ae.physics.separation.py,SRC_WILLS_ACCOUNTING,bibliography,"Source(citation=""Wills B. A. and Napier-Munn T. 2005, Metallurgical accounting, control and simulation, in Wills' Mineral Processing Technology, 7th edition, Elsevier, pp. 39-89"", tier=Tier.T1, doi='1",0
+ae.physics.separation.py,SRC_WILLS_CLASSIFICATION,bibliography,"Source(citation=""Wills B. A. and Finch J. A. 2016, Classification, in Wills' Mineral Processing Technology, 8th edition, Elsevier, pp. 199-221"", tier=Tier.T1, doi='10.1016/b978-0-08-097053-0.00009-1',",0
+ae.physics.separation.py,SRC_LIN_2020,bibliography,"Source(citation='Lin M., Liu Z., Wei Y. et al. 2020, A Critical Review on the Mineralogy and Processing for High-Grade Quartz, Mining, Metallurgy and Exploration 37:1627-1639', tier=Tier.T1, doi='10.1",0
+ae.physics.separation.py,SRC_DU_2024,bibliography,"Source(citation='Du S., Pan B., Xia L. et al. 2024, Purification of Vein Quartz Using a New Fluorine-Free Flotation: A Case from Southern Anhui Province, China, Minerals 14(12):1191', tier=Tier.T1, do",0
+ae.physics.thermal.py,M_SIO2,numeric_constant,0.0600843,0
+ae.physics.thermal.py,T_REF,numeric_constant,298.15,0
+ae.physics.thermal.py,_ACCESSED,bibliography,"_dt.date(2026, 9, 16)",0
+ae.physics.thermal.py,SRC_HP2011,bibliography,"Source(citation='Holland, T.J.B. and Powell, R. 2011, An improved and extended internally consistent thermodynamic dataset for phases of petrological interest, involving a new equation of state for so",0
+ae.physics.thermal.py,SRC_HGP2018,bibliography,"Source(citation='Holland, T.J.B., Green, E.C.R. and Powell, R. 2018, Melting of Peridotites through to Granites: A Simple Thermodynamic Model in the System KNCFMASHTOCr, Journal of Petrology 59:881-90",0
+ae.physics.thermal.py,SRC_LBNL_GLASS,bibliography,"Source(citation='Galitsky, C. and Worrell, E. 2008, Energy Efficiency Improvement and Cost Saving Opportunities for the Glass Industry: An ENERGY STAR Guide for Energy and Plant Managers, Lawrence Ber",0
+ae.physics.thermal.py,CP_T_MAX_BASIS,prose,"'ASSUMED. The ds62/ds633 SI transcription carries no per-endmember temperature validity range, and the publisher PDF is unreachable from this sandbox. t_max is set to the temperature above which each ",0
+ae.plant.capacity.py,HOURS_PER_YEAR,numeric_constant,8760.0,0
+ae.plant.streams.py,CLOSURE_TOL,numeric_constant,1e-06,0

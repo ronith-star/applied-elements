@@ -1,10 +1,11 @@
 """Provenance and uncertainty contract tests."""
 import datetime as dt
+
 import numpy as np
 import pytest
+
+from ae.core.provenance import MISSING, Distribution, MissingValueError, Source, Tag, Tier, Value
 from ae.core.units import Q_
-from ae.core.provenance import (Tag, Tier, Source, Distribution, Value, MISSING,
-                                MissingValueError)
 
 T1 = Source(citation="Muller et al. 2012, Quartz: Deposits, Mineralogy and Analytics",
             tier=Tier.T1, doi="10.1007/978-3-642-22161-3", accessed=dt.date(2026, 9, 16))

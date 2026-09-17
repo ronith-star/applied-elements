@@ -188,7 +188,7 @@ def _clash(doc: str) -> list[str]:
     for para in re.split(r"\n\s*\n", refs):
         flat = re.sub(r"\s+", " ", para)
         disclaiming = re.search(
-            r"not cited|could not be verified|unverifiable", flat, re.I)
+            r"not cited|could not be verified|unverifiable", flat, re.IGNORECASE)
         if disclaiming:
             disclaimed_paras.append(flat)
         elif re.search(r"doi:|\*[A-Z]", flat):

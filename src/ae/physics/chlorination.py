@@ -221,31 +221,31 @@ import enum
 import math
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from ae.core.feedstock import Feedstock
 from ae.core.provenance import MISSING, Source, Tag, Tier, Value, _Missing
 from ae.core.units import Q_, Quantity, require_dimensionality, require_fraction
 
 __all__ = [
+    "CHLORIDES",
     "GAS_CONSTANT",
     "P_REFERENCE",
-    "TROUTON_ENTROPY",
-    "PhaseChange",
-    "ChlorideSpecies",
-    "CHLORIDES",
     "REDUCTANT_REQUIRED",
-    "THERMO",
-    "ScreenResult",
     "SOURCE_LIU_2026",
     "SOURCE_PUBCHEM",
-    "trouton_enthalpy",
-    "vapour_pressure",
+    "THERMO",
+    "TROUTON_ENTROPY",
+    "ChlorideSpecies",
+    "PhaseChange",
+    "ScreenResult",
     "gibbs_of_reaction",
     "hertz_knudsen_flux",
-    "requires_reductant",
     "removal_screen",
+    "requires_reductant",
     "screen_feedstock",
+    "trouton_enthalpy",
+    "vapour_pressure",
 ]
 
 #: Molar gas constant, CODATA 2018 exact value.
@@ -314,7 +314,7 @@ class ChlorideSpecies(BaseModel):
     pubchem_cid: int | None = None
 
     @model_validator(mode="after")
-    def _physical(self) -> "ChlorideSpecies":
+    def _physical(self) -> ChlorideSpecies:
         t_b = float(self.transition_T.quantity.to("K").magnitude)
         if t_b <= 0.0:
             raise ValueError(f"{self.formula}: transition temperature must be positive")

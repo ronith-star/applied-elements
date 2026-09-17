@@ -25,6 +25,7 @@ from ae.core.provenance import MissingValueError, Source, Tag, Tier, Value
 from ae.core.units import Q_, require_dimensionality
 from ae.physics.diffusion import (
     D0_SWEEP_M2_S,
+    DIFFUSIVITY_STATUS,
     ERF_HALF,
     FO_SHORT_TIME_SWITCH,
     GAS_CONSTANT,
@@ -32,7 +33,6 @@ from ae.physics.diffusion import (
     MOST_MOBILE_BOUND,
     TI_LATTICE_BOUND,
     ArrheniusDiffusivity,
-    DIFFUSIVITY_STATUS,
     Verdict,
     critical_activation_energy,
     diffusion_length,
@@ -89,7 +89,10 @@ def quartz_no_lattice_split() -> Feedstock:
     return Feedstock(
         sample_id="AE-Q-IN-VKB-002", ore_type=OreType.VEIN_QUARTZ,
         deposit_name="Synthetic test vein", country="IN", impurities=imp,
-        characterized=True,
+        # characterized deliberately LEFT FALSE: this fixture omits the
+        # lattice split on purpose, so it is at tier 'bulk_quantified'
+        # and claiming characterization would assert evidence it lacks.
+
     )
 
 

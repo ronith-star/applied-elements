@@ -24,15 +24,16 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import numpy as np
 
 from ae.core.provenance import Distribution, Source, Tag, Tier, Value
 from ae.core.units import UREG, Quantity
 
-__all__ = ["Registry", "ParameterNotFound", "DuplicateParameter"]
+__all__ = ["DuplicateParameter", "ParameterNotFound", "Registry"]
 
 
 class ParameterNotFound(KeyError):
@@ -195,7 +196,7 @@ class Registry:
         return p
 
     @classmethod
-    def load(cls, path: str | Path) -> "Registry":
+    def load(cls, path: str | Path) -> Registry:
         """Read a registry back, reconstructing units and provenance."""
         raw = json.loads(Path(path).read_text())
         reg = cls()

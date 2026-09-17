@@ -171,37 +171,43 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ae.core.feedstock import Feedstock
 from ae.core.provenance import Source, Tag, Tier, Value
-from ae.core.units import Q_, DimensionalityError, Quantity, require_dimensionality
+from ae.core.units import (
+    Q_,
+    REGISTRY_QUANTITY,
+    DimensionalityError,
+    Quantity,
+    require_dimensionality,
+)
 
 __all__ = [
-    "Polymorph",
-    "TransitionCharacter",
-    "ContactMaterial",
-    "RiskLevel",
+    "QUARTZ_LANDAU",
     "R_GAS",
-    "require_molar_volume",
+    "SRC_CARPENTER",
     "SRC_HP2011",
     "SRC_RINGDALEN",
     "SRC_WARDEN",
-    "SRC_ZHANG",
     "SRC_WENK",
-    "SRC_CARPENTER",
-    "LandauParameters",
-    "QUARTZ_LANDAU",
-    "Transition",
+    "SRC_ZHANG",
     "TRANSITIONS",
+    "ContactMaterial",
+    "DevitrificationAssessment",
+    "LandauParameters",
+    "Polymorph",
+    "RiskLevel",
     "ScheduleSegment",
     "ThermalSchedule",
-    "order_parameter",
-    "landau_critical_temperature",
-    "excess_molar_volume",
+    "Transition",
+    "TransitionCharacter",
     "alpha_beta_cumulative_volume_strain",
-    "cristobalite_onset_temperature",
     "arrhenius_rate_ratio",
-    "jmak_fraction",
+    "cristobalite_onset_temperature",
     "crossed_transitions",
     "devitrification_risk",
-    "DevitrificationAssessment",
+    "excess_molar_volume",
+    "jmak_fraction",
+    "landau_critical_temperature",
+    "order_parameter",
+    "require_molar_volume",
 ]
 
 #: Molar gas constant, J/(mol K). CODATA 2018 exact value (SI redefinition 2019).
@@ -221,7 +227,7 @@ def require_molar_volume(quantity: object, name: str) -> Quantity:
     not define. Raises TypeError for a bare number and DimensionalityError for the wrong
     dimension, so the guard behaves identically to the core checks in tests.
     """
-    if not isinstance(quantity, Quantity):
+    if not isinstance(quantity, REGISTRY_QUANTITY):
         raise TypeError(
             f"{name} must be a pint Quantity with molar volume dimensions "
             f"(e.g. Q_(2.269e-5, 'm**3/mol')), got {type(quantity).__name__}"
@@ -395,7 +401,7 @@ class LandauParameters(BaseModel):
     p_0: Value
 
     @model_validator(mode="after")
-    def _dimensions(self) -> "LandauParameters":
+    def _dimensions(self) -> LandauParameters:
         require_dimensionality(self.tc_0.quantity, "temperature", "tc_0")
         require_dimensionality(self.s_d.quantity, "heat_capacity_molar", "s_d")
         require_molar_volume(self.v_d.quantity, "v_d")
@@ -455,7 +461,7 @@ class Transition(BaseModel):
     note: str | None = None
 
     @model_validator(mode="after")
-    def _dimensions(self) -> "Transition":
+    def _dimensions(self) -> Transition:
         require_dimensionality(self.temperature.quantity, "temperature", f"{self.name}.T")
         if self.temperature.quantity.to("K").magnitude <= 0.0:
             raise ValueError(f"{self.name}: absolute temperature must be positive")
@@ -884,7 +890,7 @@ class ScheduleSegment(BaseModel):
     label: str | None = None
 
     @model_validator(mode="after")
-    def _dimensions(self) -> "ScheduleSegment":
+    def _dimensions(self) -> ScheduleSegment:
         require_dimensionality(self.target_temperature, "temperature", "target_temperature")
         require_dimensionality(self.hold_time, "time", "hold_time")
         if float(self.target_temperature.to("K").magnitude) <= 0.0:
@@ -921,7 +927,7 @@ class ThermalSchedule(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _dimensions(self) -> "ThermalSchedule":
+    def _dimensions(self) -> ThermalSchedule:
         require_dimensionality(self.start_temperature, "temperature", "start_temperature")
         if not self.segments:
             raise ValueError("a thermal schedule needs at least one segment")
@@ -1015,7 +1021,7 @@ class DevitrificationAssessment(BaseModel):
     note: str
 
     @model_validator(mode="after")
-    def _dimensions(self) -> "DevitrificationAssessment":
+    def _dimensions(self) -> DevitrificationAssessment:
         require_dimensionality(self.margin_above_onset, "temperature", "margin_above_onset")
         require_dimensionality(self.hold_above_onset, "time", "hold_above_onset")
         if float(self.hold_above_onset.to("s").magnitude) < 0.0:

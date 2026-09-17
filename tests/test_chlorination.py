@@ -9,6 +9,7 @@ carbonaceous reductant at every temperature.
 
 from __future__ import annotations
 
+import datetime as dt
 import math
 
 import pytest
@@ -38,8 +39,6 @@ from ae.physics.chlorination import (
     vapour_pressure,
 )
 
-import datetime as dt
-
 _SRC = Source(
     citation="Test fixture source, not a real reference",
     tier=Tier.T2, url="https://example.invalid/fixture", accessed=dt.date(2026, 9, 16),
@@ -60,6 +59,12 @@ def quartz() -> Feedstock:
         total={e: _v(Q_(v, "ppm_mass")) for e, v in
                [("Al", 30.0), ("Ti", 10.0), ("Li", 5.0), ("Fe", 3.0),
                 ("Na", 8.0), ("K", 8.0), ("B", 1.0)]},
+        lattice_fraction={el: Value(
+            quantity=Q_(0.5, "dimensionless"), tag=Tag.ASSUMED,
+            basis="INVENTED test fixture split, not a measurement. Present only "
+                  "so the 'located' tier can be constructed; no assertion "
+                  "depends on its magnitude.",
+            confidence="low") for el in ("Al", "Ti", "Li", "Fe", "Na", "K", "B")},
         method="LA_ICP_MS",
     )
     return Feedstock(

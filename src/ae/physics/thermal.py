@@ -197,27 +197,27 @@ from ae.physics.phases import (
 )
 
 __all__ = [
-    "M_SIO2",
-    "T_REF",
-    "SRC_HP2011",
-    "SRC_HGP2018",
-    "SRC_LBNL_GLASS",
-    "CpCoefficients",
     "CP_COEFFICIENTS",
     "FORMATION_ENTHALPY",
-    "molar_heat_capacity",
-    "specific_heat_capacity",
+    "M_SIO2",
+    "SRC_HGP2018",
+    "SRC_HP2011",
+    "SRC_LBNL_GLASS",
+    "T_REF",
+    "CpCoefficients",
+    "EnergyBalance",
+    "ThermalStep",
+    "calcination_energy",
+    "electricity_cost",
+    "fusion_energy",
     "integrated_enthalpy",
     "landau_excess_enthalpy",
     "landau_excess_heat_capacity",
+    "molar_heat_capacity",
     "phase_enthalpy",
-    "specific_transition_enthalpy",
-    "ThermalStep",
-    "EnergyBalance",
-    "calcination_energy",
-    "fusion_energy",
     "quench_heat_rejection",
-    "electricity_cost",
+    "specific_heat_capacity",
+    "specific_transition_enthalpy",
 ]
 
 #: Molar mass of SiO2, kg/mol. Holland and Powell ds62 endmember value.
@@ -311,7 +311,7 @@ class CpCoefficients(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _dimensions(self) -> "CpCoefficients":
+    def _dimensions(self) -> CpCoefficients:
         require_dimensionality(self.a.quantity, "heat_capacity_molar", "a")
         require_dimensionality(self.t_min, "temperature", "t_min")
         require_dimensionality(self.t_max, "temperature", "t_max")
@@ -679,7 +679,7 @@ class ThermalStep(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _dimensions(self) -> "ThermalStep":
+    def _dimensions(self) -> ThermalStep:
         require_dimensionality(self.t_start, "temperature", "t_start")
         require_dimensionality(self.t_end, "temperature", "t_end")
         eta = require_fraction(
@@ -740,7 +740,7 @@ class EnergyBalance(BaseModel):
     notes: tuple[str, ...] = ()
 
     @model_validator(mode="after")
-    def _balance_closes(self) -> "EnergyBalance":
+    def _balance_closes(self) -> EnergyBalance:
         for field in ("theoretical", "supplied", "losses", "sensible", "transition"):
             require_dimensionality(getattr(self, field), "specific_energy_mass", field)
         theo = float(self.theoretical.to("J/kg").magnitude)

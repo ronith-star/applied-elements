@@ -1,13 +1,19 @@
 """Factored capex: scaling, escalation vs location, reconciliation, accuracy band."""
-import datetime as dt
 import dataclasses as dc
+import datetime as dt
+
 import pytest
+
+from ae.core.provenance import Source, Tag, Tier, Value
+from ae.core.site import Currency, LabourRates, PowerSupply, Site
 from ae.core.units import Q_, DimensionalityError
-from ae.core.provenance import Tag, Tier, Source, Value
-from ae.core.site import Currency, PowerSupply, LabourRates, Site
 from ae.econ.capex import (
-    Equipment, scale_cost, escalate_cost, estimate_capex, exponent_provenance,
     SCALING_RANGE,
+    Equipment,
+    escalate_cost,
+    estimate_capex,
+    exponent_provenance,
+    scale_cost,
 )
 
 SRC = Source(citation="Vendor quotation, redacted", tier=Tier.T2,

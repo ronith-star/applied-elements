@@ -8,7 +8,7 @@ import pytest
 
 from ae.core.feedstock import Feedstock, ImpurityProfile, OreType
 from ae.core.provenance import Tag, Value
-from ae.core.units import DimensionalityError, Q_
+from ae.core.units import Q_, DimensionalityError
 from ae.physics import phases
 from ae.physics.phases import (
     QUARTZ_LANDAU,
@@ -66,6 +66,12 @@ def characterized_ore() -> Feedstock:
     prof = ImpurityProfile(
         total={"Al": v(60.0), "Ti": v(3.0), "Li": v(2.0), "Fe": v(5.0), "Na": v(10.0),
                "K": v(20.0), "B": v(0.5)},
+        lattice_fraction={el: Value(
+            quantity=Q_(0.5, "dimensionless"), tag=Tag.ASSUMED,
+            basis="INVENTED test fixture split, not a measurement. Present only "
+                  "so the 'located' tier can be constructed; no assertion "
+                  "depends on its magnitude.",
+            confidence="low") for el in ("Al", "Ti", "Li", "Fe", "Na", "K", "B")},
         method="LA_ICP_MS",
     )
     return Feedstock(sample_id="AE-Q-PK-VEIN-001", ore_type=OreType.VEIN_QUARTZ,

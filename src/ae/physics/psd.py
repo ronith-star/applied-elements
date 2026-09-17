@@ -169,7 +169,7 @@ from __future__ import annotations
 import datetime as _dt
 import enum
 import math
-from typing import Final, Literal
+from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -178,18 +178,18 @@ from ae.core.provenance import Source, Tag, Tier, Value
 from ae.core.units import Q_, Quantity, require_dimensionality, require_fraction
 
 __all__ = [
-    "Weighting",
-    "SRC_HATCH_CHOATE",
     "SRC_ALDERLIESTEN",
+    "SRC_HATCH_CHOATE",
     "SRC_RINGDALEN_SSA",
     "Z_10",
     "Z_90",
     "LogNormalPSD",
-    "RosinRammlerPSD",
     "PSDSummary",
+    "RosinRammlerPSD",
+    "Weighting",
     "convert_lognormal_median",
-    "specific_surface_area",
     "feedstock_sphericity_assumption",
+    "specific_surface_area",
 ]
 
 _ACCESSED: Final[_dt.date] = _dt.date(2026, 9, 16)
@@ -273,7 +273,7 @@ class PSDSummary(BaseModel):
     specific_surface_area: Quantity
 
     @model_validator(mode="after")
-    def _checks(self) -> "PSDSummary":
+    def _checks(self) -> PSDSummary:
         for field in ("d10", "d50", "d90", "sauter_d32"):
             q = require_dimensionality(getattr(self, field), "length", field)
             if float(q.to("m").magnitude) <= 0.0:
@@ -404,7 +404,7 @@ class LogNormalPSD(BaseModel):
     sphericity: Value | None = None
 
     @model_validator(mode="after")
-    def _checks(self) -> "LogNormalPSD":
+    def _checks(self) -> LogNormalPSD:
         require_dimensionality(self.d_gn, "length", "d_gn")
         require_dimensionality(self.density, "density", "density")
         if float(self.d_gn.to("m").magnitude) <= 0.0:
@@ -564,7 +564,7 @@ class RosinRammlerPSD(BaseModel):
     sphericity: Value | None = None
 
     @model_validator(mode="after")
-    def _checks(self) -> "RosinRammlerPSD":
+    def _checks(self) -> RosinRammlerPSD:
         require_dimensionality(self.d_prime, "length", "d_prime")
         require_dimensionality(self.density, "density", "density")
         if float(self.d_prime.to("m").magnitude) <= 0.0:

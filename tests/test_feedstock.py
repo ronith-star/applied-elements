@@ -1,10 +1,18 @@
 """FEEDSTOCK schema and oxide conversion tests."""
 import datetime as dt
+
 import pytest
+
+from ae.core.feedstock import (
+    MOLAR_MASS,
+    OXIDE_STOICH,
+    Feedstock,
+    ImpurityProfile,
+    OreType,
+    oxide_to_element,
+)
+from ae.core.provenance import MISSING, MissingValueError, Source, Tag, Tier, Value
 from ae.core.units import Q_
-from ae.core.provenance import Tag, Tier, Source, Value, MISSING, MissingValueError
-from ae.core.feedstock import (OreType, Feedstock, ImpurityProfile, oxide_to_element,
-                               OXIDE_STOICH, MOLAR_MASS, ELEMENTS)
 
 SRC = Source(citation="Test source 2026", tier=Tier.T1, doi="10.1000/test",
              accessed=dt.date(2026, 9, 16))
@@ -254,6 +262,7 @@ def test_tier_docstrings_enumerate_every_tier_in_the_type():
     how "three tiers" survived alongside a four-member Literal. Checked by
     reflection against the type, so the two cannot drift again."""
     import typing
+
     from ae.core.feedstock import CharacterizationTier
     tiers = set(typing.get_args(CharacterizationTier))
     assert tiers == {"unmeasured", "screened", "bulk_quantified", "located"}

@@ -27,20 +27,20 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ae.core.provenance import MISSING, Tag, Value, _Missing
-from ae.core.units import Q_, Quantity, to_ppm_mass
+from ae.core.provenance import MISSING, Value, _Missing
+from ae.core.units import to_ppm_mass
 
 __all__ = [
-    "OreType",
-    "InclusionType",
     "ELEMENTS",
     "MOLAR_MASS",
     "OXIDE_STOICH",
-    "oxide_to_element",
+    "Feedstock",
     "ImpurityProfile",
     "InclusionCharacter",
+    "InclusionType",
+    "OreType",
     "PhysicalProperties",
-    "Feedstock",
+    "oxide_to_element",
 ]
 
 
@@ -147,7 +147,7 @@ class ImpurityProfile(BaseModel):
     basis_material: Literal["run_of_mine", "crushed", "beneficiated", "single_grain"] | None = None
 
     @model_validator(mode="after")
-    def _known_elements_and_units(self) -> "ImpurityProfile":
+    def _known_elements_and_units(self) -> ImpurityProfile:
         for name, mapping in (("total", self.total), ("lattice_fraction", self.lattice_fraction)):
             for el in mapping:
                 if el not in ELEMENTS:
@@ -252,7 +252,7 @@ class Feedstock(BaseModel):
     note: str | None = None
 
     @model_validator(mode="after")
-    def _characterized_means_measured(self) -> "Feedstock":
+    def _characterized_means_measured(self) -> Feedstock:
         if self.characterized:
             if self.characterization_tier != "located":
                 raise ValueError(

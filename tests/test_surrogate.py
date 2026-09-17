@@ -1,9 +1,13 @@
 """Surrogate validation: grouped splits, baselines, OOD refusal."""
 import numpy as np
 import pytest
+
 from ae.ml.surrogate import (
-    TrainingSet, Surrogate, evaluate_surrogate, random_kfold_optimism,
+    Surrogate,
+    TrainingSet,
+    evaluate_surrogate,
     leave_one_deposit_out_splits,
+    random_kfold_optimism,
 )
 
 

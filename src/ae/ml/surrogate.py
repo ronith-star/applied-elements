@@ -77,14 +77,14 @@ from typing import Any, Literal
 import numpy as np
 
 __all__ = [
-    "TrainingSet",
-    "OODReport",
-    "FoldResult",
     "EvaluationResult",
+    "FoldResult",
+    "OODReport",
     "Surrogate",
+    "TrainingSet",
     "evaluate_surrogate",
-    "random_kfold_optimism",
     "leave_one_deposit_out_splits",
+    "random_kfold_optimism",
 ]
 
 

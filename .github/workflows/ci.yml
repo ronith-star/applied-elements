@@ -1,0 +1,57 @@
+# Continuous integration for the Applied Elements platform.
+#
+# Runs on every push and pull request. The job deliberately does NOT install
+# the package in editable mode before the first pytest invocation: for
+# twenty-five commits the suite passed only because an editable install
+# happened to exist in one development environment, and a fresh clone would
+# have failed on `import ae`. tests/conftest.py now puts src/ on sys.path, and
+# the "no editable install" step below is what keeps that true, by running the
+# suite exactly as someone who has just cloned the repository would.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install runtime and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy scipy pandas matplotlib sympy pint \
+            SALib simpy PuLP scikit-learn xgboost openpyxl XlsxWriter \
+            pydantic PyKrige pytest mypy ruff
+
+      # Runs BEFORE any install of this package: proves a fresh clone works.
+      - name: Suite runs without an editable install
+        run: python -m pytest tests/ -q
+
+      - name: Lint
+        run: ruff check src tests
+
+      - name: Type check
+        run: mypy src
+
+      - name: Doctests in modules
+        run: python -m pytest --doctest-modules src/ae -q
+
+      - name: Export the parameter registry and validation record
+        run: |
+          python scripts/export_registry.py
+          python scripts/export_validation.py
+
+      - name: Upload registry and validation artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: registry-and-validation
+          path: data/registry/*.csv

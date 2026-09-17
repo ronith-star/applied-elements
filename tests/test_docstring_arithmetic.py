@@ -23,15 +23,17 @@ docstring is now recomputed" on the strength of a grep over one directory with a
 hand-picked literal list. The claim was broader than the check. The detector is
 now mechanical and its blind spot is written down rather than papered over.
 """
-import numpy as np
 import pytest
 from scipy import stats
 
-from ae.core.units import Q_
 from ae.core.feedstock import oxide_to_element
+from ae.core.units import Q_
 from ae.plant.capacity import OEE, UnitCapacity, assess_line
 from ae.plant.yield_cascade import (
-    cascade_yield, stage_throughput_factors, off_spec_fraction, required_process_mean,
+    cascade_yield,
+    off_spec_fraction,
+    required_process_mean,
+    stage_throughput_factors,
 )
 
 
@@ -136,7 +138,7 @@ def test_spc_prose_arithmetic():
 def test_scheduling_prose_arithmetic():
     """scheduling.py: M/M/1 Wq = 0.8/(1.0 x 0.2) = 4.0 h; M/D/1 is exactly half
     at 2.0 h; rho 0.5 gives 1.0 h so 0.5 -> 0.8 quadruples the queue."""
-    from ae.plant.scheduling import mm1_waiting_time, allen_cunneen_waiting_time
+    from ae.plant.scheduling import allen_cunneen_waiting_time, mm1_waiting_time
     assert mm1_waiting_time(0.8, 1.0) == pytest.approx(4.0, abs=1e-9)
     assert mm1_waiting_time(0.5, 1.0) == pytest.approx(1.0, abs=1e-9)
     assert mm1_waiting_time(0.8, 1.0) / mm1_waiting_time(0.5, 1.0) == pytest.approx(4.0)

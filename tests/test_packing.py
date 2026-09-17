@@ -10,8 +10,8 @@ from __future__ import annotations
 import pytest
 
 from ae.core.feedstock import Feedstock, OreType
-from ae.core.provenance import Tag, Tier, Value
-from ae.core.units import DimensionalityError, Q_
+from ae.core.provenance import Tag, Tier
+from ae.core.units import Q_, DimensionalityError
 from ae.physics import packing as pk
 from ae.physics.packing import (
     EINSTEIN_INTRINSIC_VISCOSITY,

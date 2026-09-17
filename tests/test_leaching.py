@@ -21,8 +21,8 @@ import math
 
 import numpy as np
 import pytest
-from scipy.optimize import brentq
 from pydantic import ValidationError
+from scipy.optimize import brentq
 
 from ae.core.feedstock import Feedstock, ImpurityProfile, OreType
 from ae.core.provenance import MissingValueError, Source, Tag, Tier, Value
@@ -96,7 +96,10 @@ def quartz_no_lattice_split() -> Feedstock:
     return Feedstock(
         sample_id="AE-Q-IN-VKB-002", ore_type=OreType.VEIN_QUARTZ,
         deposit_name="Synthetic test vein", country="IN", impurities=imp,
-        characterized=True,
+        # characterized deliberately LEFT FALSE: this fixture omits the
+        # lattice split on purpose, so it is at tier 'bulk_quantified'
+        # and claiming characterization would assert evidence it lacks.
+
     )
 
 

@@ -238,7 +238,8 @@ import datetime as _dt
 import enum
 import math
 import warnings
-from typing import Final, Sequence
+from collections.abc import Sequence
+from typing import Final
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -248,28 +249,28 @@ from ae.core.provenance import MISSING, Source, Tag, Tier, Value, _Missing
 from ae.core.units import Q_, Quantity, require_dimensionality, require_fraction
 
 __all__ = [
-    "GAS_CONSTANT",
-    "Regime",
     "EA_REGIME_BANDS",
+    "GAS_CONSTANT",
+    "SOURCE_XIA_2024",
+    "SOURCE_YANG_2020",
     "Arrhenius",
     "LeachSystem",
+    "Regime",
     "RegimeFit",
-    "SOURCE_YANG_2020",
-    "SOURCE_XIA_2024",
+    "arrhenius_fit",
+    "conversion",
+    "conversion_over_size_distribution",
+    "conversion_profile",
+    "g_of_conversion",
+    "identify_regime",
     "leachable_ppm",
+    "removal_fraction_from_assay",
+    "size_exponent_from_series",
     "tau_film",
+    "tau_for",
+    "tau_from_single_point",
     "tau_product_layer",
     "tau_surface_reaction",
-    "tau_for",
-    "g_of_conversion",
-    "conversion",
-    "conversion_profile",
-    "tau_from_single_point",
-    "identify_regime",
-    "arrhenius_fit",
-    "size_exponent_from_series",
-    "conversion_over_size_distribution",
-    "removal_fraction_from_assay",
 ]
 
 #: Molar gas constant, CODATA 2018 exact value. J mol^-1 K^-1.
@@ -370,7 +371,7 @@ class Arrhenius(BaseModel):
         default=None, description="Calibration interval in K as (low, high)")
 
     @model_validator(mode="after")
-    def _physically_possible(self) -> "Arrhenius":
+    def _physically_possible(self) -> Arrhenius:
         a = self.prefactor.quantity
         ea = self.activation_energy.quantity.to("J/mol")
         if float(a.magnitude) <= 0.0:
@@ -440,7 +441,7 @@ class LeachSystem(BaseModel):
     surface_rate_constant: Arrhenius | _Missing = MISSING
 
     @model_validator(mode="after")
-    def _dimensions_and_ranges(self) -> "LeachSystem":
+    def _dimensions_and_ranges(self) -> LeachSystem:
         require_dimensionality(self.particle_radius.quantity, "length", "particle_radius")
         require_dimensionality(self.temperature.quantity, "temperature", "temperature")
         r = float(self.particle_radius.quantity.to("m").magnitude)

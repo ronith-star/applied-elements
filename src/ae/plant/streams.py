@@ -98,17 +98,18 @@ LIMITATIONS
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Literal
+from typing import Literal
 
 from ae.core.units import Q_, Quantity, require_dimensionality
 
 __all__ = [
+    "BalanceResult",
+    "Flowsheet",
+    "MassBalanceError",
     "Stream",
     "UnitOp",
-    "Flowsheet",
-    "BalanceResult",
-    "MassBalanceError",
 ]
 
 #: Relative closure tolerance on the solids balance, as a fraction of feed flow.
@@ -364,14 +365,14 @@ class Flowsheet:
         self.order: list[str] = []
         self.links: list[tuple[str, str, str]] = []
 
-    def add(self, unit: UnitOp) -> "Flowsheet":
+    def add(self, unit: UnitOp) -> Flowsheet:
         if unit.name in self.units:
             raise ValueError(f"unit {unit.name!r} already present")
         self.units[unit.name] = unit
         self.order.append(unit.name)
         return self
 
-    def connect(self, source: str, kind: Literal["product", "reject"], target: str) -> "Flowsheet":
+    def connect(self, source: str, kind: Literal["product", "reject"], target: str) -> Flowsheet:
         for u in (source, target):
             if u not in self.units:
                 raise KeyError(f"unknown unit {u!r}")

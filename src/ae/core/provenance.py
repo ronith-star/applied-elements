@@ -29,13 +29,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from ae.core.units import UREG, Quantity
 
 __all__ = [
-    "Tag",
-    "Tier",
+    "MISSING",
+    "Distribution",
     "MissingValueError",
     "Source",
-    "Distribution",
+    "Tag",
+    "Tier",
     "Value",
-    "MISSING",
 ]
 
 
@@ -77,7 +77,7 @@ class Source(BaseModel):
     note: str | None = None
 
     @model_validator(mode="after")
-    def _external_sources_are_locatable(self) -> "Source":
+    def _external_sources_are_locatable(self) -> Source:
         if self.tier in (Tier.T1, Tier.T2, Tier.T3):
             if not (self.doi or self.url):
                 raise ValueError(
@@ -131,7 +131,7 @@ class Distribution(BaseModel):
     relative: bool = False        # True: parameters are factors on the nominal
 
     @model_validator(mode="after")
-    def _params_match_kind(self) -> "Distribution":
+    def _params_match_kind(self) -> Distribution:
         need = {
             "point": (),
             "normal": ("loc", "scale"),
@@ -165,7 +165,7 @@ class Distribution(BaseModel):
         return rng.triangular(self.low, self.loc, self.high, n)
 
     @classmethod
-    def relative_normal(cls, frac: float) -> "Distribution":
+    def relative_normal(cls, frac: float) -> Distribution:
         """Symmetric normal with standard deviation ``frac`` TIMES the nominal.
 
         The common "plus or minus 20 percent" input: ``relative_normal(0.20)``.
@@ -177,7 +177,7 @@ class Distribution(BaseModel):
         return cls(kind="normal", loc=0.0, scale=frac, relative=True)
 
     @classmethod
-    def relative_uniform(cls, lo_frac: float, hi_frac: float) -> "Distribution":
+    def relative_uniform(cls, lo_frac: float, hi_frac: float) -> Distribution:
         """Uniform between ``lo_frac`` and ``hi_frac`` times the nominal.
 
         For an asymmetric scenario band such as "between 0.7x and 1.5x".
@@ -225,7 +225,7 @@ class Value(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _provenance_matches_tag(self) -> "Value":
+    def _provenance_matches_tag(self) -> Value:
         if self.tag in (Tag.MEASURED, Tag.SOURCED) and self.source is None:
             raise ValueError(
                 f"{self.tag.value} value must carry a Source; an uncited measurement or "
@@ -294,9 +294,9 @@ class _Missing:
     that failed to compute rather than a measurement that was never made.
     """
 
-    _instance: "_Missing | None" = None
+    _instance: _Missing | None = None
 
-    def __new__(cls) -> "_Missing":
+    def __new__(cls) -> _Missing:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance

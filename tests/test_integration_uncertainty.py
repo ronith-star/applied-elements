@@ -5,11 +5,18 @@ site's price ranges in, a P10/P50/P90 NPV and a ranked list of what to measure
 out. It exercises yield_cascade, unit_economics, capex and valuation together
 under Monte Carlo and Sobol.
 """
-import numpy as np
 import pytest
+
 from ae.econ.uncertainty import Uncertain, monte_carlo, sobol_analysis, tornado
 from ae.econ.valuation import Project, breakeven_price
 from ae.plant.yield_cascade import cascade_yield, off_spec_fraction
+
+#: Upper specification limit on aluminium, ppm by mass. Module scope so a test
+#: that reasons about the limit binds to the SAME constant the model uses,
+#: rather than retyping 30.0 and asserting it against itself.
+USL_AL = 30.0
+#: Annual feed to the modelled plant, tonnes.
+FEED_TONNES = 7000.0
 
 
 def plant_npv(
@@ -40,9 +47,6 @@ def plant_npv(
     LOGNORMAL model because impurity distributions are right-skewed and the
     normal understates exactly the tail that fails lots.
     """
-    USL_AL = 30.0
-    FEED_TONNES = 7000.0
-
     mass_y = cascade_yield([mass_yield_flot, mass_yield_leach])
     spec_y = 1.0 - off_spec_fraction(al_mean_ppm, al_sigma_ppm, USL_AL,
                                      model="lognormal")
@@ -99,7 +103,7 @@ def test_full_chain_monte_carlo_10k():
     assert mc.n_draws == 10000 and mc.n_failed == 0
     s = mc.summary("npv_musd")
     p_loss = mc.probability_below("npv_musd", 0.0)
-    print(f"\nNPV (MUSD) over 10,000 draws:")
+    print("\nNPV (MUSD) over 10,000 draws:")
     print(f"  P10 {s['P10']:+.1f}   P50 {s['P50']:+.1f}   P90 {s['P90']:+.1f}")
     print(f"  mean {s['mean']:+.1f}  sd {s['sd']:.1f}  P90-P10 {s['P90_minus_P10']:.1f}")
     print(f"  P(NPV < 0) = {p_loss:.3f}")
@@ -194,9 +198,15 @@ def test_chain_is_deterministic_given_inputs():
 def test_spec_yield_dominates_when_variability_is_high():
     """Mechanism check: at a 30 ppm limit, raising lot-to-lot sigma from 1.5 to
     6.0 ppm must cut overall yield materially even with mass yields fixed."""
-    # The specification limit the mechanism is stated against.
-    USL_AL_PPM = 30.0
-    assert USL_AL_PPM == 30.0
+    # The 30 ppm limit is the model's own constant, not a number retyped here,
+    # and the mechanism is verified through it: at sigma 1.5 essentially every
+    # lot clears 30 ppm from a 22 ppm mean, at sigma 6.0 a large tail does not.
+    assert USL_AL == 30.0, "the docstring's 30 ppm limit is the model constant"
+    off_tight = off_spec_fraction(22.0, 1.5, USL_AL, model="lognormal")
+    off_loose = off_spec_fraction(22.0, 6.0, USL_AL, model="lognormal")
+    assert off_tight < 0.02 < off_loose, (
+        f"off-spec must grow with sigma: {off_tight:.4f} -> {off_loose:.4f}"
+    )
     base = {"mass_yield_leach": 0.92, "mass_yield_flot": 0.85, "al_mean_ppm": 22.0,
             "price": 3500.0, "power_price": 0.07, "reagent_price": 1.8,
             "capex_musd": 38.0, "discount_rate": 0.14}

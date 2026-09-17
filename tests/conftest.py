@@ -9,11 +9,17 @@ module named 'ae'``. A fresh clone would have failed the same way on the first
 ``pytest`` run, which for a repository whose point is reproducibility is the
 defect that matters most.
 
-Running ``pytest tests/ src/`` masked it further: collecting a file under
-``src/`` makes pytest prepend that file's base directory (``src``, the first
-ancestor without ``__init__.py``) to ``sys.path``, so the src-tree argument was
-silently doing the work of an install. Dropping it, as CI or any reader would,
-broke the suite.
+The habitual command in this project was ``pytest tests/ src/``, and an
+earlier version of this note claimed the ``src/`` argument had been masking
+the problem by making pytest prepend ``src`` to ``sys.path``. THAT CLAIM WAS
+WRONG and the runs in front of me disproved it: with the editable install
+gone, ``pytest tests/ src/`` failed with 56 collection errors, and
+``pytest tests/test_units.py src/ae/core/units.py`` failed identically to
+``pytest tests/test_units.py`` alone. Whatever rootdir insertion pytest does
+for src-tree arguments, it was not what made ``import ae`` resolve here. The
+only mechanism actually evidenced is the editable install: ``pip`` reported
+PackageNotFoundError for ``ae`` once the suite started failing, and this file
+is what removes the dependency on it.
 
 An editable install is still the right thing for development, and
 ``pyproject.toml`` configures one. This file guarantees the suite runs without
@@ -37,7 +43,7 @@ def test_src_is_importable_without_an_editable_install() -> None:
     invariant prevents every test module from being collected at all, which
     reports as a collection error rather than a test failure.
     """
-    import ae.core.units  # noqa: F401
+    import ae.core.units
 
     assert pathlib.Path(ae.core.units.__file__).resolve().is_relative_to(SRC), (
         f"ae imported from {ae.core.units.__file__}, not from {SRC}; a stale "

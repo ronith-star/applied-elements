@@ -29,20 +29,20 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ae.core.provenance import MISSING, Source, Tag, Value, _Missing
-from ae.core.units import Q_, Quantity, require_dimensionality
+from ae.core.provenance import MISSING, Source, Value, _Missing
+from ae.core.units import Q_, Quantity
 
 __all__ = [
     "Currency",
     "ExchangeRate",
-    "PowerSupply",
-    "LabourRates",
-    "ReagentPrices",
-    "LogisticsLink",
-    "TradeMeasure",
     "Incentive",
+    "LabourRates",
+    "LogisticsLink",
     "PermittingRegime",
+    "PowerSupply",
+    "ReagentPrices",
     "Site",
+    "TradeMeasure",
 ]
 
 
@@ -71,7 +71,7 @@ class ExchangeRate(BaseModel):
     note: str | None = None
 
     @model_validator(mode="after")
-    def _sane(self) -> "ExchangeRate":
+    def _sane(self) -> ExchangeRate:
         if self.base == self.quote:
             raise ValueError("base and quote currencies must differ")
         if self.low is not None and self.high is not None and self.low > self.high:
@@ -105,7 +105,7 @@ class PowerSupply(BaseModel):
     note: str | None = None
 
     @model_validator(mode="after")
-    def _contract_rates_are_flagged(self) -> "PowerSupply":
+    def _contract_rates_are_flagged(self) -> PowerSupply:
         if self.rate_basis in ("bilateral_contract", "ppa") and not self.note:
             raise ValueError(
                 "a bilateral contract or PPA rate is not a published average and must "
@@ -201,7 +201,7 @@ class Incentive(BaseModel):
     conditions: tuple[str, ...] = ()
 
     @model_validator(mode="after")
-    def _certainty_must_be_justified(self) -> "Incentive":
+    def _certainty_must_be_justified(self) -> Incentive:
         if self.award_probability == 1.0 and self.kind in ("grant", "loan_guarantee"):
             raise ValueError(
                 f"{self.kind} cannot have award_probability 1.0: a discretionary award "

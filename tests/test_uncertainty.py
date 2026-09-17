@@ -1,11 +1,17 @@
 """Monte Carlo and Sobol: analytic validation, diagnostics, interaction detection."""
+import math
+
 import numpy as np
 import pytest
-from ae.econ.uncertainty import (
-    Uncertain, monte_carlo, sobol_analysis, convergence_check,
-    spearman_screening, tornado,
-)
 
+from ae.econ.uncertainty import (
+    Uncertain,
+    convergence_check,
+    monte_carlo,
+    sobol_analysis,
+    spearman_screening,
+    tornado,
+)
 
 # --- Ishigami: the standard Sobol test function, with ANALYTIC indices -------
 # f = sin(x1) + a sin^2(x2) + b x3^4 sin(x1), xi ~ U(-pi, pi), a=7, b=0.1.
@@ -59,11 +65,23 @@ def test_zero_first_order_with_large_total_is_the_case_tornado_misses():
     """x3 has S1 = 0 and ST = 0.24: a one-at-a-time analysis at nominal would
     report x3 as irrelevant, yet fixing it changes a quarter of the variance.
     This is the structural argument for variance decomposition."""
-    ST_X3_ANALYTIC = 0.24
-    assert ST_X3_ANALYTIC == pytest.approx(0.24, abs=0.005)
+    # The docstring's 0.24 DERIVED from Ishigami's closed form, not restated.
+    # With a = 7, b = 0.1 and x ~ U(-pi, pi):
+    #   V   = a^2/8 + b pi^4/5 + b^2 pi^8/18 + 1/2
+    #   V3  = 0                     (no main effect)
+    #   V13 = b^2 pi^8 (1/18 - 1/50)
+    #   ST3 = (V3 + V13) / V
+    a_, b_ = 7.0, 0.1
+    p4_, p8_ = math.pi ** 4, math.pi ** 8
+    V_ = a_ * a_ / 8 + b_ * p4_ / 5 + b_ * b_ * p8_ / 18 + 0.5
+    V13_ = b_ * b_ * p8_ * (1 / 18 - 1 / 50)
+    st3_exact = (0.0 + V13_) / V_
+    assert st3_exact == pytest.approx(0.2437, abs=1e-4)
+    assert round(st3_exact, 2) == 0.24, "the docstring's 0.24 is this rounded"
     r = sobol_analysis(ishigami, ish_inputs(), n_base=4096, seed=3)
     assert abs(r.first_order["x3"]) < 0.03
-    assert r.total_order["x3"] > 0.15
+    assert r.total_order["x3"] == pytest.approx(st3_exact, abs=0.03), \
+        "the ESTIMATOR must recover the analytic ST3, not merely exceed a floor"
     assert r.interaction_share["x3"] > 0.15
     # And the tornado does indeed miss it: at nominal x1 = 0, sin(x1) = 0 so the
     # x3 term vanishes entirely and its swing is zero.
@@ -76,10 +94,20 @@ def test_zero_first_order_with_large_total_is_the_case_tornado_misses():
 def test_additive_fraction_detects_non_separability():
     """sum(S_i) well below 1 means the model is not separable. Ishigami is
     about 0.76 additive; a purely additive model returns about 1.0."""
-    ISHIGAMI_ADDITIVE = 0.76
-    assert ISHIGAMI_ADDITIVE < 1.0
+    # The docstring's 0.76 DERIVED from the closed form, not restated:
+    # sum(S1_i) = (V1 + V2 + V3) / V with V3 = 0.
+    a_, b_ = 7.0, 0.1
+    p4_, p8_ = math.pi ** 4, math.pi ** 8
+    V_ = a_ * a_ / 8 + b_ * p4_ / 5 + b_ * b_ * p8_ / 18 + 0.5
+    V1_ = 0.5 * (1 + b_ * p4_ / 5) ** 2
+    V2_ = a_ * a_ / 8
+    additive_exact = (V1_ + V2_) / V_
+    assert additive_exact == pytest.approx(0.7563, abs=1e-4)
+    assert round(additive_exact, 2) == 0.76
+    assert additive_exact < 1.0, "non-separable by construction"
     r = sobol_analysis(ishigami, ish_inputs(), n_base=2048, seed=5)
-    assert 0.6 < r.additive_fraction < 0.9
+    assert r.additive_fraction == pytest.approx(additive_exact, abs=0.04), \
+        "the ESTIMATOR must recover the analytic additive fraction"
 
     def additive(a: float, b: float, c: float) -> float:
         return 2 * a + 3 * b + 4 * c

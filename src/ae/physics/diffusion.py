@@ -311,29 +311,29 @@ from ae.core.provenance import MISSING, MissingValueError, Source, Tag, Tier, Va
 from ae.core.units import Q_, Quantity, require_dimensionality, require_fraction
 
 __all__ = [
-    "GAS_CONSTANT",
-    "ERF_HALF",
-    "ArrheniusDiffusivity",
-    "DIFFUSIVITY_STATUS",
-    "MOST_MOBILE_BOUND",
-    "TI_LATTICE_BOUND",
     "D0_SWEEP_M2_S",
+    "DIFFUSIVITY_STATUS",
+    "ERF_HALF",
+    "FO_SHORT_TIME_SWITCH",
+    "GAS_CONSTANT",
     "LIU_2026_EA_RANGE_KJ",
-    "Verdict",
+    "MOST_MOBILE_BOUND",
     "SOURCE_LIU_2026",
     "SOURCE_XIA_2024",
-    "diffusivity",
+    "TI_LATTICE_BOUND",
+    "ArrheniusDiffusivity",
+    "Verdict",
+    "critical_activation_energy",
     "diffusion_length",
+    "diffusion_length_table",
+    "diffusivity",
+    "erfc_profile",
     "fourier_number",
     "fractional_extraction_sphere",
-    "FO_SHORT_TIME_SWITCH",
+    "lattice_ceiling_ppm",
+    "lattice_removal_verdict",
     "limiting_grain_radius",
     "time_to_deplete_grain",
-    "erfc_profile",
-    "diffusion_length_table",
-    "critical_activation_energy",
-    "lattice_removal_verdict",
-    "lattice_ceiling_ppm",
 ]
 
 #: Molar gas constant, CODATA 2018 exact value.
@@ -386,7 +386,7 @@ class ArrheniusDiffusivity(BaseModel):
     medium: Literal["alpha_quartz", "beta_quartz", "fused_silica", "unspecified"] = "unspecified"
 
     @model_validator(mode="after")
-    def _physical(self) -> "ArrheniusDiffusivity":
+    def _physical(self) -> ArrheniusDiffusivity:
         require_dimensionality(self.d0.quantity, "diffusivity", "d0")
         require_dimensionality(self.activation_energy.quantity.to("J/mol"),
                                "molar_energy", "activation_energy")
