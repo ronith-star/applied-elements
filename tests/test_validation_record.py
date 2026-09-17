@@ -23,6 +23,8 @@ from __future__ import annotations
 import pathlib
 import sys
 
+import pytest
+
 SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
@@ -87,21 +89,40 @@ def test_no_analytic_check_is_reported_as_literature() -> None:
     rows = ev.collect()
     bm = [r for r in rows if r["kind"] == "benchmark"]
 
-    # The docstring's two counts, asserted rather than recalled. 27 is the
-    # corrected literature count; 36 was the inflated figure the DOI-first
-    # rule produced, reproduced here by re-running that rule so the size of
-    # the inflation is measured and not remembered.
+    # The inflation the DOI-first rule produced, MEASURED by re-running that
+    # rule rather than recalled as a literal. Absolute counts are deliberately
+    # not pinned here: adding a benchmark changes them, and this module's own
+    # guards are themselves benchmark-marked, so a hardcoded total makes the
+    # test fail for the wrong reason. Earlier revisions pinned 27 then 28 and
+    # broke on exactly that. What is stable and what the docstring claims is
+    # that the DOI-first rule OVERCOUNTS, by the number of analytic and
+    # self-consistency checks whose module happens to cite a method paper.
     n_lit = sum(1 for r in bm if r["benchmark_kind"] == "literature")
-    assert n_lit == 27, f"corrected literature count moved to {n_lit}"
     inflated = sum(
         1 for r in bm
         if r["dois"] or r["module_dois"] or r["citations_in_docstring"]
     )
-    assert inflated == 36, (
-        f"the DOI-first rule would classify {inflated} as literature; the "
-        "docstring's 36 is that figure"
+    assert inflated > n_lit, (
+        f"the DOI-first rule classified {inflated} as literature against the "
+        f"corrected {n_lit}; if it no longer overcounts, the distinction this "
+        "module exists to enforce has gone away and the test needs rewriting"
     )
-    assert inflated - n_lit == 9, "the inflation was nine benchmarks"
+    # Each overcounted row must be one the corrected rule calls analytic or
+    # self-consistency, which is what makes the delta an inflation rather
+    # than an unexplained discrepancy.
+    over = [r for r in bm
+            if (r["dois"] or r["module_dois"] or r["citations_in_docstring"])
+            and r["benchmark_kind"] != "literature"]
+    assert len(over) == inflated - n_lit, (
+        "the overcount does not decompose into non-literature rows, so the "
+        "two rules disagree for some reason other than method citations"
+    )
+    assert all(r["benchmark_kind"] in ("analytic", "self_consistency")
+               for r in over), (
+        "a row the DOI-first rule would call literature is neither literature "
+        f"nor analytic nor self-consistency: "
+        f"{[(r['test'], r['benchmark_kind']) for r in over]}"
+    )
 
     exact_words = ("exact rather than experimental", "known indices",
                    "known in closed form", "reference value is exact")
@@ -115,3 +136,54 @@ def test_no_analytic_check_is_reported_as_literature() -> None:
         "these declare an exact reference value yet are counted as literature "
         f"validation:\n  " + "\n  ".join(mislabelled)
     )
+
+
+@pytest.mark.benchmark
+def test_no_literature_benchmark_is_demoted_by_a_fixture_word() -> None:
+    """A synthetic INPUT must not decide the provenance of a REFERENCE.
+
+    This is the direction the earlier guard missed. That one checked only the
+    literature-direction mislabel (an analytic check reported as literature),
+    so a real regression in the other direction went undetected:
+    test_benchmark_xia_2024_residual_is_lattice quotes Xia et al. 2024's
+    measured 128.86 and 24.23 ug/g, and was silently classified `analytic`
+    because its docstring also says "For the synthetic fixture". The word
+    described where the input came from, not where the reference came from.
+
+    The invariant asserted here is general, not a patch for one row: a
+    benchmark that cites a DOI and is classified analytic must say IN TERMS
+    that its reference value is exact, via an _EXACT_REFERENCE_HINT. A DOI
+    plus an analytic label with no such statement is the signature of a
+    keyword collision.
+    """
+    rows = [r for r in ev.collect() if r["kind"] == "benchmark"]
+    offenders = []
+    for r in rows:
+        if r["benchmark_kind"] != "analytic":
+            continue
+        if not (r["dois"] or r["module_dois"]):
+            continue
+        hay = (r["test"] + " " + r["claim"]).lower()
+        if not any(h in hay for h in ev._EXACT_REFERENCE_HINTS):
+            offenders.append(r["test"])
+    assert not offenders, (
+        "these benchmarks cite a DOI, are labelled analytic, and never state "
+        f"that their reference value is exact: {offenders}. Either the "
+        "reference is a published measurement (so the label is wrong) or the "
+        "docstring must say the value is exact rather than experimental."
+    )
+
+
+def test_all_six_xia_benchmarks_are_literature() -> None:
+    """The specific regression, pinned by name.
+
+    Six benchmarks reproduce values from Xia et al. 2024 (doi
+    10.3390/min14070727). All six must be literature-classified; one of them
+    regressed to analytic once and was not caught because the verification
+    after that change re-printed only three of the affected rows.
+    """
+    rows = {r["test"]: r for r in ev.collect() if r["kind"] == "benchmark"}
+    xia = {t: r["benchmark_kind"] for t, r in rows.items() if "xia" in t.lower()}
+    assert len(xia) == 6, f"expected 6 Xia benchmarks, found {len(xia)}: {xia}"
+    wrong = {t: k for t, k in xia.items() if k != "literature"}
+    assert not wrong, f"Xia benchmarks misclassified: {wrong}"

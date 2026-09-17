@@ -52,9 +52,27 @@ CITE = re.compile(r"\b([A-Z][A-Za-z\-']+(?:\s+(?:et al\.|and\s+[A-Z][A-Za-z\-']+
 _ANALYTIC_HINTS = (
     "analytic", "closed form", "closed-form", "identity", "ishigami",
     "mm1", "m/m/1", "m/d/1", "mm_d_1", "littles_law", "little's law",
-    "by construction", "known mechanism", "synthetic", "exact by",
+    "by construction", "known mechanism", "exact by",
     "monte_carlo_10k", "per_fold", "baselines",
 )
+
+#: Words that describe the FIXTURE rather than the REFERENCE VALUE, and which
+#: therefore must not decide provenance on their own.
+#:
+#: "synthetic" was in _ANALYTIC_HINTS and that was wrong. A test can construct
+#: a synthetic feedstock and compare its output against a MEASURED literature
+#: value: test_benchmark_xia_2024_residual_is_lattice does exactly that,
+#: quoting Xia et al. 2024's measured 128.86 and 24.23 ug/g while computing a
+#: floor for an invented fixture. The word describes where the INPUT came
+#: from, not where the reference came from, and conflating the two demoted a
+#: genuine literature benchmark to analytic.
+#:
+#: This is the same failure mode as the "identity" collision recorded below:
+#: a keyword that is true of one part of the docstring deciding a question
+#: about another part. Such a word is only evidence of an analytic check when
+#: nothing in the docstring points at an external measurement, so it is tested
+#: LAST, after the reported-value hints and after any DOI.
+_FIXTURE_ONLY_HINTS = ("synthetic",)
 
 #: Phrases by which a docstring declares it reproduces REPORTED VALUES. A
 #: keyword scan alone cannot separate these cases: a benchmark against Xia et
@@ -82,6 +100,16 @@ _REPORTED_VALUE_HINTS = (
 _EXACT_REFERENCE_HINTS = (
     "exact rather than experimental", "reference value is exact",
     "known indices", "known in closed form", "true value is known",
+    # Added after a guard flagged two benchmarks that ARE analytic and say so
+    # in wording this list did not cover: a Rosin-Rammler / lognormal
+    # cross-check describing "closed-form derivations", and a first-order
+    # kinetics test stating outright that it is "rather than against
+    # experimental data" because no batch flotation dataset was retrievable.
+    # The guard was right to flag them (DOI plus analytic label plus no
+    # statement) and the fix belongs here, not in relabelling the tests.
+    "closed-form derivation", "closed form derivation",
+    "rather than against experimental data",
+    "analytic solution of", "against the analytic solution",
 )
 
 
@@ -132,8 +160,11 @@ def _benchmark_kind(name: str, doc: str, has_source: bool,
         return "self_consistency"
     if has_source or module_dois:
         return "literature"
-    if any(h in hay for h in _SELF_CONSISTENCY_HINTS):
-        return "self_consistency"
+    # Fixture-describing words are consulted only here, once every route to an
+    # external measurement has been exhausted. Ranking them any earlier means
+    # a synthetic INPUT decides the provenance of a measured REFERENCE.
+    if any(h in hay for h in _FIXTURE_ONLY_HINTS):
+        return "analytic"
     return "unclassified"
 
 
