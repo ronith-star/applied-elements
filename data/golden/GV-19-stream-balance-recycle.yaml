@@ -1,0 +1,196 @@
+id: GV-19
+kind: golden
+title: Two-stage flowsheet with a cleaner reject recycle, solved to a fixed point by hand
+check: stream_balance_recycle
+derivation: independent
+module: ae.plant.streams
+reference: >
+  The fixed point of a single recycle loop is elementary algebra and needs no source.
+  The convergence criterion used by the module (damped successive substitution,
+  convergent when the loop gain is below unity) is the standard result for this
+  iteration and the loop gain is computed explicitly below.
+inputs:
+  name: rougher-cleaner with recycle
+  element: Fe
+  feed_kg_s: 100.0
+  feed_ppm: 1000.0
+  units:
+    - {name: rougher, mass_yield: 0.80, element_removal: 0.60}
+    - {name: cleaner, mass_yield: 0.75, element_removal: 0.50}
+  links:
+    - [rougher, product, cleaner]
+    - [cleaner, reject, rougher]
+  damping: 0.5
+  tol: 1.0e-10
+  max_iter: 200
+provenance:
+  feed_kg_s: ASSUMED, 100 kg/s, a round basis. Nothing depends on the absolute scale.
+  feed_ppm: ASSUMED, 1000 ppm Fe. A scenario value, not a Vikarabad assay.
+  mass_yield: ASSUMED, 0.80 rougher and 0.75 cleaner.
+  element_removal: ASSUMED, 0.60 of the Fe entering the rougher leaves with its
+    reject, 0.50 for the cleaner. Both are below the values a real magnetic or
+    flotation stage would need to be qualified against.
+  damping: ASSUMED, 0.5, the module default. The fixed point does not depend on the
+    damping; only the iteration count does.
+  tol: ASSUMED, 1e-10 on the recycle mass flow, the module default.
+arithmetic: |
+  Solids. Let R be the recycle flow. The rougher sees F + R, passes 0.80 of it to the
+  cleaner, and the cleaner rejects 0.25 of what it receives back to the rougher:
+    R = 0.25 * 0.80 * (F + R) = 0.20 (F + R)
+    R (1 - 0.20) = 0.20 F
+    R = 0.20 * 100 / 0.80 = 25.0 kg/s
+  Loop gain is 0.20, well below unity, so the iteration converges.
+    rougher feed   = 100 + 25 = 125.0 kg/s
+    rougher product = 0.80 * 125 = 100.0 kg/s
+    rougher reject  = 125 - 100 = 25.0 kg/s (terminal)
+    cleaner product = 0.75 * 100 = 75.0 kg/s (terminal)
+    cleaner reject  = 100 - 75 = 25.0 kg/s (recycled, consistent with R above)
+  Closure: terminal out = 25.0 + 75.0 = 100.0 kg/s = feed, so the closure error is 0.
+  Overall yield = 75.0/100.0 = 0.75. WITHOUT the recycle the same two stages give
+  0.80 * 0.75 = 0.60, so the recycle raises yield from 0.60 to 0.75 by returning
+  material that would otherwise have been discarded.
+  Iron. Feed Fe = 100 * 1000e-6 = 0.1 kg/s. The rougher passes 0.40 of the Fe it
+  sees, the cleaner rejects 0.50 of what it gets, so the Fe loop gain is
+  0.40 * 0.50 = 0.20, the same as the solids gain in this case:
+    Fe_recycle = 0.20 (0.1 + Fe_recycle) -> Fe_recycle = 0.02/0.80 = 0.025 kg/s
+    rougher feed Fe = 0.1 + 0.025 = 0.125 kg/s over 125 kg/s = 1000 ppm
+    rougher product Fe = 0.40 * 0.125 = 0.05 kg/s over 100 kg/s = 500 ppm
+    rougher reject Fe  = 0.60 * 0.125 = 0.075 kg/s over 25 kg/s = 3000 ppm
+    cleaner product Fe = 0.50 * 0.05 = 0.025 kg/s over 75 kg/s = 333.3333333 ppm
+    cleaner reject Fe  = 0.50 * 0.05 = 0.025 kg/s over 25 kg/s = 1000 ppm
+  Element closure: terminal Fe out = 0.075 + 0.025 = 0.1 kg/s = feed Fe, exactly.
+  That the recycle stream returns at exactly the feed grade of 1000 ppm is a
+  coincidence of these numbers, not a general result; it happens because the solids
+  and element loop gains are equal here.
+  Feasibility. A unit cannot reject more of an element than arrives, which caps the
+  feed concentration at (1 - mass_yield)/removal:
+    rougher: (1 - 0.80)/0.60 = 0.3333333333 mass fraction
+    cleaner: (1 - 0.75)/0.50 = 0.5 mass fraction
+  Both caps are five orders above the 0.001 mass fraction actually present, so the
+  balance is feasible with large margin.
+expected:
+  converged: 1.0
+  overall_yield: 0.75
+  closure_error: 0.0
+  element_closure: 0.0
+  recycle_kg_s: 25.0
+  rougher_feed_kg_s: 125.0
+  rougher_product_kg_s: 100.0
+  cleaner_product_kg_s: 75.0
+  rougher_reject_kg_s: 25.0
+  rougher_feed_ppm: 1000.0
+  rougher_product_ppm: 500.0
+  cleaner_product_ppm: 333.3333333333
+  rougher_reject_ppm: 3000.0
+  recycle_ppm: 1000.0
+  max_feasible_feed_fraction_rougher: 0.3333333333333333
+  max_feasible_feed_fraction_cleaner: 0.5
+tolerances:
+  converged:
+    abs: 0.0
+    reason: >
+      A boolean encoded as 1.0. No rounding to admit, so the tolerance is
+      exactly zero. If the solver did not converge every other output in this
+      vector is meaningless, so this one is checked exactly.
+  overall_yield:
+    abs: 1.0e-09
+    reason: >
+      The fixed point is approached iteratively, not solved in closed form, so
+      the error is set by the solver tolerance of 1e-10 on the recycle mass flow
+      rather than by floating point. A 1e-10 kg/s error in a 25 kg/s recycle
+      propagates to about 1e-12 in the yield. 1e-9 admits that with three orders
+      of margin. This is the reason the tolerance is looser than the 1e-12 used
+      for closed-form vectors: the convergence criterion, not the arithmetic, is
+      the binding term.
+  closure_error:
+    abs: 1.0e-10
+    reason: >
+      The module raises a MassBalanceError if this exceeds its own CLOSURE_TOL,
+      so any value it returns is already below that threshold. The tolerance
+      here matches the solver tolerance of 1e-10, which is the level at which
+      the iteration was stopped.
+  element_closure:
+    abs: 1.0e-10
+    reason: >
+      As closure_error, set by the 1e-10 solver tolerance. The element balance
+      is enforced by construction inside each unit (the reject composition is
+      the residual), so the only error is the unconverged part of the recycle.
+  recycle_kg_s:
+    abs: 1.0e-09
+    reason: >
+      The quantity the iteration converges on, stopped at 1e-10 absolute by the
+      tol input. 1e-9 admits one order above the stopping criterion, which
+      covers the final damped step. Reported because it is the algebraic answer
+      25.0 kg/s derived above, so agreement means the solver found the right
+      fixed point and not merely a stationary one.
+  rougher_feed_kg_s:
+    abs: 1.0e-09
+    reason: >
+      Feed plus recycle, so it inherits the recycle's 1e-10 convergence error.
+  rougher_product_kg_s:
+    abs: 1.0e-09
+    reason: >
+      Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the
+      recycle's 1e-10 convergence error.
+  cleaner_product_kg_s:
+    abs: 1.0e-09
+    reason: >
+      Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the
+      recycle's 1e-10 convergence error.
+  rougher_reject_kg_s:
+    abs: 1.0e-09
+    reason: >
+      Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the
+      recycle's 1e-10 convergence error.
+  rougher_feed_ppm:
+    abs: 1.0e-06
+    reason: >
+      A concentration in ppm, so the same relative convergence error of 1e-12
+      becomes 1e-9 absolute at 1000 ppm. 1e-6 ppm admits that with three orders
+      of margin and is still six orders below any real assay resolution (ICP-MS
+      on a 1000 ppm Fe stream resolves perhaps 1 ppm), so the tolerance tests
+      the solver and not the instrument.
+  rougher_product_ppm:
+    abs: 1.0e-06
+    reason: >
+      Same basis as rougher_feed_ppm. A concentration in ppm, so the same
+      relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm.
+      1e-6 ppm admits that with three orders of margin and is still six orders
+      below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves
+      perhaps 1 ppm), so the tolerance tests the solver and not the instrument.
+  cleaner_product_ppm:
+    abs: 1.0e-06
+    reason: >
+      As rougher_feed_ppm. This output is 1000/3 ppm, which is not exactly
+      representable, so it also carries one rounding near 6e-14 ppm. The
+      convergence term dominates.
+  rougher_reject_ppm:
+    abs: 1.0e-06
+    reason: >
+      Same basis as rougher_feed_ppm. A concentration in ppm, so the same
+      relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm.
+      1e-6 ppm admits that with three orders of margin and is still six orders
+      below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves
+      perhaps 1 ppm), so the tolerance tests the solver and not the instrument.
+  recycle_ppm:
+    abs: 1.0e-06
+    reason: >
+      Same basis as rougher_feed_ppm. A concentration in ppm, so the same
+      relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm.
+      1e-6 ppm admits that with three orders of margin and is still six orders
+      below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves
+      perhaps 1 ppm), so the tolerance tests the solver and not the instrument.
+  max_feasible_feed_fraction_rougher:
+    abs: 1.0e-12
+    reason: >
+      A closed-form ratio (1 - y)/r computed once, not iterated, so the bound is
+      one division, 1 ulp near 6e-17. 1e-12 admits it. Tighter than the other
+      outputs in this vector precisely because this one does not pass through
+      the solver.
+  max_feasible_feed_fraction_cleaner:
+    abs: 1.0e-12
+    reason: >
+      Same basis as max_feasible_feed_fraction_rougher. A closed-form ratio (1 -
+      y)/r computed once, not iterated, so the bound is one division, 1 ulp near
+      6e-17. 1e-12 admits it. Tighter than the other outputs in this vector
+      precisely because this one does not pass through the solver.

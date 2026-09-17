@@ -1,0 +1,65 @@
+id: GV-06
+kind: golden
+title: Krieger-Dougherty relative viscosity and volume to mass fraction conversion
+check: krieger_dougherty
+derivation: independent
+module: ae.physics.packing
+reference: >
+  Krieger, I.M. and Dougherty, T.J. 1959, A Mechanism for Non-Newtonian Flow in
+  Suspensions of Rigid Spheres, Transactions of the Society of Rheology 3:137-152,
+  doi:10.1122/1.548848.
+inputs:
+  phi: 0.60
+  phi_max: 0.75
+  intrinsic_viscosity: 2.5
+  filler_density_kg_m3: 2200.0
+  matrix_density_kg_m3: 1200.0
+provenance:
+  phi: ASSUMED, 0.60 filler volume fraction, a high but achievable epoxy moulding
+    compound loading.
+  phi_max: ASSUMED, 0.75, a plausible maximum packing fraction for a graded spherical
+    filler. Chosen above phi so the viscosity is finite; at phi = phi_max it diverges.
+  intrinsic_viscosity: SOURCED, 2.5, the Einstein hard-sphere coefficient assumed in
+    the Krieger-Dougherty derivation (Krieger and Dougherty 1959).
+  filler_density_kg_m3: ASSUMED, 2200 kg/m^3, fused silica rather than crystalline
+    quartz. Fused silica is the material actually used as a spherical filler.
+  matrix_density_kg_m3: ASSUMED, 1200 kg/m^3, a cured epoxy.
+arithmetic: |
+  eta_r = (1 - phi/phi_max)^(-[eta] phi_max)
+  phi/phi_max = 0.60/0.75 = 0.8, and 1 - 0.8 = 1/5 exactly in rational arithmetic.
+  exponent = -[eta] phi_max = -2.5 * 0.75 = -1.875
+  eta_r = (1/5)^(-1.875) = 5^1.875 = exp(1.875 ln 5)
+    ln 5 = 1.6094379124341003
+    1.875 * 1.6094379124341003 = 3.017696085813938
+    exp(3.017696085813938) = 20.444135848948562
+  In double precision 1 - 0.6/0.75 evaluates to 0.20000000000000007 rather than to
+  0.2, because 0.6/0.75 is not binary-exact, and the powered result is then
+  20.444135848948548. The two routes differ by 1.4e-14, a relative 7e-16, which
+  sets the tolerance below.
+  Mass fraction from volume fraction:
+    w = phi rho_f / (phi rho_f + (1 - phi) rho_m)
+      = 0.6*2200 / (0.6*2200 + 0.4*1200)
+      = 1320 / (1320 + 480) = 1320/1800 = 0.7333333333333333
+expected:
+  relative_viscosity: 20.4441358489
+  mass_fraction: 0.7333333333333333
+tolerances:
+  relative_viscosity:
+    abs: 1.0e-06
+    reason: >
+      Measured, not assumed. Evaluating the exact rational route 5^1.875 and the
+      floating point route (1 - 0.6/0.75)^-1.875 in this session gave
+      20.444135848948562 and 20.444135848948548, a difference of 1.4e-14. The
+      subtraction 1 - phi/phi_max loses a bit because 0.6/0.75 is not binary-
+      exact, and the exponent of -1.875 amplifies that relative error slightly.
+      1e-6 absolute admits the measured 1.4e-14 with eight orders of margin and
+      does not fail on a reassociated implementation. A wrong intrinsic
+      viscosity (2.0 in place of 2.5) gives 5^1.5 = 11.18, which this tolerance
+      detects by seven orders of magnitude.
+  mass_fraction:
+    abs: 1.0e-12
+    reason: >
+      Exact small integers throughout (1320/1800 = 11/15), so the only error is
+      one division, at most 1 ulp near 1e-17. 1e-12 admits it with five orders
+      of margin. The conversion direction is the substance of the check:
+      swapping the densities gives 0.5, which fails by 0.23.

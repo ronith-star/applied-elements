@@ -1,0 +1,161 @@
+id: RV-01
+kind: regression
+title: Seeded Monte Carlo percentiles of a uniform variable, with the analytic quantile alongside
+check: monte_carlo_percentiles
+derivation: from_code
+regression_reason: >
+  The expected values in this file are the percentiles of a PARTICULAR seeded sample
+  and can only come from running the code. They depend on the seed, on the number of
+  draws, on numpy's default_rng bit stream and on numpy's percentile interpolation
+  convention. None of those is derivable with a calculator, so this is a REGRESSION
+  vector and is counted separately from the golden vectors. What the file does check
+  independently is that each seeded percentile lies within the order-statistic
+  standard error of its ANALYTIC value, which is derived in the arithmetic block; the
+  seeded value pins the bit stream, and the analytic bound tests the estimator.
+module: ae.econ.uncertainty
+reference: >
+  David, H.A. and Nagaraja, H.N. 2003, Order Statistics, 3rd edition, Wiley, for the
+  asymptotic standard error of a sample quantile, se = sqrt(p(1-p)/n)/f(x_p).
+inputs:
+  name: x
+  low: 100.0
+  high: 200.0
+  kind: uniform
+  n_draws: 50000
+  seed: 0
+  percentiles: [10, 50, 90]
+  n_boot: 400
+provenance:
+  low: ASSUMED, 100. The uniform distribution was chosen because its quantile
+    function and its density are both exact, so the analytic comparison below has no
+    approximation of its own.
+  high: ASSUMED, 200.
+  n_draws: ASSUMED, 50000, above the module's documented floor of 10000 for
+    percentile reporting.
+  seed: ASSUMED, 0. This is the number that makes the expected values reproducible
+    and is also the reason they are not golden.
+  n_boot: ASSUMED, 400 bootstrap resamples for the percentile standard error, the
+    module default.
+arithmetic: |
+  Analytic quantiles of U(100, 200):
+    P10 = 100 + 0.10*100 = 110.0
+    P50 = 100 + 0.50*100 = 150.0
+    P90 = 100 + 0.90*100 = 190.0
+  Order-statistic standard error, se = sqrt(p(1-p)/n) / f(x_p) with density
+  f = 1/(200-100) = 0.01:
+    at p = 0.10: sqrt(0.10*0.90/50000) = sqrt(1.8e-06) = 0.0013416407864998738
+                 se = 0.0013416407864998738/0.01 = 0.13416407864998739
+    at p = 0.50: sqrt(0.25/50000) = 0.0022360679774997895
+                 se = 0.22360679774997896
+    at p = 0.90: same as p = 0.10 by symmetry, se = 0.13416407864998739
+  So a correct estimator should land within roughly 0.13 of 110 and 0.22 of 150.
+  MEASURED seeded values, which are the regression content of this file:
+    seed 0: P10 = 109.78876517893794, P50 = 150.05657561025876,
+            P90 = 189.79034145691648, mean = 150.06755258237402
+  Deviations from analytic: -0.21123482106206382, +0.056575610258761344 and
+  -0.2096585430835205, which are 1.574, 0.253 and 1.563 standard errors
+  respectively. That the P10 and P90 deviations are both about 1.6 se in
+  the same direction is not a defect; it is what one draw of a correlated sample
+  looks like.
+  Across seeds 0 to 4 the measured P10 ranged 109.63914543983736 to
+  110.0019941642077, a spread of 0.363, consistent with an se of 0.134.
+  The module's own bootstrap standard error at seed 0 returned 0.1325916214003937
+  for P10 and 0.23663988865573488 for P50, against the analytic 0.1342 and 0.2236.
+  The ratios are 0.988 and 1.058, so the bootstrap agrees with the closed form to
+  within 6 percent, which is the real check in this file: it tests the uncertainty reporting, not just the point estimate.
+expected:
+  n_draws: 50000.0
+  n_failed: 0.0
+  mean: 150.0675525824
+  p10: 109.7887651789
+  p50: 150.0565756103
+  p90: 189.7903414569
+  bootstrap_se_p10: 0.1325916214
+  bootstrap_se_p50: 0.2366398887
+analytic_reference:
+  p10: 110.0
+  p50: 150.0
+  p90: 190.0
+  order_statistic_se_p10: 0.1341640786
+  order_statistic_se_p50: 0.2236067977
+  order_statistic_se_p90: 0.1341640786
+tolerances:
+  n_draws:
+    abs: 0.0
+    reason: >
+      An integer count of completed draws. Any other value means draws were
+      lost.
+  n_failed:
+    abs: 0.0
+    reason: >
+      An integer count of model failures, which must be zero for an identity
+      model. A non-zero value would mean the error-recording path fired on a
+      function that cannot fail.
+  mean:
+    abs: 1.0e-09
+    reason: >
+      A REGRESSION tolerance at the floating point level, not a statistical one.
+      The seed fixes the sample exactly, so the mean of that sample is a
+      deterministic function of the bit stream and reproduces to full precision
+      on the same numpy version. 1e-9 admits summation-order differences across
+      platforms. The statistical question (is 150.0676 close to 150?) is
+      answered by the analytic_reference block: the standard error of the mean
+      here is (100/sqrt(12))/sqrt(50000) = 0.1290994448735806, and the measured
+      mean sits 0.0676 from 150, which is 0.52 of that. This tolerance says
+      nothing about that question.
+  p10:
+    abs: 1.0e-09
+    reason: >
+      As mean: a fixed seed makes this exact, so the tolerance is floating point
+      and the value is a bit-stream pin. It is emphatically NOT a statement that
+      the tenth percentile of U(100,200) is known to 1e-9; that quantity is 110
+      and this sample estimates it to 0.21.
+  p50:
+    abs: 1.0e-09
+    reason: >
+      Same basis as p10. Same basis as mean. A REGRESSION tolerance at the
+      floating point level, not a statistical one. The seed fixes the sample
+      exactly, so the mean of that sample is a deterministic function of the bit
+      stream and reproduces to full precision on the same numpy version. 1e-9
+      admits summation-order differences across platforms. The statistical
+      question (is 150.0676 close to 150?) is answered by the analytic_reference
+      block: the standard error of the mean here is (100/sqrt(12))/sqrt(50000) =
+      0.1290994448735806, and the measured mean sits 0.0676 from 150, which is
+      0.52 of that. This tolerance says nothing about that question.
+      Additionally for this output: : a fixed seed makes this exact, so the
+      tolerance is floating point and the value is a bit-stream pin. It is
+      emphatically NOT a statement that the tenth percentile of U(100,200) is
+      known to 1e-9; that quantity is 110 and this sample estimates it to 0.21.
+  p90:
+    abs: 1.0e-09
+    reason: >
+      Same basis as p10. Same basis as mean. A REGRESSION tolerance at the
+      floating point level, not a statistical one. The seed fixes the sample
+      exactly, so the mean of that sample is a deterministic function of the bit
+      stream and reproduces to full precision on the same numpy version. 1e-9
+      admits summation-order differences across platforms. The statistical
+      question (is 150.0676 close to 150?) is answered by the analytic_reference
+      block: the standard error of the mean here is (100/sqrt(12))/sqrt(50000) =
+      0.1290994448735806, and the measured mean sits 0.0676 from 150, which is
+      0.52 of that. This tolerance says nothing about that question.
+      Additionally for this output: : a fixed seed makes this exact, so the
+      tolerance is floating point and the value is a bit-stream pin. It is
+      emphatically NOT a statement that the tenth percentile of U(100,200) is
+      known to 1e-9; that quantity is 110 and this sample estimates it to 0.21.
+  bootstrap_se_p10:
+    abs: 1.0e-09
+    reason: >
+      Also seeded (the bootstrap resampling uses the same seed argument), so it
+      reproduces exactly. The interesting comparison, against the analytic
+      0.1342, is checked by the test with a 10 percent relative band rather than
+      by this tolerance, because the bootstrap is a consistent but not exact
+      estimator of the asymptotic standard error at n_boot = 400.
+  bootstrap_se_p50:
+    abs: 1.0e-09
+    reason: >
+      Same basis as bootstrap_se_p10. Also seeded (the bootstrap resampling uses
+      the same seed argument), so it reproduces exactly. The interesting
+      comparison, against the analytic 0.1342, is checked by the test with a 10
+      percent relative band rather than by this tolerance, because the bootstrap
+      is a consistent but not exact estimator of the asymptotic standard error
+      at n_boot = 400.

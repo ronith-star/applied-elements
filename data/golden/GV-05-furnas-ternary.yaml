@@ -1,0 +1,105 @@
+id: GV-05
+kind: golden
+title: Furnas ternary maximum packing and optimal volume composition
+check: furnas_packing
+derivation: independent
+module: ae.physics.packing
+reference: >
+  McGeary, R.K. 1961, Mechanical Packing of Spherical Particles, Journal of the
+  American Ceramic Society 44:513-522, doi:10.1111/j.1151-2916.1961.tb13716.x.
+  The vibrated monomodal packing fraction 0.625 is McGeary's and is the module default.
+inputs:
+  diameters_um: [490.0, 70.0, 10.0]
+provenance:
+  diameters_um: ASSUMED, 490/70/10 um, chosen so both successive ratios are exactly 7,
+    the minimum separation McGeary found necessary. This keeps the geometry inside the
+    model's stated domain, so no ratio warning is raised and the vector tests the
+    equations rather than the guard.
+  phi_monomodal: SOURCED, 0.625, McGeary 1961 vibrated spheres. This is the module
+    default and is not passed by the vector.
+arithmetic: |
+  Equation (1): phi_max = 1 - (1 - phi1)^N with phi1 = 0.625, so 1 - phi1 = 0.375.
+    N = 3: 0.375^3 = 0.052734375
+           phi_max = 1 - 0.052734375 = 0.947265625
+  Equation (2): raw term for class i (coarsest first) is phi1 (1 - phi1)^i:
+    i = 0: 0.625 * 1        = 0.625
+    i = 1: 0.625 * 0.375    = 0.234375
+    i = 2: 0.625 * 0.140625 = 0.087890625
+    sum = 0.947265625, which equals phi_max, an identity of the construction.
+  Normalised composition:
+    0.625        / 0.947265625 = 0.6597938144329897
+    0.234375     / 0.947265625 = 0.2474226804123711
+    0.087890625  / 0.947265625 = 0.0927835051546392
+    Exact as fractions: 64/97, 24/97, 9/97.
+  Size ratios: 490/70 = 7, 70/10 = 7.
+expected:
+  n_classes: 3.0
+  phi_monomodal: 0.625
+  phi_max: 0.947265625
+  composition_0: 0.6597938144
+  composition_1: 0.2474226804
+  composition_2: 0.0927835052
+  composition_sum: 1.0
+  size_ratio_0: 7.0
+  size_ratio_1: 7.0
+tolerances:
+  n_classes:
+    abs: 0.0
+    reason: >
+      An integer count of size classes. Any deviation is a wrong answer and not
+      a rounding difference, so the tolerance is exactly zero.
+  phi_monomodal:
+    abs: 0.0
+    reason: >
+      A constant passed through from the module default. Exactly representable
+      in binary (0.625 = 5/8) and subjected to no arithmetic, so equality is the
+      correct test and any non-zero tolerance would be a fudge factor.
+  phi_max:
+    abs: 0.0
+    reason: >
+      0.625 and 0.375 are both exactly representable in binary (5/8 and 3/8),
+      and 0.375^3 = 27/512 is exact in double precision, as is the subtraction
+      from 1. The whole chain is therefore exact and the tolerance is zero.
+      Choosing a non-zero tolerance here would be a fudge factor: there is no
+      error to admit.
+  composition_0:
+    abs: 1.0e-10
+    reason: >
+      The normalisation divides by 0.947265625, and 64/97 is not exactly
+      representable, so one rounding of about 1e-17 enters. 1e-10 admits it with
+      seven orders of margin and is tighter than the last digit quoted.
+  composition_1:
+    abs: 1.0e-10
+    reason: >
+      Same basis as composition_0. The normalisation divides by 0.947265625, and
+      64/97 is not exactly representable, so one rounding of about 1e-17 enters.
+      1e-10 admits it with seven orders of margin and is tighter than the last
+      digit quoted.
+  composition_2:
+    abs: 1.0e-10
+    reason: >
+      Same basis as composition_0. The normalisation divides by 0.947265625, and
+      64/97 is not exactly representable, so one rounding of about 1e-17 enters.
+      1e-10 admits it with seven orders of margin and is tighter than the last
+      digit quoted.
+  composition_sum:
+    abs: 1.0e-12
+    reason: >
+      Three roundings of about 1e-17 each summing to at most 3e-17. The module
+      asserts closure to 1e-12 internally, so this tolerance matches the
+      invariant the module itself enforces rather than inventing a looser one.
+  size_ratio_0:
+    abs: 1.0e-12
+    reason: >
+      490e-6/70e-6 in double precision. Neither operand is exactly representable
+      after the micron-to-metre conversion, so the quotient may differ from 7 by
+      about 1 ulp, near 1e-15. 1e-12 admits that and is far tighter than the
+      sevenfold threshold the ratio is compared against.
+  size_ratio_1:
+    abs: 1.0e-12
+    reason: >
+      Same basis as size_ratio_0. 490e-6/70e-6 in double precision. Neither
+      operand is exactly representable after the micron-to-metre conversion, so
+      the quotient may differ from 7 by about 1 ulp, near 1e-15. 1e-12 admits
+      that and is far tighter than the sevenfold threshold the ratio is compared
+      against.

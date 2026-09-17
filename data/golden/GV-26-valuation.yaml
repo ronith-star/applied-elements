@@ -1,0 +1,214 @@
+id: GV-26
+kind: golden
+title: NPV, IRR, payback, levelized cost and breakeven price on a five-period project
+check: valuation
+derivation: independent
+module: ae.econ.valuation
+reference: >
+  Discounted cash flow arithmetic is elementary and needs no source. The identity
+  checked here, that the breakeven price equals the levelized cost when the tax rate
+  is zero, follows from both being the price at which discounted revenue equals
+  discounted cost, and is derived explicitly below.
+inputs:
+  capex_schedule: [50.0, 50.0]
+  construction_periods: 2
+  ramp_fractions: [0.5, 1.0]
+  nameplate_tonnes: 100.0
+  price: 10.0
+  cash_cost_per_tonne: 6.0
+  life_periods: 3
+  discount_rate: 0.10
+provenance:
+  capex_schedule: ASSUMED, 50 units in each of two construction periods. Round
+    numbers chosen so every discount factor is a power of 1.1 that can be written out.
+  construction_periods: ASSUMED, 2 periods with no output. The module's docstring
+    records that setting this to zero understates the capital cost of a project of
+    this shape by 38 percent, which is why the vector uses a non-zero value.
+  ramp_fractions: ASSUMED, 50 percent of nameplate in the first operating period,
+    full rate thereafter.
+  nameplate_tonnes: ASSUMED, 100 t per period.
+  price: ASSUMED, 10 currency units per tonne.
+  cash_cost_per_tonne: ASSUMED, 6 units per tonne, giving a 40 percent margin.
+  life_periods: ASSUMED, 3 operating periods. Deliberately short so the cash flow
+    stream can be written out in full and checked term by term.
+  discount_rate: ASSUMED, 0.10 per period. No tax, no working capital, no salvage and
+    no fixed cost, all at their module defaults of zero, so the vector isolates the
+    discounting arithmetic.
+arithmetic: |
+  Output profile, zero through construction then ramped:
+    [0, 0, 50, 100, 100] tonnes
+  Revenue at 10/t:   [0, 0, 500, 1000, 1000]
+  Variable at 6/t:   [0, 0, 300, 600, 600]
+  EBITDA:            [0, 0, 200, 400, 400]
+  Capex:             [50, 50, 0, 0, 0]
+  Net cash flow = EBITDA - capex (tax, working capital and salvage are all zero):
+                     [-50, -50, 200, 400, 400]
+  Discount factors at 10 percent: 1, 1.1, 1.21, 1.331, 1.4641
+  Present values term by term:
+    t=0: -50/1       = -50.0
+    t=1: -50/1.1     = -45.45454545454545
+    t=2: 200/1.21    = 165.2892561983471
+    t=3: 400/1.331   = 300.525920360631
+    t=4: 400/1.4641  = 273.2053821460282
+  NPV = -50 - 45.45454545454545 + 165.2892561983471 + 300.525920360631
+        + 273.2053821460282 = 643.5660132504609
+  IRR is the rate at which that sum is zero. Solved by bisection on the polynomial
+  in this session, independently of the module: 1.4675038570565175 per period. At
+  that rate the discounted sum is -1.78e-15, which is the check.
+  Payback, undiscounted: cumulative net cash flow is
+    [-50, -100, 100, 500, 900], first non-negative at t=2, interpolating within the
+    crossing period: 1 + 100/200 = 1.5 periods.
+  PV of output: 50/1.21 + 100/1.331 + 100/1.4641
+              = 41.32231404958677 + 75.13148009015775 + 68.30134553650706
+              = 184.7551396762516 tonnes
+  PV of capex: 50 + 50/1.1 = 95.45454545454545
+  PV of all costs (capex plus variable plus fixed):
+    cost stream = [50, 50, 300, 600, 600]
+    PV = 50 + 45.45454545454545 + 247.93388429752062 + 450.78888054094654
+       + 409.8080732190423 = 1203.9853835120548
+  Levelized cost = PV(costs)/PV(output) = 1203.9853835120548/184.7551396762516
+                 = 6.516654343807763 per tonne
+  Breakeven price. At zero tax the NPV is linear in price, so the breakeven price is
+  the one at which PV(revenue) = PV(costs), that is
+    price * PV(output) = PV(costs), price = PV(costs)/PV(output),
+  the SAME expression as the levelized cost. So breakeven and LCOP must agree
+  exactly at zero tax, and the vector asserts that identity. With tax they would
+  differ, because tax is not linear in price once losses are carried forward.
+  Cross-check: the breakeven price is 6.5166543438 against a cash cost of 6.00, so
+  the capital burden is 0.5166543438 per tonne, which is PV(capex)/PV(output) =
+  95.45454545454545/184.7551396762516 = 0.5166543438077635, and
+  6.0 + 0.5166543438077635 = 6.5166543438077635, agreeing with the levelized cost
+  to the last digit. Two independent routes to the same number.
+  Peak funding requirement, the most negative cumulative undiscounted position:
+    min(0, -50, -100, 100, 500, 900) = -100.0
+expected:
+  output_0: 0.0
+  output_1: 0.0
+  output_2: 50.0
+  output_3: 100.0
+  output_4: 100.0
+  net_cash_flow_0: -50.0
+  net_cash_flow_1: -50.0
+  net_cash_flow_2: 200.0
+  net_cash_flow_3: 400.0
+  net_cash_flow_4: 400.0
+  npv: 643.5660132505
+  irr: 1.4675038571
+  payback_undiscounted: 1.5
+  levelized_cost: 6.5166543438
+  breakeven_price: 6.5166543438
+  npv_at_breakeven: 0.0
+  peak_funding_requirement: -100.0
+tolerances:
+  output_0:
+    abs: 0.0
+    reason: >
+      An exact zero placed by the construction-period logic. Nothing to round.
+      Checked because an off-by-one in the ramp offset would put output in a
+      construction period.
+  output_1:
+    abs: 0.0
+    reason: >
+      An exact zero placed by the construction-period logic, the second of two
+      construction periods. Nothing to round. Checked because an off-by-one in
+      the ramp offset would put output into a construction period.
+  output_2:
+    abs: 1.0e-12
+    reason: >
+      0.5 * 100, both exactly representable, so the product is exact. 1e-12
+      guards only against a different route.
+  output_3:
+    abs: 1.0e-12
+    reason: >
+      The product 1.0 times 100, both exactly representable in binary, so the
+      result is exact. 1e-12 guards only against a different route to the same
+      number.
+  output_4:
+    abs: 1.0e-12
+    reason: >
+      The ramp holds its last value, so 1.0 * 100 again. Checked so that a ramp
+      shorter than the life is confirmed to extend rather than to fall back to
+      zero.
+  net_cash_flow_0:
+    abs: 1.0e-12
+    reason: >
+      A single capex entry negated, with zero EBITDA, tax and working capital,
+      so the value is exactly -50. 1e-12 admits any summation-order difference.
+  net_cash_flow_1:
+    abs: 1.0e-12
+    reason: >
+      A single capex entry negated, with zero EBITDA, tax and working capital,
+      so the value is exactly -50. 1e-12 admits any summation-order difference.
+  net_cash_flow_2:
+    abs: 1.0e-09
+    reason: >
+      Revenue less variable cost, both exact products of round numbers, so the
+      difference is exact. 1e-9 admits any pint conversion rounding.
+  net_cash_flow_3:
+    abs: 1.0e-09
+    reason: >
+      Revenue less variable cost, both exact products of round numbers, so the
+      difference is exact. 1e-9 admits any pint unit-conversion rounding on the
+      way out.
+  net_cash_flow_4:
+    abs: 1.0e-09
+    reason: >
+      Revenue less variable cost, both exact products of round numbers, so the
+      difference is exact. 1e-9 admits any pint unit-conversion rounding on the
+      way out.
+  npv:
+    abs: 1.0e-09
+    reason: >
+      Five divisions by powers of 1.1 (none binary-exact) and four additions, at
+      magnitudes near 300, so the bound is a few ulp of 643, near 5e-13. 1e-9
+      admits that with three orders of margin. This is the vector's least
+      forgiving arithmetic output and the tolerance reflects that the discount
+      factors compound their rounding.
+  irr:
+    abs: 1.0e-08
+    reason: >
+      The module finds the IRR by bisection with a stated tolerance of 1e-10 on
+      the rate, so the error floor is the solver's, not floating point's. The
+      independently derived value came from a separate 400-iteration bisection
+      in this session, which converges to about 1e-16 on the rate but locates
+      the same root. 1e-8 admits the module's 1e-10 stopping criterion with two
+      orders of margin and allows for the two bisections bracketing from
+      different sides.
+  payback_undiscounted:
+    abs: 1.0e-09
+    reason: >
+      A linear interpolation within the crossing period, one division of exact
+      integers 100/200, so exact. 1e-9 admits any rounding in the cumulative
+      sum. The interpolation is the substance: reporting the integer period 2
+      rather than 1.5 would fail by 0.5.
+  levelized_cost:
+    abs: 1.0e-09
+    reason: >
+      A ratio of two discounted sums, each carrying the 5e-13 bound of the NPV
+      chain, so the quotient carries about 1e-14 relative or 7e-14 absolute at
+      6.52. 1e-9 admits that with four orders of margin.
+  breakeven_price:
+    abs: 1.0e-08
+    reason: >
+      Found by bisection on price with the module's stated tolerance of 1e-8, so
+      the solver's stopping criterion sets the floor, not floating point. The
+      tolerance equals that criterion rather than something tighter, because a
+      tighter value would be asserting a precision the solver does not deliver.
+  npv_at_breakeven:
+    abs: 1.0e-06
+    reason: >
+      The NPV recomputed at the breakeven price must be zero. It is not exactly
+      zero: the breakeven price is known only to the solver's 1e-8, and the NPV
+      derivative with respect to price is PV(output) = 184.76, so a 1e-8 price
+      error gives an NPV error near 1.8e-6. The tolerance is that propagated
+      figure rounded up, which is why it is 1e-6 and not 1e-8. This is the
+      clearest case in the suite of a tolerance derived by propagation rather
+      than chosen.
+  peak_funding_requirement:
+    abs: 1.0e-09
+    reason: >
+      A minimum over a cumulative sum of exact values at a zero discount rate,
+      so exact. 1e-9 admits any rounding. The output is checked because it
+      answers a different question from the NPV (how much cash must be raised,
+      not whether the project is worth it) and a project can have a positive NPV
+      and an unfundable peak.

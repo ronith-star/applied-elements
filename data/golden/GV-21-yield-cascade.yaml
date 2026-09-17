@@ -1,0 +1,79 @@
+id: GV-21
+kind: golden
+title: Four-stage yield cascade and the throughput factor each stage must carry
+check: yield_cascade
+derivation: independent
+module: ae.plant.yield_cascade
+reference: >
+  The product of stage yields and the reciprocal-of-downstream-product throughput
+  factor are elementary and need no source. The engineering point they encode, that
+  an upstream unit must be sized for the inverse of everything downstream of it, is
+  standard process design practice.
+inputs:
+  stage_yields: [0.95, 0.88, 0.92, 0.99]
+provenance:
+  stage_yields: ASSUMED, four stages at 0.95, 0.88, 0.92 and 0.99. Chosen so that no
+    two partial products coincide, which means a throughput factor computed with an
+    off-by-one index would give a visibly different number rather than a coincidentally
+    correct one. That off-by-one is a real failure mode recorded in this repository's
+    corrections file, where a throughput factor was wrong in the fourth decimal.
+arithmetic: |
+  Cascade yield, the product of all four:
+    0.95 * 0.88 = 0.836
+    0.836 * 0.92 = 0.76912
+    0.76912 * 0.99 = 0.7614288
+  Throughput factor for stage i is the reciprocal of the product of stage i and
+  everything downstream of it, because a tonne of final product requires
+  1/(that product) tonnes entering stage i:
+    stage 0: product 0.95*0.88*0.92*0.99 = 0.7614288  -> f0 = 1.3133204312734166
+    stage 1: product      0.88*0.92*0.99 = 0.801504   -> f1 = 1.2476544097097457
+    stage 2: product           0.92*0.99 = 0.9108     -> f2 = 1.097935880544576
+    stage 3: product                0.99 = 0.99       -> f3 = 1.0101010101010102
+  Each factor is strictly larger than the next, and f0 equals 1/cascade_yield, which
+  is the identity that makes the sequence checkable: 1/0.7614288 = 1.3133204312734166.
+  The off-by-one failure mode: computing stage 1's factor as 1/(0.95*0.92*0.99),
+  which is the product EXCLUDING its own yield and including an upstream one, gives
+  1.1557219795206064 rather than 1.2476544097097457, a 7.4 percent undersizing of
+  that unit.
+expected:
+  cascade_yield: 0.7614288
+  throughput_factor_0: 1.3133204313
+  throughput_factor_1: 1.2476544097
+  throughput_factor_2: 1.0979358805
+  throughput_factor_3: 1.0101010101
+tolerances:
+  cascade_yield:
+    abs: 1.0e-12
+    reason: >
+      Three multiplications of two-decimal values, none binary-exact, so three
+      roundings of about 1e-17 each. 1e-12 admits that with five orders of
+      margin and is four orders tighter than the fourth-decimal error this class
+      of calculation actually suffered in this repository.
+  throughput_factor_0:
+    abs: 1.0e-09
+    reason: >
+      One division into a four-term product, so four roundings plus one, near
+      6e-16 relative or 8e-16 absolute at 1.31. 1e-9 admits that with six orders
+      of margin and is six orders tighter than the 0.0920 discrepancy an off-by-
+      one index produces, so it separates a rounding difference from the real
+      defect.
+  throughput_factor_1:
+    abs: 1.0e-09
+    reason: >
+      As throughput_factor_0, one fewer multiplication. The 0.0919 gap to the
+      off- by-one value is seven orders above this tolerance.
+  throughput_factor_2:
+    abs: 1.0e-09
+    reason: >
+      Same basis as throughput_factor_0. One division into a four-term product,
+      so four roundings plus one, near 6e-16 relative or 8e-16 absolute at 1.31.
+      1e-9 admits that with six orders of margin and is six orders tighter than
+      the 0.0920 discrepancy an off-by-one index produces, so it separates a
+      rounding difference from the real defect.
+  throughput_factor_3:
+    abs: 1.0e-09
+    reason: >
+      One division, 1/0.99, whose exact value 100/99 is not binary-exact, so 1
+      ulp near 2e-16. 1e-9 admits it. This is the output that pins the index
+      convention at the downstream end: a factor of 1.0 here would mean the last
+      stage's own yield was excluded.

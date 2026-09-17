@@ -1,0 +1,51 @@
+id: GV-02
+kind: golden
+title: Operating work index inverted from measured mill power
+check: bond_inversion
+derivation: independent
+module: ae.physics.comminution
+reference: >
+  Bond, F.C. 1952, The Third Theory of Comminution, Transactions AIME 193:484-494.
+  Inversion of the same relation, dividing by the identical size term.
+inputs:
+  specific_energy: 14.6
+  energy_unit: kWh/tonne
+  work_index_unit: kWh/tonne
+  f80_um: 2000.0
+  p80_um: 150.0
+  convention: metric
+provenance:
+  specific_energy: ASSUMED, 14.6 kWh/tonne, a plausible measured mill draw per tonne.
+    Treated as exact for this vector because the vector tests arithmetic, not a
+    measurement uncertainty.
+  f80_um: ASSUMED, 2000 um.
+  p80_um: ASSUMED, 150 um (100 mesh).
+  convention: ASSUMED, metric, matching the stated energy unit. The module raises on a
+    convention mismatch rather than converting, which is the 10.23 percent silent
+    error it exists to prevent.
+arithmetic: |
+  1/sqrt(150)  = 0.08164965809277261
+  1/sqrt(2000) = 0.02236067977499790
+  difference   = 0.05928897831777471
+  denominator  = 10 * 0.05928897831777471 = 0.5928897831777471
+  Wi_op = 14.6 / 0.5928897831777471 = 24.625150262699417 kWh/tonne
+  Round trip: 10 * 24.625150262699417 * 0.05928897831777471 = 14.6 exactly by construction.
+expected:
+  operating_work_index: 24.6251502627
+  round_trip_specific_energy: 14.6
+tolerances:
+  operating_work_index:
+    abs: 1.0e-09
+    reason: >
+      Floating point only. One division by a value formed from two square roots.
+      Double precision bounds the relative error near 1e-15; 1e-9 absolute is
+      far looser than that and far tighter than any formula error.
+  round_trip_specific_energy:
+    abs: 1.0e-12
+    reason: >
+      A round trip through the module's forward function must return the input
+      to within accumulated rounding, which for one division followed by one
+      multiplication by the same denominator is at most a few ulp, near 1e-14
+      absolute at this magnitude. 1e-12 admits that and nothing larger. The
+      check is meaningful because the forward and inverse are separate code
+      paths: a sign or coefficient error in one and not the other breaks it.

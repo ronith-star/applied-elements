@@ -1,0 +1,105 @@
+id: GV-18
+kind: golden
+title: Flotation first-order recovery, two-product mass balance and a partition curve
+check: separation_recovery
+derivation: independent
+module: ae.physics.separation
+reference: >
+  Garcia-Zuniga, H. 1935, first-order flotation rate equation, as restated in
+  Wills, B.A. and Finch, J.A. 2016, Wills' Mineral Processing Technology, 8th
+  edition, Elsevier. The two-product formula and the Ecart Probable definition of a
+  partition curve are standard results in that text.
+inputs:
+  time_s: 45.0
+  k_per_s: 0.08
+  ultimate_recovery: 0.85
+  feed_grade: 2.5
+  concentrate_grade: 18.0
+  tailing_grade: 0.4
+  x50: 100.0
+  ep: 25.0
+provenance:
+  time_s: ASSUMED, 45 s residence time.
+  k_per_s: ASSUMED, 0.08 1/s, so k t = 3.6 exactly, chosen for traceability.
+  ultimate_recovery: ASSUMED, 0.85. Real rate fits need four to six timed
+    concentrates; a single pair cannot separate k from R_inf, which the module states.
+  feed_grade: ASSUMED, 2.5 percent, in any consistent unit.
+  concentrate_grade: ASSUMED, 18.0.
+  tailing_grade: ASSUMED, 0.4.
+  x50: ASSUMED, 100 um cut size.
+  ep: ASSUMED, 25 um Ecart Probable, a realistic classifier sharpness.
+arithmetic: |
+  First-order recovery, R = R_inf (1 - exp(-k t)):
+    k t = 0.08 * 45 = 3.6
+    exp(-3.6) = 0.02732372244729256
+    1 - 0.02732372244729256 = 0.9726762775527075
+    R = 0.85 * 0.9726762775527075 = 0.8267748359198013
+  Two-product formula, mass yield Y = (f - t)/(c - t):
+    f - t = 2.5 - 0.4 = 2.1
+    c - t = 18.0 - 0.4 = 17.6
+    Y = 2.1/17.6 = 0.11931818181818181
+  Element recovery R = Y c / f = 0.11931818181818181 * 18.0 / 2.5
+    = 2.1477272727272725 / 2.5 = 0.859090909090909
+  Cross-check by the alternative form Y c/f = (f-t)c / ((c-t)f)
+    = 2.1 * 18 / (17.6 * 2.5) = 37.8/44.0 = 0.859090909090909, which agrees to all
+  printed digits by both routes.
+  Partition curve. The module uses a logistic whose scale follows from the
+  definition that the partition rises from 0.25 to 0.75 across 2 Ep:
+    s = Ep / ln 3 = 25 / 1.0986122886681098 = 22.755980665670933
+    at x = x50 the exponent is zero, so the partition is exactly 0.5
+    at x = x50 + Ep the exponent is Ep/s = ln 3, so the partition is
+      1/(1 + exp(-ln 3)) = 1/(1 + 1/3) = 3/4 = 0.75 exactly by construction
+  The 0.75 value is the definition of Ep, so this output is a definitional check and
+  not an arithmetic one: if the module used Ep/1.349 (the normal-distribution
+  convention) rather than Ep/ln 3, the value at x50 + Ep would be 0.7699.
+expected:
+  flotation_recovery: 0.8267748359
+  mass_yield: 0.11931818181818182
+  element_recovery: 0.8590909090909091
+  logistic_scale: 22.7559806657
+  partition_at_x50: 0.5
+  partition_at_x50_plus_ep: 0.75
+tolerances:
+  flotation_recovery:
+    abs: 1.0e-09
+    reason: >
+      One exponential, one subtraction from 1 and one multiplication. exp
+      carries 1 ulp, and 1 - 0.0273 loses nothing, so the bound is near 2e-16.
+      1e-9 admits it with seven orders of margin, and a missing R_inf factor
+      would give 0.9727, detected by 0.146.
+  mass_yield:
+    abs: 1.0e-12
+    reason: >
+      Two exact subtractions of one-decimal values (which are not binary-exact,
+      so each carries 1 ulp near 4e-16) and one division. The bound is near
+      3e-16. 1e-12 admits it with three orders of margin.
+  element_recovery:
+    abs: 1.0e-12
+    reason: >
+      One multiplication and one division on top of the mass yield, so the bound
+      is near 1e-15. 1e-12 admits it. The alternative algebraic route in the
+      arithmetic block agrees to all printed digits, which is why a tolerance
+      this tight is defensible rather than lucky.
+  logistic_scale:
+    abs: 1.0e-09
+    reason: >
+      One division by ln 3, which carries 1 ulp, so the relative error is near
+      2e-16 and the absolute error near 5e-15 at 22.7560. 1e-9 admits it with
+      six orders of margin.
+  partition_at_x50:
+    abs: 1.0e-12
+    reason: >
+      The logistic at zero exponent is 1/(1 + exp(0)) = 0.5, with exp(0) exactly
+      1 in IEEE 754, so the result is exactly 0.5. 1e-12 is used rather than 0.0
+      only because the argument (x - x50)/s is formed by a subtraction of equal
+      floats, which is exactly zero, then divided, so the tolerance could be
+      zero; 1e-12 guards against an implementation that shifts the curve by a
+      half-bin.
+  partition_at_x50_plus_ep:
+    abs: 1.0e-12
+    reason: >
+      1/(1 + exp(-ln 3)) where exp(-ln 3) differs from 1/3 by 1 ulp, so the
+      result differs from 0.75 by about 4e-17. 1e-12 admits that with four
+      orders of margin and is four orders tighter than the 0.0199 discrepancy a
+      different Ep convention would produce, so the check distinguishes the
+      conventions.

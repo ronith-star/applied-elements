@@ -1,0 +1,77 @@
+id: GV-10
+kind: golden
+title: Implied removal rate and the SiO2 percent ceiling a residual trace sum sets
+check: purity_ceiling
+derivation: independent
+module: ae.physics.impurity_location
+reference: >
+  Xia, Y., Zhang, X., Wang, L. et al. 2024, purification study reporting a trace
+  element sum falling from 128.86 to 24.23 ug/g, doi:10.3390/min14070727. The two
+  input concentrations below are that paper's reported figures, as recorded in
+  src/ae/physics/impurity_location.py; the floor figure is this suite's own GV-09
+  output and is a scenario value, not a measurement.
+inputs:
+  feed_sum_ppm: 128.86
+  product_sum_ppm: 24.23
+  floor_sum_ppm: 78.6
+provenance:
+  feed_sum_ppm: SOURCED, 128.86 ug/g, Xia et al. 2024. Quoted to five significant
+    figures as published. No uncertainty is given in the source, so none is claimed
+    here; the figure is used as an exact input to an arithmetic identity.
+  product_sum_ppm: SOURCED, 24.23 ug/g, Xia et al. 2024.
+  floor_sum_ppm: COMPUTED, 78.6 ppm, the floor derived in GV-09 from ASSUMED partition
+    and efficiency inputs. Carried here to show what such a floor would imply for a
+    purity claim. It is a scenario, gated on the assay campaign.
+arithmetic: |
+  Implied removal fraction = 1 - product/feed
+    24.23 / 128.86 = 0.18803352475554863
+    1 - 0.18803352475554863 = 0.8119664752444513
+    as a percentage: 81.19664752444513 percent
+  SiO2 percent ceiling from a residual trace sum, treating the trace sum as the only
+  non-SiO2 constituent:
+    from the product sum: 100 - 24.23e-4 = 100 - 0.002423 = 99.997577 percent
+    from the GV-09 floor: 100 - 78.6e-4  = 100 - 0.00786   = 99.99214 percent
+  The unit step is the substance of the check: 1 ppm is 1e-4 percent, so a trace sum
+  of 24.23 ppm costs 0.002423 percentage points, not 0.2423 and not 0.00002423.
+  Getting that factor wrong by 100 is the difference between 4N and 5N in a
+  marketing claim, which is why the conversion is pinned here.
+expected:
+  implied_removal_fraction: 0.8119664752444513
+  implied_removal_percent: 81.1966475244
+  sio2_percent_from_product: 99.997577
+  sio2_percent_from_floor: 99.99214
+tolerances:
+  implied_removal_fraction:
+    abs: 1.0e-12
+    reason: >
+      One division and one subtraction from 1. The division carries 1 ulp near
+      2e-17; the subtraction from 1 of a value near 0.19 is exact to within 1
+      ulp of the result, near 1e-16. 1e-12 admits that with four orders of
+      margin.
+  implied_removal_percent:
+    abs: 1.0e-09
+    reason: >
+      The fraction times 100, so the absolute error scales by 100 to near 1e-14.
+      1e-9 admits it with five orders of margin. Reported separately from the
+      fraction because the published figure in the module docstring is a
+      percentage (81.2), and the vector checks the scaling explicitly.
+  sio2_percent_from_product:
+    abs: 1.0e-12
+    reason: >
+      A subtraction of 0.002423 from 100. This is the catastrophic-cancellation
+      case in the vector: the result keeps only about 11 significant digits of
+      the small term, because 100 has an exponent 5 orders above 0.002423. The
+      absolute error is therefore about 1 ulp of 100, near 1.4e-14. 1e-12 admits
+      that with two orders of margin, which is why this tolerance is not set to
+      1e-15: at that level the check would fail on a legitimate reordering of
+      the subtraction.
+  sio2_percent_from_floor:
+    abs: 1.0e-12
+    reason: >
+      Same basis as sio2_percent_from_product. A subtraction of 0.002423 from
+      100. This is the catastrophic-cancellation case in the vector: the result
+      keeps only about 11 significant digits of the small term, because 100 has
+      an exponent 5 orders above 0.002423. The absolute error is therefore about
+      1 ulp of 100, near 1.4e-14. 1e-12 admits that with two orders of margin,
+      which is why this tolerance is not set to 1e-15: at that level the check
+      would fail on a legitimate reordering of the subtraction.

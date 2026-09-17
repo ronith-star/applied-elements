@@ -1,0 +1,160 @@
+id: GV-24
+kind: golden
+title: Cash cost per tonne of product, with the cascade yield dividing the feed-basis inputs
+check: cash_cost
+derivation: independent
+module: ae.econ.unit_economics
+reference: >
+  The structure (consumption per tonne of feed, divided by the cascade yield to reach
+  a product basis, plus fixed costs per tonne, less byproduct credits) is standard
+  mining and chemical cost accounting. Every price below is a FIXTURE value, not a
+  quoted tariff: no Telangana power tariff or Indian HCl price was verified in this
+  session, so none is asserted.
+inputs:
+  site:
+    site_id: IN-TG-VKB
+    country: IN
+    region: Telangana
+    currency: USD
+    energy_price: 0.08
+    operator_rate: 6.0
+    reagent_prices: {HCl: 0.22}
+    construction_cost_index: 1.15
+  demands:
+    - {name: electricity, per_tonne_feed: 180.0, unit: kWh/tonne, basis: feed}
+    - {name: HCl, per_tonne_feed: 25.0, unit: kg/tonne, basis: feed}
+  cascade_yield: 0.65
+  product_tonnes_per_year: 8000.0
+  annual_labour: 2400000.0
+  annual_maintenance: 800000.0
+  credits: [{name: iron oxide byproduct, value: 15.0}]
+  capex: 40000000.0
+  fixed_charge_rate: 0.12
+provenance:
+  energy_price: >
+    ASSUMED, 0.08 USD/kWh. NOT SOURCED. A Telangana industrial tariff was
+    not retrievable in this session, so this is a fixture number and the resulting
+    cost is a scenario, not an estimate for this site.
+  operator_rate: >
+    ASSUMED, 6.00 USD/h fully loaded. Not used in the arithmetic below,
+    since labour enters as an annual total; required to construct the Site object.
+  reagent_prices: >
+    ASSUMED, 0.22 USD/kg HCl. NOT SOURCED.
+  construction_cost_index: >
+    ASSUMED, 1.15. Not used in cash cost; it enters capex.
+  demands: >
+    ASSUMED, 180 kWh and 25 kg HCl per tonne of FEED. The basis is the point:
+    a per-product basis would give a cost 35 percent lower and is the error the
+    yield division exists to prevent.
+  cascade_yield: >
+    ASSUMED, 0.65 overall, consistent in structure with GV-21 though not
+    numerically equal to it.
+  product_tonnes_per_year: >
+    ASSUMED, 8000 t/yr.
+  annual_labour: >
+    ASSUMED, 2.4 MUSD/yr.
+  annual_maintenance: >
+    ASSUMED, 0.8 MUSD/yr.
+  credits: >
+    ASSUMED, 15 USD/t of product from an iron oxide byproduct. Speculative:
+    no offtake for such a byproduct has been identified.
+  fixed_charge_rate: >
+    ASSUMED, 0.12 per year, within the 0.08 to 0.15 band the module
+    documents as typical. This is a levelized charge, not a discounted cash flow.
+arithmetic: |
+  Variable inputs, quoted per tonne of FEED and converted to a product basis by
+  dividing by the cascade yield:
+    electricity: 180 kWh/t feed * 0.08 USD/kWh = 14.4 USD/t feed
+                 14.4 / 0.65 = 22.153846153846153 USD/t product
+    HCl:         25 kg/t feed * 0.22 USD/kg = 5.5 USD/t feed
+                 5.5 / 0.65 = 8.461538461538462 USD/t product
+  Fixed costs, annual totals over annual product tonnes:
+    labour:      2,400,000 / 8,000 = 300.0 USD/t
+    maintenance:   800,000 / 8,000 = 100.0 USD/t
+    freight:     0.0, explicitly waived on an ex-works basis (buyer collects). The
+                 module requires freight to be supplied or explicitly waived, so
+                 that a zero is a decision and not an omission.
+  Gross cost = 22.153846153846153 + 8.461538461538462 + 300.0 + 100.0 + 0.0
+             = 430.61538461538464 USD/t
+  Cash cost = gross less credits = 430.61538461538464 - 15.0
+            = 415.61538461538464 USD/t
+  Capital recovery, levelized: 40,000,000 * 0.12 / 8,000 = 600.0 USD/t
+  Full cost = 415.61538461538464 + 600.0 = 1015.6153846153846 USD/t
+  The capital recovery term is 1.44 times the whole cash cost, which is the
+  structural fact worth reading off this vector: at 8000 t/yr against a 40 MUSD
+  capital base, this business is a capital story and not an operating cost story.
+  The module deliberately excludes capital recovery from the line breakdown so that
+  the cash cost lines sum to the cash cost and nothing else.
+expected:
+  line_electricity: 22.1538461538
+  line_HCl: 8.4615384615
+  line_labour: 300.0
+  line_maintenance: 100.0
+  line_freight: 0.0
+  gross_cost: 430.6153846154
+  cash_cost: 415.6153846154
+  capital_recovery: 600.0
+  full_cost: 1015.6153846154
+  breakdown_closes: 1.0
+tolerances:
+  line_electricity:
+    abs: 1.0e-09
+    reason: >
+      One multiplication and one division by 0.65, which is not binary-exact, so
+      2 ulp near 7e-15 USD/t. 1e-9 USD/t admits that with six orders of margin
+      and is six orders below the cent, so it tests the arithmetic and makes no
+      claim about the accuracy of the ASSUMED input price.
+  line_HCl:
+    abs: 1.0e-09
+    reason: >
+      Same basis as line_electricity. One multiplication and one division by
+      0.65, which is not binary-exact, so 2 ulp near 7e-15 USD/t. 1e-9 USD/t
+      admits that with six orders of margin and is six orders below the cent, so
+      it tests the arithmetic and makes no claim about the accuracy of the
+      ASSUMED input price.
+  line_labour:
+    abs: 1.0e-09
+    reason: >
+      One division of exact integers, 2400000/8000 = 300 exactly in IEEE 754.
+      1e-9 guards only against a different route.
+  line_maintenance:
+    abs: 1.0e-09
+    reason: >
+      Same basis as line_labour. One division of exact integers, 2400000/8000 =
+      300 exactly in IEEE 754. 1e-9 guards only against a different route.
+  line_freight:
+    abs: 0.0
+    reason: >
+      An exact zero, placed there by an explicit waiver rather than computed.
+      There is no rounding to admit. The output is checked because an
+      implementation that silently omitted freight rather than recording a
+      waiver would drop the line entirely, and the test then fails on a missing
+      key.
+  gross_cost:
+    abs: 1.0e-09
+    reason: >
+      A sum of five lines, two of which carry 7e-15, so the bound is near 2e-14
+      USD/t. 1e-9 admits it with five orders of margin.
+  cash_cost:
+    abs: 1.0e-09
+    reason: >
+      Gross less one credit, one subtraction at a magnitude near 430, so the
+      bound is near 6e-14 USD/t.
+  capital_recovery:
+    abs: 1.0e-09
+    reason: >
+      Exact integers throughout: 40e6 * 0.12 / 8000. 0.12 is not binary-exact,
+      so 1 ulp near 7e-14 USD/t enters. 1e-9 admits it. Reported as the
+      DIFFERENCE between full and cash cost, so the output also checks that
+      capital recovery is not double-counted inside the cash cost.
+  full_cost:
+    abs: 1.0e-09
+    reason: >
+      One addition of two quantities near 400 and 600, so the bound is near
+      1e-13 USD/t.
+  breakdown_closes:
+    abs: 0.0
+    reason: >
+      A boolean from the module's own internal reconciliation, which checks the
+      lines sum to the cash cost within its own 1e-9 tolerance. Encoded as 1.0,
+      so there is nothing to round.

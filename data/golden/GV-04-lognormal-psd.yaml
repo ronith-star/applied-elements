@@ -1,0 +1,100 @@
+id: GV-04
+kind: golden
+title: Log-normal PSD median conversions by weighting, Sauter mean and span
+check: lognormal_psd
+derivation: independent
+module: ae.physics.psd
+reference: >
+  Hatch, T. and Choate, S.P. 1929, Statistical description of the size properties of
+  non-uniform particulate substances, Journal of the Franklin Institute 207:369-387.
+  The moment relation d_k = d_gn exp(k s^2) used below is the Hatch-Choate form.
+inputs:
+  d_gn_um: 8.0
+  sigma_g: 1.8
+  density_kg_m3: 2650.0
+provenance:
+  d_gn_um: >
+    ASSUMED, 8 um COUNT median. The distinction matters: the module stores the
+    count median and a caller who passes a volume median gets a distribution whose
+    volume median is larger by exp(3 s^2).
+  sigma_g: >
+    ASSUMED, 1.8. Values near 1 give a near-monodisperse powder; 1.8 is a
+    moderately wide ground product. The module requires sigma_g >= 1.
+  density_kg_m3: >
+    SOURCED, 2650 kg/m^3, alpha quartz.
+arithmetic: |
+  s = ln(sigma_g) = ln(1.8) = 0.5877866649021191
+  s^2 = 0.345493163436756
+  Medians by weighting exponent k (number 0, area 2, volume 3):
+    number: 8 * exp(0)                  = 8.0 um
+    area:   8 * exp(2 * 0.345493163436756) = 8 * exp(0.690986326873512)
+            = 8 * 1.9956829585543872 = 15.965463668435097 um
+    volume: 8 * exp(3 * 0.345493163436756) = 8 * exp(1.036479490310268)
+            = 8 * 2.8192742405231996 = 22.554193924185597 um
+  Sauter mean: d32 = d_gn exp(2.5 s^2) = 8 * exp(0.86373290859189)
+            = 8 * 2.3719986419269956 = 18.975989135415965 um
+  Surface area: S = 6/(rho d32) = 6/(2650 * 18.975989135415965e-6)
+            = 119.31662308820114 m^2/kg
+  Volume-weighted span: the volume-weighted quantiles are d50v exp(+/- z90 s) with
+  z90 = 1.2815515655446004, so
+    span = exp(z90 s) - exp(-z90 s)
+         = exp(0.7532789206115501) - exp(-0.7532789206115501)
+         = 2.123952884323046 - 0.4708202368240027 = 1.6531326474990433
+  The span is independent of d_gn, which is the structural fact this output checks.
+expected:
+  s: 0.5877866649021191
+  number_median_um: 8.0
+  area_median_um: 15.9654636684
+  volume_median_um: 22.5541939242
+  sauter_d32_um: 18.9759891354
+  specific_surface_area_m2_per_kg: 119.3166230882
+  volume_span: 1.6531326475
+tolerances:
+  s:
+    abs: 1.0e-12
+    reason: >
+      One natural logarithm of 1.8, accurate to 1 ulp near 1e-16. 1e-12 admits
+      that with four orders of margin and is far tighter than any change in the
+      sigma_g convention, which would move s by order 0.1.
+  number_median_um:
+    abs: 1.0e-12
+    reason: >
+      The count median is the stored input multiplied by exp(0), so the only
+      error is one multiplication by exactly 1.0, which in IEEE 754 is exact. A
+      non-zero deviation here would mean the weighting exponent is wrong, so the
+      tightest tolerance in the vector belongs on this output.
+  area_median_um:
+    abs: 1.0e-08
+    reason: >
+      Two floating point operations (one exp, one multiply) at a magnitude near
+      16 um, so the bound is near 2e-15 um. 1e-8 admits it with seven orders of
+      margin and still separates the three medians, which differ by 6 um.
+  volume_median_um:
+    abs: 1.0e-08
+    reason: >
+      Same basis as area_median_um. Two floating point operations (one exp, one
+      multiply) at a magnitude near 16 um, so the bound is near 2e-15 um. 1e-8
+      admits it with seven orders of margin and still separates the three
+      medians, which differ by 6 um.
+  sauter_d32_um:
+    abs: 1.0e-08
+    reason: >
+      Same basis as area_median_um. Two floating point operations (one exp, one
+      multiply) at a magnitude near 16 um, so the bound is near 2e-15 um. 1e-8
+      admits it with seven orders of margin and still separates the three
+      medians, which differ by 6 um.
+  specific_surface_area_m2_per_kg:
+    abs: 1.0e-06
+    reason: >
+      One division into the exp-derived d32, so the relative error is d32's,
+      near 1e-15, which at 119 m^2/kg is 1e-13 absolute. 1e-6 is seven orders
+      looser and still catches a wrong moment (using the volume median instead
+      of d32 would give 99 m^2/kg).
+  volume_span:
+    abs: 1.0e-09
+    reason: >
+      A difference of two exponentials, each accurate to 1 ulp, at magnitudes
+      near 2 and 0.5, so the absolute bound is near 5e-16. 1e-9 admits it with
+      six orders of margin. Reported to nine places because the value must not
+      depend on d_gn, and a d_gn-dependent implementation would fail by a large
+      margin.

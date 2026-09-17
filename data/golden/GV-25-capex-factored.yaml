@@ -1,0 +1,174 @@
+id: GV-25
+kind: golden
+title: Factored capital estimate with escalation, location factor and an AACE Class 5 band
+check: capex
+derivation: independent
+module: ae.econ.capex
+reference: >
+  AACE International Recommended Practice 18R-97, Cost Estimate Classification
+  System, for the Class 5 accuracy range of minus 50 to plus 100 percent, as
+  recorded in the module's AACE_ACCURACY table. The six-tenths rule for capacity
+  scaling is standard and is used here with an exponent of 0.65, stated as an input.
+  The two index values below are FIXTURE numbers: no Chemical Engineering Plant Cost
+  Index value was verified in this session, so no real index level is asserted.
+inputs:
+  site:
+    site_id: IN-TG-VKB
+    country: IN
+    region: Telangana
+    currency: USD
+    energy_price: 0.08
+    operator_rate: 6.0
+    reagent_prices: {HCl: 0.22}
+    construction_cost_index: 1.15
+  equipment:
+    - {name: kiln, purchased_cost: 3000000.0, installation_factor: 2.2}
+    - {name: mill, purchased_cost: 1500000.0, installation_factor: 1.8}
+  indirect_factor: 0.30
+  contingency_fraction: 0.25
+  base_index: 708.0
+  target_index: 826.0
+  scaling: {known_cost: 2000000.0, known_size: 5000.0, target_size: 18000.0, size_unit: tonne/year, exponent: 0.65}
+  escalation: {cost: 1000000.0}
+provenance:
+  purchased_cost: >
+    ASSUMED, 3.0 MUSD kiln and 1.5 MUSD mill. NOT SOURCED: no vendor
+    quotes were obtained. This is why the estimate is Class 5.
+  installation_factor: >
+    ASSUMED, 2.2 for the kiln and 1.8 for the mill, inside the 1.0
+    to 6.0 range the module allows and near the middle of the 1.4 (bare tank) to 3.5
+    (instrumented) band it documents as typical.
+  indirect_factor: >
+    ASSUMED, 0.30, mid-range of the 0.20 to 0.40 the module documents.
+  contingency_fraction: >
+    ASSUMED, 0.25.
+  base_index: >
+    ASSUMED, 708.0. NOT SOURCED as a real CEPCI value. The ratio to the
+    target index is what the arithmetic tests.
+  target_index: >
+    ASSUMED, 826.0, giving a ratio of exactly 7/6.
+  construction_cost_index: >
+    ASSUMED, 1.15 as a location factor relative to the index
+    basis, meaning construction at this site costs 15 percent more than at the
+    reference location.
+  exponent: >
+    ASSUMED, 0.65. The choice matters: at a 3.6-fold scale-up, an exponent of
+    0.6 against 0.9 changes the scaled cost by more than 50 percent, which the module
+    documents. No fitted exponent for this equipment class was sourced.
+arithmetic: |
+  Installed cost on a raw basis, purchased times installation factor:
+    kiln: 3,000,000 * 2.2 = 6,600,000
+    mill: 1,500,000 * 1.8 = 2,700,000
+    raw installed = 9,300,000; raw purchased = 4,500,000
+  Index ratio = 826/708 = 1.1666666666666667 (exactly 7/6)
+  Location factor = 1.15
+  Installed, escalated and located:
+    9,300,000 * 1.1666666666666667 * 1.15 = 10,850,000 * 1.15 = 12,477,500
+    In double precision this evaluates to 12477499.999999998.
+  Purchased, escalated and located:
+    4,500,000 * 1.1666666666666667 * 1.15 = 5,250,000 * 1.15 = 6,037,500
+    (6037499.999999999 in double precision)
+  Indirects at 0.30 of installed: 12,477,500 * 0.30 = 3,743,250
+  Subtotal: 12,477,500 + 3,743,250 = 16,220,750
+  Contingency at 0.25 of the subtotal: 16,220,750 * 0.25 = 4,055,187.5
+  Total project cost: 16,220,750 + 4,055,187.5 = 20,275,937.5
+  AACE Class 5 band, minus 50 to plus 100 percent:
+    low  = 20,275,937.5 * 0.50 = 10,137,968.75
+    high = 20,275,937.5 * 2.00 = 40,551,875.0
+  The band spans a factor of four. Quoting the Class 4 band (minus 30 to plus 50)
+  on an estimate built from no quotes and no plot plan would understate the upside
+  by a factor of two, which this module's docstring records as a defect it fixed.
+  Six-tenths scaling, exponent 0.65:
+    ratio = 18,000/5,000 = 3.6
+    3.6^0.65 = 2.299305221174797
+    2,000,000 * 2.299305221174797 = 4,598,610.442349594
+  Escalation alone: 1,000,000 * 7/6 = 1,166,666.6666666667
+expected:
+  index_ratio: 1.1666666666666667
+  location_factor: 1.15
+  total_purchased: 6037500.0
+  total_installed: 12477500.0
+  indirect_cost: 3743250.0
+  contingency: 4055187.5
+  total_project_cost: 20275937.5
+  accuracy_low: 10137968.75
+  accuracy_high: 40551875.0
+  scaled_cost: 4598610.4423495941
+  escalated_cost: 1166666.6666666667
+  reconciles: 1.0
+tolerances:
+  index_ratio:
+    abs: 1.0e-12
+    reason: >
+      One division giving 7/6, not binary-exact, so 1 ulp near 2e-16. 1e-12
+      admits it with four orders of margin.
+  location_factor:
+    abs: 1.0e-12
+    reason: >
+      A constant passed through from the Site. 1.15 is not binary-exact, so 1
+      ulp near 2e-16, but no operation is applied. 1e-12 admits any conversion
+      rounding.
+  total_purchased:
+    abs: 0.01
+    reason: >
+      A RELATIVE-scale absolute tolerance of one cent on a 6.04 MUSD figure,
+      which is 1.7e-9 relative. The arithmetic is two multiplications on a 4.5e6
+      magnitude, so the floating point bound is a few ulp of 6e6, near 2e-9 USD,
+      and the measured value 6037499.999999999 differs from the exact 6037500 by
+      9.3e-10 USD. One cent admits that with seven orders of margin. A cent
+      rather than 1e-9 USD is chosen because currency below the cent is not
+      meaningful and because the value is the product of three inexact decimals,
+      so pinning it to the nanodollar would test the multiplication order rather
+      than the estimate.
+  total_installed:
+    abs: 0.01
+    reason: >
+      As total_purchased. The measured value 12477499.999999998 differs from the
+      exact 12477500 by 1.9e-9 USD, which one cent admits with seven orders of
+      margin.
+  indirect_cost:
+    abs: 0.01
+    reason: >
+      One further multiplication by 0.30, so the bound is near 5e-10 USD. One
+      cent admits it.
+  contingency:
+    abs: 0.01
+    reason: >
+      One addition and one multiplication by 0.25, which is binary-exact, so the
+      bound is inherited from the subtotal, near 2e-9 USD. One cent admits it.
+  total_project_cost:
+    abs: 0.01
+    reason: >
+      The sum of three components each within 2e-9 USD, so the bound is near
+      6e-9 USD. One cent admits that with six orders of margin and is nine
+      orders below the plus 100 percent Class 5 uncertainty, which is the real
+      uncertainty on this number and is stated in the provenance rather than in
+      the tolerance.
+  accuracy_low:
+    abs: 0.01
+    reason: >
+      The total times 0.50, which is binary-exact, so the total's bound halves.
+      One cent admits it.
+  accuracy_high:
+    abs: 0.01
+    reason: >
+      The total times 2.00, exact, so the bound doubles to 1.2e-8 USD. One cent
+      admits it.
+  scaled_cost:
+    abs: 0.01
+    reason: >
+      One fractional power and one multiplication. The power 3.6^0.65 carries
+      about 1 ulp relative, 2e-16, which at 4.6 MUSD is 1e-9 USD. One cent
+      admits that with seven orders of margin. An exponent of 0.6 rather than
+      0.65 gives 4,313,318 USD, a 285,292 USD difference, seven orders above the
+      tolerance.
+  escalated_cost:
+    abs: 0.01
+    reason: >
+      One multiplication by 7/6, so the bound is near 2e-10 USD. One cent admits
+      it.
+  reconciles:
+    abs: 0.0
+    reason: >
+      A boolean from the module's own internal check that the components sum to
+      the total within its 1e-6 tolerance. Encoded as 1.0, nothing to round.

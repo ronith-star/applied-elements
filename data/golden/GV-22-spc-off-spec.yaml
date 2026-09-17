@@ -1,0 +1,149 @@
+id: GV-22
+kind: golden
+title: Cpk from six lot assays, its confidence interval, and the off-spec fraction under two tail models
+check: spc
+derivation: independent
+module: ae.plant.yield_cascade
+reference: >
+  Montgomery, D.C. 2012, Introduction to Statistical Quality Control, 7th edition,
+  Wiley, section 8.7, for the large-sample variance of the Cpk estimator,
+  Var(Cpk) = (1/(9n))(1 + 9 Cpk^2 / 2).
+inputs:
+  assays: [10.0, 12.0, 14.0, 16.0, 18.0, 20.0]
+  usl: 30.0
+  confidence: 0.95
+  cpk_target: 1.33
+provenance:
+  assays: ASSUMED, six lots at 10 to 20 ppm in steps of 2. An arithmetic sequence was
+    chosen so the mean and the sum of squared deviations are exact integers, which
+    makes the standard deviation a clean sqrt(14). These are not measurements; no lot
+    assays exist for the Vikarabad deposit.
+  usl: ASSUMED, 30 ppm upper specification limit, one-sided, which is the form an
+    impurity spec takes (there is no lower limit on purity).
+  confidence: ASSUMED, 0.95, two-sided, so the z multiplier is the 0.975 quantile.
+  cpk_target: SOURCED as a convention, 1.33, the customary four-sigma capability
+    target. It is a convention rather than a measurement and is used here only to
+    invert for the process mean it would require.
+arithmetic: |
+  n = 6, mean = (10+12+14+16+18+20)/6 = 90/6 = 15.0
+  Sum of squared deviations from the mean:
+    (-5)^2 + (-3)^2 + (-1)^2 + 1^2 + 3^2 + 5^2 = 25+9+1+1+9+25 = 70
+  Sample variance (ddof = 1) = 70/5 = 14.0
+  Sample standard deviation = sqrt(14) = 3.7416573867739413
+  One-sided Cpk = (USL - mean)/(3 sigma) = (30 - 15)/(3 * 3.7416573867739413)
+    = 15/11.224972160321824 = 1.3363062095621219
+  Confidence interval, Montgomery's large-sample variance:
+    Cpk^2 = 1.7857142857142856
+    Var = (1/(9*6)) * (1 + 9*1.7857142857142856/2)
+        = (1/54) * (1 + 8.035714285714285)
+        = 9.035714285714285/54 = 0.1673280423280423
+    sd(Cpk) = sqrt(0.1673280423280423) = 0.40905750491592535
+    z at the 0.975 quantile = 1.9599639845400532
+    half width = 1.9599639845400532 * 0.40905750491592535 = 0.8017379772410295
+    CI = 1.3363062095621219 -/+ 0.8017379772410295
+       = (0.5345682323210924, 2.1380441868031514)
+  The interval spans a factor of four in Cpk from six lots, which is the point:
+  a Cpk of 1.34 from six lots is not evidence of a capable process.
+  Off-spec fraction, normal model:
+    z = (USL - mean)/sigma = 15/3.7416573867739413 = 4.008918628686366
+    z/sqrt(2) = 2.8347335475692037
+    upper tail = 0.5 erfc(2.8347335475692037) = 3.0498714448247723e-05
+  Off-spec fraction, lognormal model matched to the same mean and variance by the
+  method of moments:
+    cv^2 = (sigma/mean)^2 = (3.7416573867739413/15)^2 = 0.06222222222222223
+    s^2 = ln(1 + cv^2) = ln(1.0622222222222222) = 0.06036314972709054
+    s = sqrt(0.06036314972709054) = 0.2456891322934137
+    mu_log = ln(15) - 0.5 s^2 = 2.70805020110221 - 0.03018157486354527
+           = 2.6778686262386646
+    z_ln = (ln 30 - mu_log)/s = (3.4011973816621555 - 2.6778686262386646)/0.2456891322934137
+         = 2.9440811999761434
+    upper tail = 0.5 erfc(z_ln/sqrt(2)) = 0.0016195750169419518
+  The lognormal tail is 53.10 times the normal tail at the same mean and standard
+  deviation. That ratio, not either number alone, is the reason the tail model has
+  to be declared: an impurity distribution is bounded below at zero and is usually
+  right-skewed, so the normal model understates the off-spec rate.
+  Required mean for the target Cpk:
+    mean = USL - 3 Cpk_target sigma = 30 - 3*1.33*3.7416573867739413
+         = 30 - 14.929212973228026 = 15.070787026771974
+expected:
+  mean: 15.0
+  sigma: 3.7416573868
+  n_lots: 6.0
+  cpk: 1.3363062096
+  ci_low: 0.5345682323
+  ci_high: 2.1380441868
+  off_spec_normal: 3.0498714448247723e-05
+  off_spec_lognormal: 0.0016195750169
+  required_mean_at_target_cpk: 15.0707870268
+tolerances:
+  mean:
+    abs: 1.0e-12
+    reason: >
+      An exact integer quotient 90/6 in floating point, so exactly 15.0. 1e-12
+      guards only against a different summation order.
+  sigma:
+    abs: 1.0e-09
+    reason: >
+      One square root of an exact integer 14, so 1 ulp near 4e-16. 1e-9 admits
+      it with six orders of margin. The ddof convention is what this pins: a
+      population standard deviation (ddof = 0) would be sqrt(70/6) = 3.4157,
+      detected by 0.33.
+  n_lots:
+    abs: 0.0
+    reason: >
+      An integer count of lots. Any other value means samples were dropped or
+      duplicated, which is a wrong answer and not a rounding difference, so the
+      tolerance is exactly zero.
+  cpk:
+    abs: 1.0e-09
+    reason: >
+      One division by 3 sigma, so it inherits sigma's relative error of 1e-16,
+      giving 1.3e-16 absolute. 1e-9 admits it with six orders of margin.
+  ci_low:
+    abs: 1.0e-08
+    reason: >
+      The chain runs Cpk -> Cpk^2 -> Var -> sqrt -> times the normal quantile ->
+      subtract. The normal quantile is the least accurate step: it is computed
+      by a rational approximation or an iterative inverse-erf, whose accuracy is
+      typically 1e-15 relative rather than 1 ulp. Propagating 1e-15 relative
+      through a 0.8017 half width gives 8e-16 absolute. 1e-8 admits that with
+      seven orders of margin and covers a slightly different quantile
+      implementation (scipy against a bisection on erf), which is the practical
+      reason this tolerance is two orders looser than cpk's.
+  ci_high:
+    abs: 1.0e-08
+    reason: >
+      Same basis as ci_low. The chain runs Cpk -> Cpk^2 -> Var -> sqrt -> times
+      the normal quantile -> subtract. The normal quantile is the least accurate
+      step: it is computed by a rational approximation or an iterative inverse-
+      erf, whose accuracy is typically 1e-15 relative rather than 1 ulp.
+      Propagating 1e-15 relative through a 0.8017 half width gives 8e-16
+      absolute. 1e-8 admits that with seven orders of margin and covers a
+      slightly different quantile implementation (scipy against a bisection on
+      erf), which is the practical reason this tolerance is two orders looser
+      than cpk's.
+  off_spec_normal:
+    rel: 1.0e-09
+    reason: >
+      A RELATIVE tolerance, because the value is 3e-05 and an absolute tolerance
+      suited to the other outputs in this vector would pass any tail
+      probability. The chain is one division and one complementary error
+      function. erfc is accurate to about 1e-15 relative in its argument, and at
+      z/sqrt(2) = 2.835 the tail is not in the regime where erfc loses precision
+      (that begins above about z = 6, where the result underflows toward zero),
+      so the relative bound is near 1e-15. 1e-9 relative admits that with six
+      orders of margin.
+  off_spec_lognormal:
+    rel: 1.0e-09
+    reason: >
+      A relative tolerance for the same reason as off_spec_normal. One extra
+      log1p, one log and one sqrt enter, each 1 ulp, so the relative bound rises
+      to about 5e-15. 1e-9 relative admits it and is five orders tighter than
+      the factor-of-53.10 difference from the normal model, so the two models
+      cannot be confused by a tolerance this size.
+  required_mean_at_target_cpk:
+    abs: 1.0e-09
+    reason: >
+      One multiplication and one subtraction from 30, where the subtracted term
+      is 14.93, so no significant cancellation. The bound is a few ulp of 30,
+      near 7e-15. 1e-9 admits it with five orders of margin.

@@ -1,0 +1,87 @@
+id: GV-11
+kind: golden
+title: Shrinking-core characteristic times in all three rate-controlling regimes
+check: leach_characteristic_times
+derivation: independent
+module: ae.physics.leaching
+reference: >
+  Levenspiel, O. 1999, Chemical Reaction Engineering, 3rd edition, Wiley, chapter 25,
+  shrinking core model for a particle of unchanging size. The three tau expressions
+  are that chapter's standard results.
+inputs:
+  sample_id: AE-Q-IN-VKB-001
+  bulk_fe_ppm: 30.0
+  fe_lattice_fraction: 0.10
+  reagent: HCl
+  particle_radius_m: 1.0e-4
+  concentration_mol_m3: 1000.0
+  solid_molar_density_mol_m3: 30000.0
+  stoich_b: 1.0
+  temperature_K: 353.15
+  k_film_m_s: 1.0e-4
+  diffusivity_m2_s: 1.0e-9
+  k_surface_m_s: 1.0e-4
+provenance:
+  particle_radius_m: ASSUMED, 1e-4 m (100 um), a round number chosen so the tau
+    arithmetic is traceable.
+  concentration_mol_m3: ASSUMED, 1000 mol/m^3, which is 1 molar.
+  solid_molar_density_mol_m3: ASSUMED, 30000 mol/m^3. This is the molar density of the
+    REACTIVE SOLID PHASE, not of the quartz matrix, a distinction the module enforces
+    and which is easy to get wrong by a factor of more than one.
+  stoich_b: ASSUMED, 1.0 mol of solid per mol of reagent, chosen to keep the
+    arithmetic clear.
+  temperature_K: ASSUMED, 353.15 K (80 degC). All three activation energies are set to
+    exactly zero in this vector so that k(T) equals the prefactor and no exponential
+    has to be evaluated by hand. That is what makes the vector hand-traceable.
+  k_film_m_s: ASSUMED, 1e-4 m/s.
+  diffusivity_m2_s: ASSUMED, 1e-9 m^2/s, the order of magnitude of an aqueous ionic
+    diffusivity in a porous product layer.
+  k_surface_m_s: ASSUMED, 1e-4 m/s.
+  bulk_fe_ppm: ASSUMED, 30 ppm Fe. Required to build the feedstock object; it does not
+    enter the tau arithmetic.
+arithmetic: |
+  With Ea = 0 the Arrhenius factor exp(-0/(RT)) is exactly 1, so k_g = 1e-4 m/s,
+  D_e = 1e-9 m^2/s and k_s = 1e-4 m/s at any temperature.
+  Film diffusion control:
+    tau = rho R / (3 b k_g C_A)
+        = 30000 * 1e-4 / (3 * 1.0 * 1e-4 * 1000)
+        = 3.0 / 0.3 = 10.0 s
+  Product layer diffusion control:
+    tau = rho R^2 / (6 b D_e C_A)
+        = 30000 * (1e-4)^2 / (6 * 1.0 * 1e-9 * 1000)
+        = 30000 * 1e-8 / 6e-6
+        = 3.0e-4 / 6.0e-6 = 50.0 s
+  Surface reaction control:
+    tau = rho R / (b k_s C_A)
+        = 30000 * 1e-4 / (1.0 * 1e-4 * 1000)
+        = 3.0 / 0.1 = 30.0 s
+  The ordering film < surface < product layer at this radius is the physical content:
+  product layer control is slowest here because it scales as R^2 while the other two
+  scale as R, so the ranking flips with particle size. That is the reason the module
+  reports all three rather than one.
+expected:
+  tau_film_s: 10.0
+  tau_product_layer_s: 50.0
+  tau_surface_reaction_s: 30.0
+tolerances:
+  tau_film_s:
+    abs: 1.0e-09
+    reason: >
+      All operands are exactly representable powers of ten times small integers,
+      so the chain 30000*1e-4/(3*1e-4*1000) is exact in binary except for the
+      final division, at most 1 ulp near 2e-15 s. 1e-9 s admits that with six
+      orders of margin. It is not set to zero because the module carries the
+      quantity through pint unit conversions, which may reassociate the
+      products.
+  tau_product_layer_s:
+    abs: 1.0e-09
+    reason: >
+      As tau_film_s, with one additional squaring of 1e-4, which is exact. The
+      R^2 dependence is the substance of the check: an implementation using R
+      rather than R^2 would return 5e5 s, detected by 14 orders of magnitude.
+  tau_surface_reaction_s:
+    abs: 1.0e-09
+    reason: >
+      As tau_film_s. The absence of the factor 3 is what distinguishes this from
+      film control; an implementation carrying the 3 would return 10 s, detected
+      by 20 s.

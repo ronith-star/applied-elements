@@ -1,0 +1,59 @@
+id: GV-15
+kind: golden
+title: Gibbs energy of a stated reaction from a supplied thermochemical table
+check: chlorination_gibbs
+derivation: independent
+module: ae.physics.chlorination
+reference: >
+  The relation dG = sum(nu dHf) - T sum(nu S) is the standard thermodynamic
+  identity and needs no source. The thermochemical values below are a FIXTURE
+  TABLE supplied to the function by this vector, not a real reaction and not
+  taken from any database. The module's own THERMO table is deliberately not
+  used, because it is incomplete: JANAF entries for Cl2(g) and CO(g) were not
+  reachable from this sandbox, which the module records, and a vector built on
+  an incomplete table would be testing the MISSING sentinel rather than the
+  arithmetic.
+inputs:
+  temperature_K: 1073.15
+  stoichiometry:
+    Z(g): 1.0
+    X(s): -1.0
+    Y(g): -1.0
+  thermo:
+    X(s): {Hf_kJ_per_mol: -400.0, S_J_per_mol_K: 80.0}
+    Y(g): {Hf_kJ_per_mol: -100.0, S_J_per_mol_K: 210.0}
+    Z(g): {Hf_kJ_per_mol: -250.0, S_J_per_mol_K: 300.0}
+provenance:
+  temperature_K: >
+    ASSUMED, 1073.15 K (800 degC), a representative chlorination
+    roasting temperature.
+  thermo: >
+    ASSUMED fixture values with round magnitudes, chosen so that the sums are
+    exact small integers. They describe no real substance. Labelling them X, Y and Z
+    rather than TiCl4 or AlCl3 is deliberate: a reader must not be able to mistake
+    this table for sourced data.
+  stoichiometry: >
+    ASSUMED, X(s) + Y(g) -> Z(g), one mole each.
+arithmetic: |
+  sum(nu dHf) = (+1)(-250) + (-1)(-400) + (-1)(-100)
+              = -250 + 400 + 100 = 250.0 kJ/mol
+  sum(nu S)   = (+1)(300) + (-1)(80) + (-1)(210)
+              = 300 - 80 - 210 = 10.0 J/(mol K)
+  T sum(nu S) = 1073.15 * 10.0 = 10731.5 J/mol = 10.7315 kJ/mol
+  dG = 250.0 - 10.7315 = 239.2685 kJ/mol
+  The sign is positive, so this fixture reaction is not spontaneous at 800 K under
+  standard states. That is the physically meaningful content of the check: a sign
+  error in the T dS term would give 260.73 kJ/mol, still positive, so a vector
+  testing only the sign would not catch it; the magnitude is what pins the term.
+expected:
+  delta_g_kJ_per_mol: 239.2685
+tolerances:
+  delta_g_kJ_per_mol:
+    abs: 1.0e-09
+    reason: >
+      Three multiplications and four additions on operands near 100 to 400, then
+      one subtraction of a 10.7 kJ/mol term from a 250 kJ/mol term, so no
+      cancellation beyond one decimal digit. The accumulated bound is a few ulp
+      of 250, near 1e-13 kJ/mol. 1e-9 kJ/mol admits that with four orders of
+      margin, and a wrong sign on the entropy term shifts the answer by 21.5
+      kJ/mol, ten orders above the tolerance.

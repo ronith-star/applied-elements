@@ -1,0 +1,49 @@
+id: GV-01
+kind: golden
+title: Bond specific energy for a 12000 to 106 micron grind
+check: bond_energy
+derivation: independent
+module: ae.physics.comminution
+reference: >
+  Bond, F.C. 1952, The Third Theory of Comminution, Transactions AIME 193:484-494.
+  The 10 kWh/short_ton * um^0.5 coefficient is Bond's own, defined on a 100 um
+  reference product, so sqrt(100) = 10.
+inputs:
+  work_index: 12.7
+  work_index_unit: kWh/short_ton
+  f80_um: 12000.0
+  p80_um: 106.0
+  convention: short
+provenance:
+  work_index: ASSUMED, 12.7 kWh/short_ton, a round mid-range quartzite figure chosen to make
+    the arithmetic traceable, not a measurement on Vikarabad ore, which is uncharacterized
+    in the citable record. No uncertainty is quoted because it is not a measurement.
+  f80_um: ASSUMED, 12000 um, a nominal primary-crusher product.
+  p80_um: ASSUMED, 106 um, a standard sieve aperture (140 mesh).
+  convention: SOURCED, short ton, Bond's own basis (Bond 1952).
+arithmetic: |
+  1/sqrt(106)   = 0.09712858623572641
+  1/sqrt(12000) = 0.00912870929175277
+  difference    = 0.08799987694397364
+  W = 10 * 12.7 * 0.08799987694397364 = 11.175984371884752 kWh/short_ton
+  metric: 11.175984371884752 * 1000 / 907.18474 = 12.31941398380887 kWh/tonne
+expected:
+  specific_energy_kwh_per_short_ton: 11.1759843719
+  specific_energy_kwh_per_metric_tonne: 12.3194139838
+tolerances:
+  specific_energy_kwh_per_short_ton:
+    abs: 1.0e-09
+    reason: >
+      Floating point only. The chain is two square roots, one subtraction and
+      two multiplications in IEEE 754 double precision, so relative error is
+      bounded at a few units in the last place, about 1e-15 relative or 1e-14
+      absolute here. 1e-9 absolute is six orders looser than that bound and
+      still four orders tighter than the last digit quoted, so it detects any
+      real formula change (a wrong reference-size coefficient shifts the answer
+      by percent, not by ppb) while never firing on arithmetic reassociation.
+  specific_energy_kwh_per_metric_tonne:
+    abs: 1.0e-09
+    reason: >
+      Floating point only, as above, plus one division by the exact constant
+      907.18474 kg per short ton. Exact constants introduce no additional error
+      beyond one rounding.

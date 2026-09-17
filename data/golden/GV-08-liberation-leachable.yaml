@@ -1,0 +1,79 @@
+id: GV-08
+kind: golden
+title: Leachable fraction of an impurity from its partition and two inclusion sizes
+check: liberation_leachable
+derivation: independent
+module: ae.physics.liberation
+reference: >
+  Same geometric model as GV-07 (Gaudin 1939 cubic form), applied separately to the
+  fluid and mineral inclusion populations and combined with the partition.
+inputs:
+  particle_size_um: 75.0
+  fluid_inclusion_size_um: 5.0
+  mineral_inclusion_size_um: 20.0
+  partition:
+    surface: 0.05
+    fluid: 0.10
+    mineral: 0.30
+    lattice: 0.55
+provenance:
+  particle_size_um: ASSUMED, 75 um.
+  fluid_inclusion_size_um: ASSUMED, 5 um, smaller than the mineral inclusions, which
+    is the usual observation and is what makes fluid inclusions harder to liberate.
+  mineral_inclusion_size_um: ASSUMED, 20 um.
+  partition: ASSUMED, a four-way split summing to exactly 1. This is a scenario, not a
+    property of the Vikarabad deposit, which is uncharacterized in the citable record.
+    A measured split requires LA-ICP-MS on inclusion-free domains plus a staged leach
+    mass balance, neither of which has been run.
+arithmetic: |
+  Surface-sited material is fully accessible, so it contributes its whole fraction.
+  Fluid inclusion exposure at 5 um in 75 um:
+    r = 5/75 = 0.06666666666666667
+    (1 - r)^3 = (14/15)^3 = 2744/3375 = 0.813037037037037
+    E_fluid = 1 - 0.813037037037037 = 631/3375 = 0.18696296296296297
+  Mineral inclusion exposure at 20 um in 75 um:
+    r = 20/75 = 0.26666666666666666
+    (1 - r)^3 = (11/15)^3 = 1331/3375 = 0.39437037037037037
+    E_mineral = 1 - 0.39437037037037037 = 2044/3375 = 0.6056296296296296
+  Leachable = surface + fluid*E_fluid + mineral*E_mineral
+            = 0.05 + 0.10*0.18696296296296297 + 0.30*0.6056296296296296
+            = 0.05 + 0.018696296296296297 + 0.18168888888888888
+            = 0.25038518518518516
+  Ceiling: 1 - lattice = 1 - 0.55 = 0.45. The leachable fraction 0.2504 is below the
+  ceiling, so the cap does not bind and the vector tests the sum rather than the cap.
+expected:
+  exposure_fluid: 0.18696296296296297
+  exposure_mineral: 0.6056296296296296
+  leachable_fraction: 0.2503851851851852
+  ceiling_one_minus_lattice: 0.45
+tolerances:
+  exposure_fluid:
+    abs: 1.0e-12
+    reason: >
+      One division, one cube, one subtraction, all in double precision on values
+      that are not binary-exact (1/15 and 14/15), so the bound is a few ulp,
+      near 5e-16 absolute. 1e-12 admits it with three orders of margin.
+  exposure_mineral:
+    abs: 1.0e-12
+    reason: >
+      Same basis as exposure_fluid. One division, one cube, one subtraction, all
+      in double precision on values that are not binary-exact (1/15 and 14/15),
+      so the bound is a few ulp, near 5e-16 absolute. 1e-12 admits it with three
+      orders of margin.
+  leachable_fraction:
+    abs: 1.0e-12
+    reason: >
+      A weighted sum of three terms, each carrying at most 5e-16, so the total
+      bound is near 1.5e-15. 1e-12 admits that with three orders of margin. The
+      value is the one a flowsheet designer reads, so the tolerance is set by
+      the arithmetic bound and not by any engineering judgment about how
+      precisely it is known: the partition inputs themselves are ASSUMED, and
+      that uncertainty is stated in the provenance rather than smuggled into the
+      tolerance.
+  ceiling_one_minus_lattice:
+    abs: 1.0e-12
+    reason: >
+      One subtraction from 1 of a value that is not binary-exact, so 1 ulp near
+      1e-17. 1e-12 admits it. The output exists so the vector records that the
+      cap was checked and found not binding, which is why it is reported rather
+      than assumed.

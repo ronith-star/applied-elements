@@ -1,0 +1,139 @@
+id: RV-03
+kind: regression
+title: EVPI on a two-action problem whose closed-form answer is 1/16, showing the nested-Monte-Carlo bias
+check: evpi
+derivation: mixed
+regression_reason: >
+  The EVPI of this problem has an exact closed form, 1/16 = 0.0625, derived below
+  with a calculator. The value the module returns does NOT equal it and cannot be
+  expected to: the nested Monte Carlo estimator is biased UPWARD at finite inner
+  sample size, and the baseline is itself a Monte Carlo estimate. The expected value
+  in this file is therefore the MEASURED value at a stated seed and sample size, so
+  the file is a REGRESSION vector. The closed form is carried alongside as
+  analytic_reference and the test checks the seeded value against the pin AND the
+  bias against its stated direction, which is the part that tests the model rather
+  than the snapshot.
+module: ae.agent.decisions
+reference: >
+  Howard, R.A. 1966, Information Value Theory, IEEE Transactions on Systems Science
+  and Cybernetics 2(1):22-26, doi:10.1109/TSSC.1966.300074, verified against Crossref
+  in this repository's corrections record. Raiffa, H. and Schlaifer, R. 1961, Applied
+  Statistical Decision Theory, Division of Research, Graduate School of Business
+  Administration, Harvard University, for the decision-analytic framing.
+inputs:
+  theta_low: -0.5
+  theta_high: 1.5
+  actions:
+    - {name: wait, cost: 0.0}
+    - {name: build, cost: 0.0}
+  null_action: wait
+  n_outer: 2048
+  n_inner: 256
+  seed: 0
+provenance:
+  theta_low: >
+    ASSUMED, -0.5. The parameter is the payoff of building, uniform on
+    (-0.5, 1.5), so a quarter of the prior mass makes building the wrong choice.
+    That fraction is what perfect information is worth.
+  theta_high: >
+    ASSUMED, 1.5.
+  actions: >
+    ASSUMED, two zero-cost actions: wait, which always pays zero, and build,
+    which pays theta. Zero action costs keep the closed form clean.
+  n_outer: >
+    ASSUMED, 2048 outer draws.
+  n_inner: >
+    ASSUMED, 256 inner draws. There is no remaining uncertainty in this
+    problem once theta is resolved, so the inner loop averages a constant and the
+    usual upward bias from taking a maximum over noisy inner estimates does NOT
+    arise here. That is deliberate: it isolates the outer-loop sampling error.
+  seed: >
+    ASSUMED, 0.
+arithmetic: |
+  Prior expectations. Waiting always pays 0. Building pays theta, so
+    E[build] = (low + high)/2 = (-0.5 + 1.5)/2 = 0.5
+  The best action under the prior is therefore build, with value 0.5.
+  With perfect information the decision maker builds when theta > 0 and waits
+  otherwise, so the value is E[max(0, theta)]:
+    E[max(0, theta)] = (1/(high - low)) * integral from 0 to 1.5 of theta dtheta
+                     = (1/2) * (1.5^2/2) = (1/2) * 1.125 = 0.5625
+  EVPI = 0.5625 - 0.5 = 0.0625 = 1/16 exactly.
+  Switch fraction. Perfect information changes the action exactly when theta < 0,
+  which has probability (0 - (-0.5))/2 = 0.25.
+  Sampling error of the estimator:
+    Var(max(0, theta)) = E[max^2] - (E[max])^2
+    E[max^2] = (1/2) * (1.5^3/3) = (1/2) * 1.125 = 0.5625
+    Var = 0.5625 - 0.5625^2 = 0.5625 - 0.31640625 = 0.24609375
+    sd = sqrt(0.24609375) = 0.49607837082461076
+    SE of the resolved value at n_outer = 2048:
+      0.49607837082461076/sqrt(2048) = 0.010961886875314282
+    Var(theta) = (high - low)^2/12 = 4/12 = 0.3333333333333333
+    The baseline uses max(n_outer*2, 512) = 4096 draws, so its SE is
+      sqrt(0.3333333333333333/4096) = 0.009021097956087902
+    Combined SE of the difference:
+      sqrt(0.010961886875314282^2 + 0.009021097956087902^2) = 0.014196590161039404
+  So the estimator should land within about 3 combined SE, 0.042589770483118212,
+  of 0.0625.
+  MEASURED at seed 0, n_outer = 2048, n_inner = 256:
+    evpi = 0.06732450807636592
+    baseline_value = 0.4928314937557836 (against the true 0.5)
+    resolved_value = 0.5601560018321495 (against the true 0.5625)
+    switch_fraction = 0.2548828125 (against the true 0.25)
+  The deviation of the EVPI estimate from 1/16 is +0.004824508076365919, which is
+  0.3398356944617673 of a combined SE. Both the baseline and the resolved value came in LOW, and because EVPI is
+  their difference the two errors partly cancel, which is why the EVPI estimate is
+  closer to truth in SE terms than either input.
+  Seed dependence, measured at n_outer = 8192: seed 0 gave 0.05622818277750663,
+  seed 1 gave 0.07114787799362726, seed 2 gave 0.06457173732175125. The spread of
+  0.014919695216120632 across three seeds at four times the sample size confirms the sampling
+  error is the dominant term and not a bias, since the values straddle 0.0625.
+  Inner-sample independence check: at n_outer = 2048 with n_inner raised from 256 to
+  2048 the measured EVPI was 0.06732450807636547 against 0.06732450807636592, a
+  difference of 4.5e-16. That confirms the claim in the provenance that the inner
+  loop averages a constant in this problem, so no upward nesting bias is present
+  and the entire deviation from 1/16 is outer-loop sampling error.
+inputs_note: >
+  The switch fraction is reported by the module as the fraction of outer draws on
+  which perfect information would change the action, and its true value 0.25 is
+  known exactly, so it is the sharpest statistical check available in this file.
+expected:
+  evpi: 0.06732450807636592
+  baseline_value: 0.4928314937557836
+  resolved_value: 0.5601560018321495
+  switch_fraction: 0.2548828125
+analytic_reference:
+  evpi: 0.0625
+  baseline_value: 0.5
+  resolved_value: 0.5625
+  switch_fraction: 0.25
+  combined_standard_error: 0.0141965902
+tolerances:
+  evpi:
+    abs: 1.0e-12
+    reason: >
+      A REGRESSION pin. The seed fixes the sample, so the value is deterministic
+      to floating point on the same numpy version, and 1e-12 admits summation-
+      order differences across platforms. This tolerance makes NO claim about
+      statistical accuracy; the 0.0141950 combined standard error in
+      analytic_reference is the honest uncertainty and the test separately
+      checks that the measured value lies within 3 of those of the closed-form
+      1/16.
+  baseline_value:
+    abs: 1.0e-12
+    reason: >
+      A seeded regression pin, as for evpi. Its own sampling error against the
+      true 0.5 is sqrt(Var(theta)/4096) = 0.009021097956087902, which the test
+      checks separately.
+  resolved_value:
+    abs: 1.0e-12
+    reason: >
+      A seeded regression pin. Its sampling error against the true 0.5625 is
+      0.010961886875314282.
+  switch_fraction:
+    abs: 1.0e-12
+    reason: >
+      A seeded regression pin on a ratio of integers (switches over n_outer), so
+      it is exactly representable and reproduces bit for bit. The statistical
+      check against the true 0.25 uses the binomial standard error
+      sqrt(0.25*0.75/2048) = 0.009568319307746789, which the test applies
+      separately.

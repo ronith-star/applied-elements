@@ -1,0 +1,75 @@
+id: GV-17
+kind: golden
+title: Alpha quartz heat capacity at 700 K, base plus Landau excess, and their sum
+check: thermal_heat_capacity
+derivation: independent
+module: ae.physics.thermal
+reference: >
+  Holland, T.J.B. and Powell, R. 2011, doi:10.1111/j.1525-1314.2010.00923.x,
+  dataset ds62, for the quartz Cp coefficients a = 92.9, b = -6.42e-4,
+  c = -714900.0, d = -716.1 recorded in the module. The Landau tricritical form with
+  Tc(0) = 847.0 K and S_D = 4.95 J/(mol K) is the module's recorded parameterisation
+  of the alpha to beta quartz transition.
+inputs:
+  polymorph: alpha_quartz
+  temperature_K: 700.0
+provenance:
+  temperature_K: ASSUMED, 700 K, chosen inside the alpha quartz field (below the
+    847 K transition) and far enough from it that the Landau term is finite and
+    moderate rather than divergent. At T approaching Tc the excess grows without
+    bound and no tolerance would be meaningful.
+arithmetic: |
+  Base heat capacity, Holland-Powell form Cp = a + bT + c/T^2 + d/sqrt(T):
+    a          = 92.9
+    bT         = -6.42e-4 * 700 = -0.4494
+    c/T^2      = -714900.0 / 490000 = -1.4589795918367348
+    d/sqrt(T)  = -716.1 / 26.457513110645905 = -27.066035912190763
+    Cp_base    = 92.9 - 0.4494 - 1.4589795918367348 - 27.066035912190763
+               = 63.92558449597251 J/(mol K)
+  Landau excess. The order parameter is q = ((Tc - T)/Tc0)^(1/4) with Tc = Tc0 at
+  zero pressure:
+    (847.0 - 700.0)/847.0 = 0.17355371900826447
+    q = 0.17355371900826447^0.25 = 0.645443870875331
+    q^2 = 0.4165977904505309
+    Cp_excess = T S_D / (2 Tc0 q^2)
+              = 700 * 4.95 / (2 * 847.0 * 0.4165977904505309)
+              = 3465.0 / 705.7166570231993 = 4.909902530309829 J/(mol K)
+  Total = 63.92558449597251 + 4.909902530309829 = 68.83548702628234 J/(mol K)
+  The excess is 7.68 percent of the base at 700 K, which is the size of the effect a
+  kiln heat balance would miss by using a tabulated Cp that omits the transition.
+expected:
+  cp_base_J_per_mol_K: 63.9255844960
+  landau_excess_J_per_mol_K: 4.9099025303
+  cp_total_J_per_mol_K: 68.8354870263
+  sum_check_J_per_mol_K: 68.83548702628234
+tolerances:
+  cp_base_J_per_mol_K:
+    abs: 1.0e-09
+    reason: >
+      One square root, two divisions, one multiplication and three additions of
+      terms between 1 and 93, so the bound is a few ulp of 93, near 4e-14 J/(mol
+      K). 1e-9 admits that with five orders of margin. A dropped d/sqrt(T) term
+      would give 90.99, detected by 27 units.
+  landau_excess_J_per_mol_K:
+    abs: 1.0e-09
+    reason: >
+      One fourth root and two divisions. The fourth root carries 1 ulp, and its
+      square appears in the denominator, so the relative error is about 1e-15,
+      giving 5e-15 J/(mol K) at this magnitude. 1e-9 admits it with six orders
+      of margin. The exponent 1/4 is tricritical and specific: a 1/2 exponent
+      would give 2.97 J/(mol K), detected by 1.9 units.
+  cp_total_J_per_mol_K:
+    abs: 1.0e-09
+    reason: >
+      The sum of the two terms above, so the bound is the sum of their bounds,
+      near 5e-14 J/(mol K). 1e-9 admits it.
+  sum_check_J_per_mol_K:
+    abs: 1.0e-12
+    reason: >
+      This output adds the two SEPARATELY returned quantities and compares
+      against the total the module returns with include_landau true, so it tests
+      that the total really is base plus excess and not a differently
+      parameterised whole. It is a self-consistency check between three module
+      calls, so the tolerance is set at the arithmetic floor of one addition, a
+      few ulp near 1.4e-14, rather than at the looser 1e-9 used for the physical
+      values.

@@ -1,0 +1,191 @@
+id: GV-14
+kind: golden
+title: Chloride vapour pressures at 400 K by one-point Clausius-Clapeyron, and the separation they imply
+check: chlorination_volatility
+derivation: independent
+module: ae.physics.chlorination
+reference: >
+  Transition temperatures are the module's recorded PubChem values: TiCl4 boils at
+  136.45 degC (CID 24193), AlCl3 sublimes at 180 degC (CID 24012), NaCl boils at
+  1465 degC (CID 5234), all retrieved via the PUG-View REST API and accessed
+  2026-09-16 as recorded in the module. TiCl4 also carries a MEASURED PubChem heat
+  of vaporization of 36.2 kJ/mol at 136.45 degC. AlCl3 and NaCl carry no measured
+  enthalpy in the module, so for those two the enthalpy of transition is estimated
+  by Trouton's rule at 85 J/(mol K), which the module tags ASSUMED with low
+  confidence. The vector reports which of the two applies per species, because
+  calling all three Trouton estimates would assert an estimate where a measurement
+  exists.
+inputs:
+  species: [TiCl4, AlCl3, NaCl]
+  temperature_K: 400.0
+  total_pressure_Pa: 101325.0
+provenance:
+  temperature_K: ASSUMED, 400 K (126.85 degC), chosen deliberately below all three
+    transition temperatures so that every predicted pressure is below one atmosphere
+    and the total-pressure cap does NOT bind. A vector at 700 K would return the cap
+    for two of three species and would test the clamp instead of the relation.
+  total_pressure_Pa: SOURCED, 101325 Pa, the standard atmosphere by definition, exact.
+  TiCl4 enthalpy: SOURCED and MEASURED, 36.2 kJ/mol, PubChem heat of vaporization
+    at 136.45 degC (CID 24193), quoted to three significant figures, so the implied
+    uncertainty is of order plus or minus 0.05 kJ/mol.
+  AlCl3 and NaCl enthalpy: ASSUMED via Trouton's rule at 85 J/(mol K), uncertainty
+    of order plus or minus 15 J/(mol K) across ordinary liquids, which propagates to
+    roughly a factor of two in pressure at this temperature offset. For those two
+    species the vector therefore checks the arithmetic of the estimate and not the
+    accuracy of the estimate.
+arithmetic: |
+  One-point Clausius-Clapeyron:
+    ln(p/P0) = -(dH/R) (1/T - 1/T_transition),  P0 = 101325 Pa, R = 8.314462618
+  where dH is the MEASURED enthalpy of transition when the module has one, and
+  otherwise the Trouton estimate dH = 85 * T_transition (in K).
+  TiCl4, T_b = 136.45 + 273.15 = 409.59999999999997 K, MEASURED dH = 36200.0 J/mol:
+    dH/R = 36200.0 / 8.314462618 = 4353.859252626927
+    1/400 - 1/409.6 = 0.0025 - 0.00244140625 = 5.859375000000005e-05
+    exponent = -4353.859252626927 * 5.859375000000005e-05 = -0.2551089405836092
+    p = 101325 * exp(-0.2551089405836092) = 101325 * 0.7748320827037518
+      = 78509.86077995766 Pa
+    Had the Trouton rule been applied to TiCl4 as well, dH would have been
+    85 * 409.6 = 34816.0 J/mol and the pressure 79279.34025051698 Pa, 1.0 percent
+    higher. The two are close here because Trouton's rule is accurate for a
+    non-associating liquid like TiCl4, which is the case it was derived for.
+  AlCl3, T_sub = 180 + 273.15 = 453.15 K, Trouton estimate:
+    dH = 85 * 453.15 = 38517.75 J/mol
+    dH/R = 38517.75 / 8.314462618 = 4632.620503532343
+    1/400 - 1/453.15 = 0.0025 - 0.0022067747986318 = 0.00029322520136820015
+    exponent = -4632.620503532343 * 0.00029322520136820015 = -1.358401080010724
+    p = 101325 * exp(-1.358401080010724) = 101325 * 0.2570714852576491
+      = 26047.768243731298 Pa
+  NaCl, T_b = 1465 + 273.15 = 1738.15 K, Trouton estimate:
+    dH = 85 * 1738.15 = 147742.75 J/mol
+    dH/R = 147742.75 / 8.314462618 = 17769.36848331621
+    1/400 - 1/1738.15 = 0.0025 - 0.0005753243390961655 = 0.0019246756609038345
+    exponent = -34.2002710294704
+    p = 101325 * exp(-34.2002710294704) = 1.4214370287424754e-10 Pa
+  The separation this predicts: at 400 K the TiCl4 partial pressure exceeds the NaCl
+  partial pressure by log10(78509.86077995766/1.4214370287424754e-10) = 14.74 orders
+  of magnitude, which is why chlorination roasting can strip Ti while leaving Na
+  entirely behind. The NaCl figure rests on a Trouton estimate extrapolated 1338 K
+  below its boiling point and is not a measurement; it should be read as "many orders
+  of magnitude lower", not as 1.42e-10 Pa.
+expected:
+  TiCl4_pressure_Pa: 78509.86077995766
+  TiCl4_capped: 0.0
+  TiCl4_transition_enthalpy_J_per_mol: 36200.0
+  TiCl4_enthalpy_is_trouton: 0.0
+  TiCl4_transition_T_K: 409.6
+  AlCl3_pressure_Pa: 26047.768243731298
+  AlCl3_capped: 0.0
+  AlCl3_transition_enthalpy_J_per_mol: 38517.75
+  AlCl3_enthalpy_is_trouton: 1.0
+  AlCl3_transition_T_K: 453.15
+  NaCl_pressure_Pa: 1.4214370287424754e-10
+  NaCl_capped: 0.0
+  NaCl_transition_enthalpy_J_per_mol: 147742.75
+  NaCl_enthalpy_is_trouton: 1.0
+  NaCl_transition_T_K: 1738.15
+tolerances:
+  TiCl4_pressure_Pa:
+    rel: 1.0e-12
+    reason: >
+      A RELATIVE tolerance is correct here because the quantity is an
+      exponential: the absolute error scales with the value, and the same
+      absolute tolerance cannot serve both 79279 Pa and 1.4e-10 Pa in one
+      vector. The chain is one reciprocal difference, one multiplication and one
+      exp, each 1 ulp, so the relative bound is near 4e-16. 1e-12 relative
+      admits that with three orders of margin and still detects a wrong enthalpy
+      basis: applying Trouton to TiCl4 in place of its measured 36.2 kJ/mol
+      moves the pressure from 78509.86 Pa to 79279.34 Pa, a 1.0 percent shift,
+      ten orders above this tolerance.
+  TiCl4_capped:
+    abs: 0.0
+    reason: >
+      A boolean encoded as 0.0 or 1.0. There is no rounding to admit, so the
+      tolerance is exactly zero. The output exists to record that the total-
+      pressure cap did not bind, which is a precondition for the pressure values
+      being the raw Clausius-Clapeyron relation rather than the clamp.
+  TiCl4_transition_enthalpy_J_per_mol:
+    abs: 1.0e-09
+    reason: >
+      A SOURCED constant passed straight through, 36.2 kJ/mol converted to
+      36200.0 J/mol, so the only error is the pint unit conversion, one
+      multiplication by 1000, which is exact in binary. 1e-9 J/mol admits any
+      conversion rounding. The output exists to pin which enthalpy basis is in
+      use, checked together with TiCl4_enthalpy_is_trouton below.
+  TiCl4_enthalpy_is_trouton:
+    abs: 0.0
+    reason: >
+      A boolean encoded as 0.0, recording that TiCl4's enthalpy is the MEASURED
+      PubChem value and not a Trouton estimate. Exactly zero tolerance: this is
+      a provenance assertion, and a 1.0 here would mean the measured value was
+      silently discarded in favour of an estimate, which is the substitution
+      this output exists to catch.
+  AlCl3_enthalpy_is_trouton:
+    abs: 0.0
+    reason: >
+      A boolean encoded as 1.0, recording that AlCl3 has no measured enthalpy in
+      the module and falls back to Trouton. Exactly zero tolerance, as a
+      provenance assertion. A 0.0 would mean an unsourced measurement appeared.
+  NaCl_enthalpy_is_trouton:
+    abs: 0.0
+    reason: >
+      A boolean encoded as 1.0, recording the Trouton fallback for NaCl. Exactly
+      zero tolerance, as a provenance assertion.
+  TiCl4_transition_T_K:
+    abs: 1.0e-09
+    reason: >
+      A degC to K conversion, 136.45 + 273.15, where neither operand is binary-
+      exact, so 1 ulp near 6e-14 K. 1e-9 K admits it. The output is reported so
+      that the enthalpy above can be checked against its own input.
+  AlCl3_pressure_Pa:
+    rel: 1.0e-12
+    reason: >
+      Same basis as TiCl4_pressure_Pa. A RELATIVE tolerance is correct here
+      because the quantity is an exponential: the absolute error scales with the
+      value, and the same absolute tolerance cannot serve both 79279 Pa and
+      1.4e-10 Pa in one vector. The chain is one reciprocal difference, one
+      multiplication and one exp, each 1 ulp, so the relative bound is near
+      4e-16. 1e-12 relative admits that with three orders of margin and still
+      detects a wrong Trouton constant, which moves the pressure by tens of
+      percent.
+  AlCl3_capped:
+    abs: 0.0
+    reason: >
+      A boolean encoded as 0.0 or 1.0, recording that the total-pressure cap did
+      not bind. There is no rounding to admit, so the tolerance is exactly zero.
+  AlCl3_transition_enthalpy_J_per_mol:
+    abs: 1.0e-09
+    reason: >
+      A Trouton estimate, one multiplication of 85 by the transition temperature
+      in K. 85 * 453.15 = 38517.75 is exact to the last digit quoted here, so
+      the bound is 1 ulp near 4e-12 J/mol. 1e-9 admits that with two orders of
+      margin. The tolerance bounds the ARITHMETIC of the estimate; the estimate
+      itself carries a plus or minus 15 J/(mol K) uncertainty on the Trouton
+      entropy, stated in the provenance.
+  AlCl3_transition_T_K:
+    abs: 1.0e-09
+    reason: >
+      180 + 273.15, one addition, 1 ulp near 6e-14 K.
+  NaCl_pressure_Pa:
+    rel: 1.0e-12
+    reason: >
+      A relative tolerance is not merely convenient here, it is the only
+      workable choice: the value is 1.4e-10 Pa, so any absolute tolerance loose
+      enough for the 79279 Pa output in the same vector would pass ANY value for
+      this one. The relative bound is the same 4e-16 as the others because the
+      exponent, although large in magnitude at -34.2, is evaluated once.
+  NaCl_capped:
+    abs: 0.0
+    reason: >
+      A boolean encoded as 0.0 or 1.0, recording that the total-pressure cap did
+      not bind. There is no rounding to admit, so the tolerance is exactly zero.
+  NaCl_transition_enthalpy_J_per_mol:
+    abs: 1.0e-09
+    reason: >
+      A Trouton estimate, 85 * 1738.15 = 147742.75, one multiplication, 1 ulp
+      near 1.5e-11 J/mol. 1e-9 admits that with two orders of margin, and the
+      Trouton uncertainty is carried in the provenance rather than here.
+  NaCl_transition_T_K:
+    abs: 1.0e-09
+    reason: >
+      One degC to K conversion, 1465 + 273.15, where 273.15 is not binary-exact,
+      so 1 ulp near 2e-13 K. 1e-9 K admits that with four orders of margin.

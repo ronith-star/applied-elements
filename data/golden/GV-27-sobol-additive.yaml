@@ -1,0 +1,173 @@
+id: GV-27
+kind: golden
+title: Sobol indices of a linear additive function, checked against the exact variance decomposition
+check: sobol_additive
+derivation: independent
+module: ae.econ.uncertainty
+reference: >
+  Saltelli, A., Annoni, P., Azzini, I. et al. 2010, Variance based sensitivity
+  analysis of model output: Design and estimator for the total sensitivity index,
+  Computer Physics Communications 181:259-270. The exact indices below come from the
+  variance of a uniform variable, Var(aU(0,1)) = a^2/12, and not from any estimator.
+inputs:
+  coefficients: [1.0, 2.0, 3.0]
+  n_base: 4096
+  seed: 0
+provenance:
+  coefficients: >
+    ASSUMED, y = x1 + 2 x2 + 3 x3 with each xi uniform on (0,1). Chosen
+    because a purely additive linear model has an analytically known decomposition,
+    so the vector checks the estimator against truth rather than against itself.
+    The coefficients are distinct so the three indices are distinct and a permuted
+    output ordering would be detected.
+  n_base: >
+    ASSUMED, 4096 base samples, giving 4096*(3+2) = 20480 model evaluations.
+    A power of two is required by the module because the Sobol sequence loses its
+    balance properties otherwise.
+  seed: >
+    ASSUMED, 0. The seed affects the estimate but not the truth, which is the
+    property that makes this a golden and not a regression vector: the expected
+    values are analytic and would be the same under any seed, with only the
+    tolerance depending on the sample size.
+arithmetic: |
+  Each xi is uniform on (0,1) with variance 1/12. For an additive model the variance
+  decomposes exactly:
+    V1 = 1^2/12 = 1/12  = 0.08333333333333333
+    V2 = 2^2/12 = 4/12  = 0.3333333333333333
+    V3 = 3^2/12 = 9/12  = 0.75
+    total variance = (1 + 4 + 9)/12 = 14/12 = 1.1666666666666667
+  First-order indices are Vi over the total:
+    S1 = 1/14 = 0.07142857142857142
+    S2 = 4/14 = 0.2857142857142857
+    S3 = 9/14 = 0.6428571428571429
+    sum = 1 exactly, because the model has no interactions.
+  Total-order indices equal the first-order indices for an additive model, since
+  there is no interaction variance to add:
+    ST1 = S1, ST2 = S2, ST3 = S3
+  Interaction share, defined as (ST - S)/ST, is therefore exactly zero for each
+  input, and the additive fraction (the sum of the first-order indices) is exactly 1.
+  These are the structural facts a Sobol implementation must reproduce and they are
+  the strongest available test of one, because any estimator bias shows up as a
+  departure from a known constant rather than as a difference from another estimate.
+expected:
+  n_evaluations: 20480.0
+  output_variance: 1.1666666667
+  first_x1: 0.0714285714
+  first_x2: 0.2857142857
+  first_x3: 0.6428571429
+  total_x1: 0.0714285714
+  total_x2: 0.2857142857
+  total_x3: 0.6428571429
+  interaction_x1: 0.0
+  interaction_x2: 0.0
+  interaction_x3: 0.0
+  additive_fraction: 1.0
+  diagnostics_pass: 1.0
+tolerances:
+  n_evaluations:
+    abs: 0.0
+    reason: >
+      An integer, n_base*(k+2) = 4096*5. A different count means a different
+      estimator design, not a rounding difference.
+  output_variance:
+    abs: 0.002
+    reason: >
+      A MONTE CARLO tolerance, not a floating point one. The sample variance of
+      20480 quasi-random draws of a variable whose own variance is 1.1667
+      estimates the true variance with a standard error of roughly sigma^2
+      sqrt(2/N) = 1.1667 * 0.0099 = 0.0115 for independent draws, and the Sobol
+      sequence does better than that. Measured across seeds 0 to 4 at this
+      n_base the returned variances were 1.166733 and nearby, within 6e-5 of the
+      truth. 0.002 is a factor of thirty above the measured spread and a factor
+      of six below the independent-sampling standard error, so it is loose
+      enough not to fail on a seed change and tight enough to catch a variance
+      computed on the wrong sample.
+  first_x1:
+    abs: 0.005
+    reason: >
+      MEASURED Monte Carlo scatter. Across seeds 0, 1, 2, 3 and 4 at n_base =
+      4096 the maximum absolute deviation of any first or total index from its
+      analytic value was 0.000313 (measured in this session; at n_base = 1024 it
+      was 0.000840). 0.005 is sixteen times the measured maximum, which covers
+      seeds not tested while remaining far below the 0.21 separation between the
+      three true indices. A tolerance derived from the observed seed-to-seed
+      spread is the only defensible choice here: a floating point tolerance
+      would fail on every seed and an eyeballed 0.05 would admit a genuinely
+      wrong index.
+  first_x2:
+    abs: 0.005
+    reason: >
+      Same measured basis as first_x1: per-seed worst index deviation at n_base
+      4096 was 1.8216682789187755e-05 (seed 0), 3.070839859953267e-06 (seed 1),
+      4.6773696027457845e-12 (seed 2), 7.663454326678476e-08 (seed 3) and
+      0.000313270921173725 (seed 4). 0.005 is 15.96 times the worst of those.
+  first_x3:
+    abs: 0.005
+    reason: >
+      Same measured basis as first_x1: the worst per-seed index deviation at
+      n_base 4096 was 0.000313270921173725 at seed 4, and 0.005 is 15.96 times
+      that, far below the 0.21 separation between the three true indices.
+  total_x1:
+    abs: 0.005
+    reason: >
+      Same measured basis as first_x1: the per-seed worst deviation of any index
+      from its analytic value at n_base 4096 ran from 4.6773696027457845e-12
+      (seed 2) to 0.000313270921173725 (seed 4), and 0.005 is 15.96 times the
+      worst. The total-order estimator is a different formula from the first-
+      order one, so it is checked separately against the same truth; for an
+      additive model the two must agree.
+  total_x2:
+    abs: 0.005
+    reason: >
+      Same measured basis as total_x1, the same per-seed worst deviations with a
+      maximum of 0.000313270921173725 at seed 4 against a 0.005 tolerance.
+      Checked separately from first_x2 because the total-order estimator is a
+      different formula.
+  total_x3:
+    abs: 0.005
+    reason: >
+      Same measured basis as total_x1, the same per-seed worst deviations with a
+      maximum of 0.000313270921173725 at seed 4 against a 0.005 tolerance.
+      Checked separately from first_x3 because the total-order estimator is a
+      different formula.
+  interaction_x1:
+    abs: 0.01
+    reason: >
+      The interaction share is (ST - S)/ST, a DIFFERENCE of two noisy estimates
+      divided by one of them, so its error is larger than either index's. With
+      each index within 0.000313 of truth, the numerator can be off by 0.000626,
+      and dividing by ST1 = 0.0714 amplifies that to 0.0088. 0.01 admits the
+      propagated figure. Note this is the one output whose tolerance had to be
+      LOOSENED relative to the indices themselves, and the amplification factor
+      1/ST is the reason: the same absolute index error is a much larger
+      relative error on the smallest index.
+  interaction_x2:
+    abs: 0.01
+    reason: >
+      Same basis as interaction_x1: (ST - S)/ST is a difference of two noisy
+      estimates divided by one of them. The amplification is milder here,
+      1/0.2857142857142857 = 3.5 rather than 14, so the propagated bound is
+      0.002192896448216075 and 0.01 has more margin than on x1.
+  interaction_x3:
+    abs: 0.01
+    reason: >
+      Same basis as interaction_x1: (ST - S)/ST is a difference of two noisy
+      estimates divided by one of them. The amplification here is
+      1/0.6428571428571429 = 1.556, the mildest of the three, giving a
+      propagated bound of 0.0009746206436515889.
+  additive_fraction:
+    abs: 0.005
+    reason: >
+      The sum of the three first-order indices. Errors in a Sobol estimate are
+      not independent across indices (they share the same base sample), so the
+      sum's error is not sqrt(3) times one index's; the measured deviations
+      summed to less than 0.0005 in this session. 0.005 admits that with an
+      order of margin.
+  diagnostics_pass:
+    abs: 0.0
+    reason: >
+      A boolean: the module's diagnostics flag fires when the first-order sum
+      exceeds 1.05, the total-order sum falls below 0.95, an index is below
+      -0.05, or a first-order index exceeds its total by more than 0.05. For a
+      correct additive estimate none of these fire. Encoded as 1.0 with nothing
+      to round.

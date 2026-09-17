@@ -1,0 +1,128 @@
+id: GV-03
+kind: golden
+title: Rosin-Rammler quantiles, Sauter mean and geometric surface area
+check: rosin_rammler
+derivation: independent
+module: ae.physics.psd
+reference: >
+  Rosin, P. and Rammler, E. 1933, The Laws Governing the Fineness of Powdered Coal,
+  Journal of the Institute of Fuel 7:29-36. Gamma function values below are from the
+  standard series, computed here by the closed-form relations stated in the
+  arithmetic block, not read from the module.
+inputs:
+  d_prime_um: 45.0
+  n: 2.6
+  density_kg_m3: 2650.0
+provenance:
+  d_prime_um: ASSUMED, 45 um, a round characteristic size. Not a measurement.
+  n: ASSUMED, 2.6, within the 2 to 4 band typical of closed-circuit ball mill products.
+    Chosen above 1 because the Sauter mean of a Rosin-Rammler distribution diverges
+    at n <= 1 and the module raises there.
+  density_kg_m3: SOURCED, 2650 kg/m^3, the accepted density of alpha quartz, quoted to
+    three significant figures. Uncertainty is not propagated in this vector because
+    the surface area scales exactly inversely with it.
+arithmetic: |
+  Quantile: d_p = d' * (-ln(1-p))^(1/n),  1/n = 0.3846153846153846
+    p = 0.10: -ln(0.90) = 0.10536051565782628
+               0.10536051565782628^0.3846153846153846 = 0.4208301818844526
+               d10 = 45 * 0.4208301818844526 = 18.937358184800367 um
+    p = 0.50: ln 2 = 0.6931471805599453
+               0.6931471805599453^0.3846153846153846 = 0.8685183997017331
+               d50 = 45 * 0.8685183997017331 = 39.083327986577984 um
+    p = 0.90: -ln(0.10) = 2.302585092994046
+               2.302585092994046^0.3846153846153846 = 1.378204699352725
+               d90 = 45 * 1.378204699352725 = 62.01921147087263 um
+  Span = (d90 - d10)/d50 = (62.01921147087263 - 18.937358184800367)/39.083327986577984
+       = 43.081853286072266/39.083327986577984 = 1.1023076975652495
+  Cumulative undersize at d = d': 1 - exp(-1) = 0.6321205588285577
+  Sauter mean: d32 = d' / Gamma(1 - 1/n) = 45 / Gamma(0.6153846153846154)
+    Gamma(0.6153846153846154) = 1.4549279883039163
+    d32 = 45 / 1.4549279883039163 = 30.929365825492706 um
+  Volume-weighted mean: E_v[d] = d' * Gamma(1 + 1/n) = 45 * Gamma(1.3846153846153846)
+    Gamma(1.3846153846153846) = 0.8882104347329064
+    E_v[d] = 45 * 0.8882104347329064 = 39.96946956298079 um
+  Geometric surface area: S = 6/(rho * d32 * psi), psi = 1
+    d32 = 30.929365825492706e-6 m
+    S = 6 / (2650 * 30.929365825492706e-6) = 73.20392393981969 m^2/kg
+expected:
+  d10_um: 18.9373581848
+  d50_um: 39.0833279866
+  d90_um: 62.0192114709
+  span: 1.1023076976
+  sauter_d32_um: 30.9293658255
+  volume_weighted_mean_um: 39.9694695630
+  specific_surface_area_m2_per_kg: 73.2039239398
+  cumulative_undersize_at_d_prime: 0.6321205588285577
+tolerances:
+  d10_um:
+    abs: 1.0e-06
+    reason: >
+      Floating point plus one fractional power. The quantile is a closed form,
+      so the only error is IEEE 754 rounding through log and pow, about 1e-15
+      relative, which is 2e-14 um here. 1e-6 um is eight orders looser than that
+      bound and still eight orders tighter than any plausible formula error
+      (dropping the 1/n exponent moves d10 by 26 um), so it separates the two
+      cleanly. The looser 1e-6 rather than 1e-9 is used because pow with a non-
+      dyadic exponent is permitted a slightly larger error than a single
+      arithmetic operation.
+  d50_um:
+    abs: 1.0e-06
+    reason: >
+      Same basis as d10_um. Floating point plus one fractional power. The
+      quantile is a closed form, so the only error is IEEE 754 rounding through
+      log and pow, about 1e-15 relative, which is 2e-14 um here. 1e-6 um is
+      eight orders looser than that bound and still eight orders tighter than
+      any plausible formula error (dropping the 1/n exponent moves d10 by 26
+      um), so it separates the two cleanly. The looser 1e-6 rather than 1e-9 is
+      used because pow with a non-dyadic exponent is permitted a slightly larger
+      error than a single arithmetic operation.
+  d90_um:
+    abs: 1.0e-06
+    reason: >
+      Same basis as d10_um. Floating point plus one fractional power. The
+      quantile is a closed form, so the only error is IEEE 754 rounding through
+      log and pow, about 1e-15 relative, which is 2e-14 um here. 1e-6 um is
+      eight orders looser than that bound and still eight orders tighter than
+      any plausible formula error (dropping the 1/n exponent moves d10 by 26
+      um), so it separates the two cleanly. The looser 1e-6 rather than 1e-9 is
+      used because pow with a non-dyadic exponent is permitted a slightly larger
+      error than a single arithmetic operation.
+  span:
+    abs: 1.0e-09
+    reason: >
+      A ratio of differences of three quantities each accurate to about 1e-14 um
+      at a magnitude near 40 um, so the propagated absolute error in the
+      dimensionless span is near 1e-15. 1e-9 admits that with six orders of
+      margin.
+  sauter_d32_um:
+    abs: 1.0e-06
+    reason: >
+      One Gamma function evaluation. Gamma is implemented by a series or by the
+      Lanczos approximation, which is accurate to roughly 1e-15 relative but not
+      to the last bit, so this quantity carries slightly more error than a plain
+      arithmetic chain. At 31 um an error of 1e-15 relative is 3e-14 um; 1e-6 um
+      admits that and still catches a wrong exponent sign, which would give 40
+      um.
+  volume_weighted_mean_um:
+    abs: 1.0e-06
+    reason: >
+      Same basis as sauter_d32_um. One Gamma function evaluation. Gamma is
+      implemented by a series or by the Lanczos approximation, which is accurate
+      to roughly 1e-15 relative but not to the last bit, so this quantity
+      carries slightly more error than a plain arithmetic chain. At 31 um an
+      error of 1e-15 relative is 3e-14 um; 1e-6 um admits that and still catches
+      a wrong exponent sign, which would give 40 um.
+  specific_surface_area_m2_per_kg:
+    abs: 1.0e-06
+    reason: >
+      One division of the Gamma-derived d32 into a constant. Absolute error
+      inherits d32's relative error, so at 73 m^2/kg it is near 1e-13. 1e-6 is
+      seven orders looser and still catches a factor-of-6 or sphericity error.
+  cumulative_undersize_at_d_prime:
+    abs: 1.0e-12
+    reason: >
+      One exponential of exactly -1, so the only error is the rounding of
+      exp(-1), bounded at 1 ulp near 1e-16. 1e-12 admits that with four orders
+      of margin. This output is the sharpest check in the vector because 1 -
+      exp(-1) is the definition of d': if the module scaled d' the value moves
+      visibly.

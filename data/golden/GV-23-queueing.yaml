@@ -1,0 +1,73 @@
+id: GV-23
+kind: golden
+title: M/M/1 and Allen-Cunneen waiting time, and the reduction the queueing approximation must satisfy
+check: queueing
+derivation: independent
+module: ae.plant.scheduling
+reference: >
+  Allen, A.O. 1990, Probability, Statistics and Queueing Theory with Computer
+  Science Applications, 2nd edition, Academic Press, for the G/G/1 waiting time
+  approximation Wq = (rho/(1-rho)) * ((ca^2 + cs^2)/2) / mu. The M/M/1 result
+  Wq = rho/(mu(1-rho)) is exact and standard.
+inputs:
+  arrival_rate: 0.6
+  service_rate: 0.9
+  cv_arrival: 1.0
+  cv_service: 0.5
+provenance:
+  arrival_rate: ASSUMED, 0.6 lots per hour.
+  service_rate: ASSUMED, 0.9 lots per hour, giving rho = 2/3 exactly, comfortably
+    below 1 so a steady state exists. The module raises at rho >= 1 rather than
+    returning a large number.
+  cv_arrival: ASSUMED, 1.0, Poisson arrivals.
+  cv_service: ASSUMED, 0.5, a service process half as variable as exponential, which
+    is what a batch kiln with a fixed cycle plus variable loading looks like.
+arithmetic: |
+  rho = 0.6/0.9 = 0.6666666666666666 (2/3)
+  1 - rho = 0.33333333333333337 in double precision
+  M/M/1 exact: Wq = rho/(mu (1 - rho)) = 0.6666666666666666/(0.9*0.33333333333333337)
+    = 0.6666666666666666/0.30000000000000004 = 2.222222222222222 h
+  Exactly, as a rational: (2/3)/(0.9 * 1/3) = (2/3)/(3/10) = 20/9 = 2.2222222222222223 h
+  Allen-Cunneen: Wq = (rho/(1-rho)) * ((ca^2 + cs^2)/2) / mu
+    rho/(1-rho) = 0.6666666666666666/0.33333333333333337 = 1.9999999999999998
+    (1.0^2 + 0.5^2)/2 = 1.25/2 = 0.625
+    Wq = 1.9999999999999998 * 0.625 / 0.9 = 1.2500000000000004/0.9
+       = 1.3888888888888886 h
+  Reduction check: at ca = cs = 1 the approximation must reduce to M/M/1:
+    (1+1)/2 = 1, so Wq = 1.9999999999999998 * 1 / 0.9 = 2.222222222222222 h,
+  which equals the M/M/1 value to the last digit printed. That reduction is the
+  structural property the vector checks; a missing factor of 1/2 in the variability
+  term would double the M/M/1 case and break it.
+  Interpretation: halving the service coefficient of variation from 1.0 to 0.5 cuts
+  queue time from 2.2222 h to 1.3889 h, a 37.5 percent reduction, with no change to
+  utilisation. Variability reduction buys capacity that a rate increase would have
+  to pay for in capital.
+expected:
+  mm1_waiting_hours: 2.2222222222
+  allen_cunneen_waiting_hours: 1.3888888889
+  allen_cunneen_at_unit_cv: 2.2222222222
+tolerances:
+  mm1_waiting_hours:
+    abs: 1.0e-09
+    reason: >
+      Two divisions and one subtraction. The subtraction 1 - 2/3 is the lossy
+      step: 2/3 is not binary-exact, so 1 - rho has a relative error near
+      1.5e-16, which the division amplifies to about 2.4e-15 absolute at 2.22 h.
+      Measured in this session the value came out 2.222222222222222 against the
+      exact 20/9 = 2.2222222222222223, a difference of 4.4e-16. 1e-9 h admits
+      that with six orders of margin.
+  allen_cunneen_waiting_hours:
+    abs: 1.0e-09
+    reason: >
+      The same lossy subtraction plus two multiplications, so the bound is near
+      3e-15. 1e-9 h admits it with six orders of margin and is eight orders
+      tighter than the 0.8333 h difference from the M/M/1 case, so the vector
+      distinguishes the two formulas.
+  allen_cunneen_at_unit_cv:
+    abs: 1.0e-09
+    reason: >
+      This output exists to check the reduction to M/M/1 and must match
+      mm1_waiting_hours. The two are computed by different functions, so
+      agreement is a real cross-check. Both carry the same 2.4e-15 bound from
+      the shared subtraction, and the tolerance is set at 1e-9 for consistency
+      with the value it is compared against rather than tighter.

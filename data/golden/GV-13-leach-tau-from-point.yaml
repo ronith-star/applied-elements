@@ -1,0 +1,54 @@
+id: GV-13
+kind: golden
+title: Characteristic time back-calculated from one timed leach assay
+check: leach_tau_from_point
+derivation: independent
+module: ae.physics.leaching
+reference: >
+  Levenspiel, O. 1999, Chemical Reaction Engineering, 3rd edition, Wiley, chapter 25.
+  tau = t / g(X) follows directly from t/tau = g(X); no additional source is needed.
+inputs:
+  regime: surface_reaction
+  conversion_x: 0.80
+  t_s: 3600.0
+provenance:
+  regime: ASSUMED, surface reaction control. In a real fit the regime would be
+    identified from the size exponent and the apparent activation energy, not
+    assumed; this vector tests the arithmetic of the back-calculation only.
+  conversion_x: MEASURED in the hypothetical, 0.80, meaning 80 percent of the leachable
+    inventory removed. A real single-point fit on one assay pair has no degrees of
+    freedom left to test the regime, which the module states as a caveat.
+  t_s: MEASURED in the hypothetical, 3600 s (one hour).
+arithmetic: |
+  g(X) for surface reaction control at X = 0.80:
+    1 - X = 0.2
+    0.2^(1/3) = 0.5848035476425733
+    g = 1 - 0.5848035476425733 = 0.4151964523574267
+  tau = t / g = 3600 / 0.4151964523574267 = 8670.594316400606 s
+  As a sanity figure: 8670.6 s is 2.41 hours, so 80 percent conversion in one hour
+  implies complete conversion of a single particle in about 2.4 hours under this
+  regime. Under product layer control the same assay pair would give
+  3600/0.3740144319939818 = 9625.297026126329 s, a 10 percent different answer from
+  the same data, which is why the regime cannot be assumed away.
+  Round trip: the module's forward conversion at t = 3600 s with this tau must return
+  X = 0.80.
+expected:
+  tau_s: 8670.5943164006
+  round_trip_conversion: 0.80
+tolerances:
+  tau_s:
+    abs: 1.0e-06
+    reason: >
+      One cube root, one subtraction and one division. The cube root carries 1
+      ulp, giving a relative error near 1.5e-16 in g, which propagates to about
+      1.3e-12 s at tau = 8670 s. 1e-6 s admits that with six orders of margin
+      and is far tighter than the 10 percent regime ambiguity noted in the
+      arithmetic, so the tolerance tests the arithmetic rather than hiding the
+      physics.
+  round_trip_conversion:
+    abs: 1.0e-12
+    reason: >
+      The forward conversion is a separate code path from tau_from_single_point,
+      so the round trip is a genuine cross-check rather than an algebraic
+      identity. Each direction carries a cube root, so the composed bound is a
+      few ulp near 3e-16. 1e-12 admits that with three orders of margin.

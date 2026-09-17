@@ -1,0 +1,120 @@
+id: GV-09
+kind: golden
+title: Impurity floor and removable inventory from a four-way partition
+check: impurity_floor
+derivation: independent
+module: ae.physics.impurity_location
+reference: >
+  Muller, A., Herrington, R., Armstrong, R. et al. 2012, Trace elements and
+  cathodoluminescence of quartz in stockwork veins of Myanmar porphyry copper
+  systems, in Gotze, J. and Mockel, R. eds., Quartz: Deposits, Mineralogy and
+  Analytics, Springer. The four-way surface, fluid inclusion, mineral inclusion and
+  lattice partition is the framework used there. The numbers in this vector are
+  ASSUMED scenario values, not measurements.
+inputs:
+  sample_id: AE-Q-IN-VKB-001
+  ore_type: vein_quartz
+  element: Al
+  bulk_ppm: 120.0
+  partition:
+    surface: 0.10
+    fluid: 0.05
+    mineral: 0.35
+    lattice: 0.50
+  efficiencies:
+    surface: 0.95
+    fluid: 0.80
+    mineral: 0.60
+provenance:
+  bulk_ppm: ASSUMED, 120 ppm Al. A scenario value. The Vikarabad deposit is
+    uncharacterized in the citable record and no assay exists for it; this number is
+    gated on a future 20 to 30 sample campaign and is never a property of the ore.
+  partition: ASSUMED, summing to exactly 1. The 0.50 lattice share is the parameter
+    that sets the ceiling grade and is precisely the number the assay campaign has to
+    measure, because lattice-bound Al cannot be removed by acid leaching.
+  efficiencies: ASSUMED removal efficiencies per location. Surface material is easiest
+    to remove (0.95), mineral inclusions hardest of the three non-lattice sites (0.60).
+    Lattice removal is left at its default of zero, which the module requires unless a
+    named mechanism is supplied.
+arithmetic: |
+  Location inventories, each bulk times its partition share:
+    surface: 120 * 0.10 = 12.0 ppm
+    fluid:   120 * 0.05 = 6.0 ppm
+    mineral: 120 * 0.35 = 42.0 ppm
+    lattice: 120 * 0.50 = 60.0 ppm
+    sum = 120.0 ppm, equal to the bulk, which is the closure this vector pins.
+  Floor, the residue a flowsheet with these efficiencies leaves behind:
+    surface residue: 12.0 * (1 - 0.95) = 12.0 * 0.05 = 0.6 ppm
+    fluid residue:    6.0 * (1 - 0.80) =  6.0 * 0.20 = 1.2 ppm
+    mineral residue: 42.0 * (1 - 0.60) = 42.0 * 0.40 = 16.8 ppm
+    lattice residue: 60.0 * (1 - 0.00) = 60.0 ppm
+    floor = 0.6 + 1.2 + 16.8 + 60.0 = 78.6 ppm
+  Removable inventory, what a PERFECT physical flowsheet could take out, which is
+  bulk minus lattice and does not depend on the efficiencies:
+    12.0 + 6.0 + 42.0 = 60.0 ppm
+  Cross-check: removable + lattice = 60.0 + 60.0 = 120.0 ppm = bulk.
+  Note the floor 78.6 exceeds the lattice inventory 60.0 by 18.6 ppm, the part of the
+  removable inventory these imperfect efficiencies fail to reach. That gap, not the
+  floor, is what an extra stage buys.
+expected:
+  conc_surface_ppm: 12.0
+  conc_fluid_ppm: 6.0
+  conc_mineral_ppm: 42.0
+  conc_lattice_ppm: 60.0
+  conc_sum_ppm: 120.0
+  floor_ppm: 78.6
+  removable_ppm: 60.0
+  removable_plus_lattice_ppm: 120.0
+tolerances:
+  conc_surface_ppm:
+    abs: 1.0e-09
+    reason: >
+      One multiplication of exact decimals that are not binary-exact (0.10), so
+      1 ulp near 1e-15 ppm. 1e-9 ppm admits it with six orders of margin and is
+      far below any assay resolution.
+  conc_fluid_ppm:
+    abs: 1.0e-09
+    reason: >
+      Same basis as conc_surface_ppm. One multiplication of exact decimals that
+      are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it
+      with six orders of margin and is far below any assay resolution.
+  conc_mineral_ppm:
+    abs: 1.0e-09
+    reason: >
+      Same basis as conc_surface_ppm. One multiplication of exact decimals that
+      are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it
+      with six orders of margin and is far below any assay resolution.
+  conc_lattice_ppm:
+    abs: 1.0e-09
+    reason: >
+      Same basis as conc_surface_ppm. One multiplication of exact decimals that
+      are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it
+      with six orders of margin and is far below any assay resolution.
+  conc_sum_ppm:
+    abs: 1.0e-09
+    reason: >
+      Four terms each carrying at most 1e-15 ppm, so 4e-15 ppm. 1e-9 admits it.
+      This output is the closure check: if the partition did not sum to 1, or if
+      the module normalised it silently, the sum would move by ppm and not by
+      ulp.
+  floor_ppm:
+    abs: 1.0e-09
+    reason: >
+      Four products and three additions on values near 100 ppm, so the bound is
+      about 1e-14 ppm. 1e-9 ppm admits it with five orders of margin. The floor
+      is the number a purity claim rests on, so the tolerance is set by the
+      arithmetic and the input uncertainty is carried in the provenance instead:
+      the inputs are ASSUMED and the floor inherits their status, which no
+      tolerance can repair.
+  removable_ppm:
+    abs: 1.0e-09
+    reason: >
+      A sum of three exact products. The output is here because it must NOT
+      depend on the efficiencies: an implementation that subtracted the floor
+      from the bulk would return 41.4 rather than 60.0, an error of 18.6 ppm
+      which this tolerance detects by ten orders of magnitude.
+  removable_plus_lattice_ppm:
+    abs: 1.0e-09
+    reason: >
+      A second closure identity, summing two independently returned quantities
+      back to the bulk. Four ulp at most, near 4e-15 ppm.

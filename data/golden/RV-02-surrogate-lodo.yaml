@@ -1,0 +1,230 @@
+id: RV-02
+kind: regression
+title: Leave-one-deposit-out folds on a six-sample three-group set, with the mean baseline derived by hand
+check: surrogate_lodo
+derivation: mixed
+regression_reason: >
+  The fold structure, the sample counts and the MEAN-baseline RMSE of each fold are
+  derived independently below with a calculator. The fitted model's RMSE and the
+  ridge-baseline RMSE are not: they depend on the estimator's internals (here a
+  gradient boosting machine with a fixed seed, and a RidgeCV alpha grid), so those
+  outputs are REGRESSION pins. The file is therefore counted as a regression vector
+  even though most of its expected values are independently derived, because the
+  strictest classification is the honest one: any file containing a value that could
+  only come from running the code is a regression vector.
+module: ae.ml.surrogate
+reference: >
+  Roberts, D.R., Bahn, V., Ciuti, S. et al. 2017, Cross-validation strategies for
+  data with temporal, spatial, hierarchical, or phylogenetic structure, Ecography
+  40:913-929, for the argument that grouped validation is the honest estimate when
+  samples cluster. The mean-baseline RMSE arithmetic below needs no source.
+inputs:
+  X: [[1.0, 0.5], [2.0, 0.5], [3.0, 1.5], [4.0, 1.5], [5.0, 2.5], [6.0, 2.5]]
+  y: [10.0, 12.0, 20.0, 22.0, 30.0, 32.0]
+  groups: [A, A, B, B, C, C]
+  feature_names: [feature_1, feature_2]
+  target_name: target
+  kind: gbm
+  seed: 0
+provenance:
+  X: >
+    ASSUMED. Feature 1 is a sample index 1 to 6 and feature 2 is the group
+    centroid (0.5, 1.5, 2.5). The target is an EXACT linear function of both,
+    y = 2*feature_1 + 6*feature_2 + 5, verified in this session against all six
+    rows: 2+3+5 = 10, 4+3+5 = 12, 6+9+5 = 20, 8+9+5 = 22, 10+15+5 = 30,
+    12+15+5 = 32. This is a synthetic fixture and proves nothing about any real
+    deposit.
+  y: >
+    ASSUMED, the exact linear image described above, in ascending order.
+  groups: >
+    ASSUMED, three deposits of two samples each. Three is the minimum that
+    leaves a non-trivial training set on every fold; the module documents that five
+    deposits is where a grouped estimate becomes meaningful, so this fixture is
+    below that threshold by design and the vector makes no claim about model skill.
+  kind: >
+    ASSUMED, gbm. A tree ensemble was chosen deliberately: it extrapolates as a
+    constant, so on a leave-one-group-out split where the held-out group lies outside
+    the training range it cannot do better than predicting the nearest training mean.
+    That failure is the pedagogical content of the fixture.
+  seed: >
+    ASSUMED, 0.
+arithmetic: |
+  Fold structure. Leave-one-deposit-out on three groups of two gives three folds,
+  each with 4 training and 2 test samples:
+    fold A: train indices [2,3,4,5], test [0,1]
+    fold B: train indices [0,1,4,5], test [2,3]
+    fold C: train indices [0,1,2,3], test [4,5]
+  Global mean of y = (10+12+20+22+30+32)/6 = 126/6 = 21.0
+  Target interquartile range, linear interpolation on the sorted y:
+    sorted y = [10,12,20,22,30,32], n = 6
+    q25 index = (6-1)*0.25 = 1.25, so q25 = 12 + 0.25*(20-12) = 14.0
+    q75 index = (6-1)*0.75 = 3.75, so q75 = 22 + 0.75*(30-22) = 28.0
+    IQR = 28.0 - 14.0 = 14.0
+  Mean-baseline RMSE per fold, predicting the TRAINING mean for every test sample:
+    fold A: train y = [20,22,30,32], mean = 104/4 = 26.0
+            test y = [10,12], errors -16 and -14
+            MSE = (256 + 196)/2 = 226.0, RMSE = sqrt(226) = 15.033296378372908
+    fold B: train y = [10,12,30,32], mean = 84/4 = 21.0
+            test y = [20,22], errors -1 and +1
+            MSE = (1 + 1)/2 = 1.0, RMSE = 1.0
+    fold C: train y = [10,12,20,22], mean = 64/4 = 16.0
+            test y = [30,32], errors +14 and +16
+            MSE = (196 + 256)/2 = 226.0, RMSE = sqrt(226) = 15.033296378372908
+  The A and C folds are symmetric, which is why their baselines are identical, and
+  the B fold is easy because the held-out group sits between the two training
+  groups. That asymmetry is the whole reason a per-fold spread must be reported and
+  not just an average: averaging 15.033296378372908, 1.0 and 15.033296378372908
+  gives 10.355530918915273, which describes none of the three folds.
+  MEASURED model RMSE, which cannot be derived by hand:
+    gbm fold A 15.033296378372908, fold B 1.0, fold C 15.033296378372908
+  The gbm exactly equals the mean baseline on every fold. That is not a coincidence
+  and it is not a bug: with 4 training samples and min_samples_leaf defaults, the
+  ensemble cannot split usefully and predicts the training mean, so it inherits the
+  baseline exactly. A model with no skill over the mean is what this fixture is
+  designed to exhibit.
+  MEASURED ridge-baseline RMSE, also not hand-derivable (RidgeCV selects alpha from
+  a 25-point logspace grid by internal cross-validation):
+    fold A 0.0022628130162319375, fold B 0.0017341949999050144,
+    fold C 0.0022628130162319375
+  The linear baseline recovers the exactly-linear target almost perfectly while the
+  tree ensemble does not. This is the case the module's "a ridge baseline can win and
+  that is reported" behaviour exists for.
+expected:
+  n_folds: 3.0
+  global_mean: 21.0
+  target_iqr: 14.0
+  n_train_A: 4.0
+  n_test_A: 2.0
+  n_train_B: 4.0
+  n_test_B: 2.0
+  n_train_C: 4.0
+  n_test_C: 2.0
+  baseline_mean_rmse_A: 15.0332963784
+  baseline_mean_rmse_B: 1.0
+  baseline_mean_rmse_C: 15.0332963784
+  rmse_A: 15.0332963784
+  rmse_B: 1.0
+  rmse_C: 15.0332963784
+  baseline_ridge_rmse_A: 0.0022628130162319375
+  baseline_ridge_rmse_B: 0.0017341949999050144
+  baseline_ridge_rmse_C: 0.0022628130162319375
+tolerances:
+  n_folds:
+    abs: 0.0
+    reason: >
+      An integer. Three groups give three folds; any other count means the
+      grouping was ignored.
+  global_mean:
+    abs: 1.0e-12
+    reason: >
+      An exact integer quotient 126/6. 1e-12 admits summation order.
+  target_iqr:
+    abs: 1.0e-12
+    reason: >
+      Two linear interpolations on exact integers giving exactly 14.0. 1e-12
+      admits the interpolation-convention arithmetic. The convention matters: a
+      nearest-rank quartile would give 20 - 12 = 8 rather than 14, detected by
+      6.
+  n_train_A:
+    abs: 0.0
+    reason: >
+      An integer sample count. Independently derived from the group structure.
+  n_test_A:
+    abs: 0.0
+    reason: >
+      An integer sample count, independently derived from the group structure:
+      three groups of two give two test samples per fold. Any other value means
+      the grouping was not respected.
+  n_train_B:
+    abs: 0.0
+    reason: >
+      An integer sample count, independently derived from the group structure:
+      six samples less the two held out give four in training.
+  n_test_B:
+    abs: 0.0
+    reason: >
+      An integer sample count, independently derived from the group structure:
+      two samples per held-out deposit.
+  n_train_C:
+    abs: 0.0
+    reason: >
+      An integer sample count, independently derived from the group structure:
+      six samples less the two held out give four in training.
+  n_test_C:
+    abs: 0.0
+    reason: >
+      An integer sample count, independently derived from the group structure:
+      two samples per held-out deposit.
+  baseline_mean_rmse_A:
+    abs: 1.0e-09
+    reason: >
+      INDEPENDENTLY DERIVED as sqrt(226). One square root of an exact integer,
+      so 1 ulp near 2e-15. 1e-9 admits it with six orders of margin. This is a
+      golden value inside a regression file and is labelled as such.
+  baseline_mean_rmse_B:
+    abs: 1.0e-09
+    reason: >
+      Independently derived as sqrt(1) = 1.0, exact. 1e-9 admits any rounding in
+      the mean.
+  baseline_mean_rmse_C:
+    abs: 1.0e-09
+    reason: >
+      INDEPENDENTLY DERIVED as sqrt(226) = 15.033296378372908, as for fold A,
+      which fold C mirrors: it trains on y = [10,12,20,22] with mean 16.0 and
+      tests on [30,32], giving errors of +14 and +16, MSE (196+256)/2 = 226.0.
+      One square root of an exact integer, so 1 ulp near 2e-15, and 1e-9 admits
+      that with six orders of margin.
+  rmse_A:
+    abs: 1.0e-06
+    reason: >
+      A REGRESSION pin on a fitted model. The gbm is deterministic at a fixed
+      seed, so it reproduces exactly on the same scikit-learn version, but a
+      version change can alter the histogram binning in the last bits. 1e-6
+      admits that while still detecting any real change in fit. It is looser
+      than the hand-derived baselines in the same file precisely because its
+      provenance is weaker, and the file says so.
+  rmse_B:
+    abs: 1.0e-06
+    reason: >
+      Same basis as rmse_A. A REGRESSION pin on a fitted model. The gbm is
+      deterministic at a fixed seed, so it reproduces exactly on the same
+      scikit- learn version, but a version change can alter the histogram
+      binning in the last bits. 1e-6 admits that while still detecting any real
+      change in fit. It is looser than the hand-derived baselines in the same
+      file precisely because its provenance is weaker, and the file says so.
+  rmse_C:
+    abs: 1.0e-06
+    reason: >
+      Same basis as rmse_A. A REGRESSION pin on a fitted model. The gbm is
+      deterministic at a fixed seed, so it reproduces exactly on the same
+      scikit- learn version, but a version change can alter the histogram
+      binning in the last bits. 1e-6 admits that while still detecting any real
+      change in fit. It is looser than the hand-derived baselines in the same
+      file precisely because its provenance is weaker, and the file says so.
+  baseline_ridge_rmse_A:
+    rel: 1.0e-06
+    reason: >
+      A RELATIVE tolerance on a regression pin, because the value is 2.3e-3 and
+      a 1e-6 absolute tolerance would be a 0.04 percent band that a RidgeCV
+      alpha- grid change could break, while an absolute tolerance scaled to the
+      other outputs would pass anything. The alpha is selected by internal
+      cross- validation over a 25-point grid, so this value is the least
+      portable in the suite and is pinned relatively.
+  baseline_ridge_rmse_B:
+    rel: 1.0e-06
+    reason: >
+      Same basis as baseline_ridge_rmse_A. A RELATIVE tolerance on a regression
+      pin, because the value is 2.3e-3 and a 1e-6 absolute tolerance would be a
+      0.04 percent band that a RidgeCV alpha-grid change could break, while an
+      absolute tolerance scaled to the other outputs would pass anything. The
+      alpha is selected by internal cross-validation over a 25-point grid, so
+      this value is the least portable in the suite and is pinned relatively.
+  baseline_ridge_rmse_C:
+    rel: 1.0e-06
+    reason: >
+      Same basis as baseline_ridge_rmse_A. A RELATIVE tolerance on a regression
+      pin, because the value is 2.3e-3 and a 1e-6 absolute tolerance would be a
+      0.04 percent band that a RidgeCV alpha-grid change could break, while an
+      absolute tolerance scaled to the other outputs would pass anything. The
+      alpha is selected by internal cross-validation over a 25-point grid, so
+      this value is the least portable in the suite and is pinned relatively.

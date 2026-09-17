@@ -1,0 +1,76 @@
+id: GV-16
+kind: golden
+title: Sensible heat to take cristobalite from 1200 K to 1700 K
+check: thermal_enthalpy
+derivation: independent
+module: ae.physics.thermal
+reference: >
+  Holland, T.J.B. and Powell, R. 2011, An improved and extended internally consistent
+  thermodynamic dataset for phases of petrological interest, Journal of Metamorphic
+  Geology 29:333-383, doi:10.1111/j.1525-1314.2010.00923.x, dataset ds62. The heat
+  capacity coefficients for cristobalite recorded in the module are
+  a = 72.7, b = 1.304e-3, c = -4129000.0, d = 0.0 in the Holland-Powell form
+  Cp = a + bT + c/T^2 + d/sqrt(T).
+inputs:
+  polymorph: cristobalite
+  t_from_K: 1200.0
+  t_to_K: 1700.0
+  include_landau: false
+  molar_mass_kg_per_mol: 0.0600843
+provenance:
+  polymorph: SOURCED, cristobalite, chosen because its d coefficient is exactly zero,
+    which removes the sqrt(T) term from the antiderivative and makes the integral
+    hand-traceable in three terms rather than four.
+  t_from_K: ASSUMED, 1200 K, above the 1143.15 K tridymite to cristobalite transition
+    recorded in the module, so cristobalite is the stable phase over the whole
+    interval and no transition enthalpy is omitted.
+  t_to_K: ASSUMED, 1700 K, below the 1743.15 K cristobalite upper limit and below the
+    1996 K melting point, so no latent heat enters.
+  include_landau: ASSUMED false. The Landau excess term in this module describes the
+    alpha to beta quartz transition at 847 K and does not apply to cristobalite.
+    Including it here would add heat capacity that belongs to a different phase.
+  molar_mass_kg_per_mol: SOURCED, 0.0600843 kg/mol for SiO2, from the module's
+    M_SIO2 constant. Used only to convert the molar result to a mass basis.
+arithmetic: |
+  Antiderivative of Cp dT with d = 0:
+    F(T) = a T + (b/2) T^2 - c/T
+  At T = 1700 K:
+    a T      = 72.7 * 1700 = 123590.0
+    (b/2)T^2 = 0.5 * 1.304e-3 * 2890000 = 1884.2800000000002
+    -c/T     = 4129000.0 / 1700 = 2428.823529411765
+    F(1700)  = 127903.10352941176 J/mol
+  At T = 1200 K:
+    a T      = 72.7 * 1200 = 87240.0
+    (b/2)T^2 = 0.5 * 1.304e-3 * 1440000 = 938.88
+    -c/T     = 4129000.0 / 1200 = 3440.8333333333335
+    F(1200)  = 91619.71333333333 J/mol
+  dH = F(1700) - F(1200) = 36283.39019607843 J/mol
+  On a mass basis: 36283.39019607843 / 0.0600843 = 603874.7259446882 J/kg
+                 = 603.8747259446882 kJ/kg
+  Sense check: 36283.39019607843 J/mol over 500 K is a mean Cp of 72.56678039215686
+  J/(mol K), which sits
+  between the endpoint values of Cp, as it must for a function that rises with T over
+  most of this interval. The c/T^2 term falls as T rises, so the mean is close to
+  a rather than far above it.
+expected:
+  delta_h_J_per_mol: 36283.3901960784
+  delta_h_kJ_per_kg: 603.8747259447
+tolerances:
+  delta_h_J_per_mol:
+    abs: 1.0e-06
+    reason: >
+      Six multiplications, two divisions and one subtraction of two quantities
+      near 1e5 whose difference is 3.6e4, so the cancellation costs less than
+      half a decimal digit. The accumulated bound is a few ulp of 1.3e5, near
+      1e-10 J/mol. 1e-6 J/mol admits that with four orders of margin. A dropped
+      c/T term would change the answer by 1012 J/mol, nine orders above the
+      tolerance.
+  delta_h_kJ_per_kg:
+    abs: 1.0e-06
+    reason: >
+      One division by the molar mass and one unit scaling, so the relative error
+      is inherited from delta_h_J_per_mol, near 1e-15, which at 604 kJ/kg is
+      6e-13 absolute. 1e-6 kJ/kg admits that with six orders of margin. Reported
+      on both bases because a plant heat balance is written per tonne and a
+      thermodynamic table per mole, and the conversion factor is a place errors
+      hide.

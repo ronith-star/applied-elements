@@ -1,0 +1,184 @@
+id: GV-20
+kind: golden
+title: OEE, loss decomposition, and the bottleneck of a two-unit line
+check: capacity_oee
+derivation: independent
+module: ae.plant.capacity
+reference: >
+  Nakajima, S. 1988, Introduction to TPM: Total Productive Maintenance,
+  Productivity Press. The availability times performance times quality
+  decomposition of OEE is that text's definition.
+inputs:
+  availability: 0.92
+  performance: 0.88
+  quality: 0.97
+  planned_hours: 7500.0
+  units:
+    - {name: kiln, rate_t_per_h: 12.0, tonnes_per_tonne_product: 1.4}
+    - {name: leach, rate_t_per_h: 8.0, tonnes_per_tonne_product: 1.0}
+provenance:
+  availability: ASSUMED, 0.92, a plausible figure for a rotary kiln with planned
+    maintenance windows.
+  performance: ASSUMED, 0.88.
+  quality: ASSUMED, 0.97.
+  planned_hours: ASSUMED, 7500 h/yr, which is 85.6 percent of the 8760 h year, leaving
+    1260 h for planned shutdown. The module caps this at 8760.
+  rate_t_per_h: ASSUMED, 12 t/h kiln and 8 t/h leach, both on a FEED basis.
+  tonnes_per_tonne_product: ASSUMED, 1.4 t of kiln feed per t of final product and 1.0
+    for the leach. The 1.4 encodes the mass loss upstream of the leach; getting this
+    ratio wrong is how a nameplate capacity comes out 40 percent too high.
+arithmetic: |
+  OEE = 0.92 * 0.88 * 0.97
+    0.92 * 0.88 = 0.8096
+    0.8096 * 0.97 = 0.785312
+  Loss decomposition, which must sum to 1 - OEE:
+    availability loss = 1 - 0.92 = 0.08
+    performance loss  = 0.92 * (1 - 0.88) = 0.92 * 0.12 = 0.1104
+    quality loss      = 0.92 * 0.88 * (1 - 0.97) = 0.8096 * 0.03
+                      = 0.024287999999999997 in double precision (0.024288 exactly)
+    sum = 0.08 + 0.1104 + 0.024288 = 0.21468800000000002 in double precision
+    1 - OEE = 1 - 0.785312 = 0.214688
+    The two routes differ by 2e-17, one ulp, which sets the tolerance below.
+  The nesting matters: a naive decomposition using (1 - performance) rather than
+  availability times (1 - performance) would give 0.12 and the three losses would
+  sum to 0.23, overstating the total loss by 7 percent of capacity.
+  Effective feed capacities:
+    kiln:  12 * 7500 * 0.785312 = 90000 * 0.785312 = 70678.08 t/yr of kiln feed
+    leach:  8 * 7500 * 0.785312 = 60000 * 0.785312 = 47118.72 t/yr of leach feed
+  Product capacities, dividing by the feed-per-product ratio:
+    kiln:  70678.08 / 1.4 = 50484.34285714286 t/yr of product
+    leach: 47118.72 / 1.0 = 47118.72 t/yr of product
+  The line rate is the minimum, 47118.72 t/yr, so the LEACH is the bottleneck even
+  though its nameplate feed rate is lower AND it has the smaller ratio. Ranking on
+  nameplate feed rate alone would have flagged the leach too, but ranking on
+  effective feed capacity would have given the same wrong-for-the-right-reason
+  answer; the product basis is what makes the comparison valid.
+  Bottleneck margin, the headroom of the second-tightest unit over the tightest:
+    (50484.34285714286 - 47118.72) / 47118.72 = 3365.6228571428583 / 47118.72
+    = 0.07142857142857145, which is 1/14 to 15 digits. Exactly: 90000/(1.4*60000) - 1
+    = 15/14 - 1 = 1/14.
+  Utilisations at the line rate:
+    kiln:  47118.72 * 1.4 / 70678.08 = 65966.208/70678.08 = 0.9333333333333332,
+           which is 14/15 to the last ulp
+    leach: 47118.72 * 1.0 / 47118.72 = 1.0
+  Slack:
+    kiln:  50484.34285714286 - 47118.72 = 3365.6228571428583 t/yr
+    leach: 0.0 t/yr
+expected:
+  oee: 0.785312
+  availability_loss: 0.08
+  performance_loss: 0.1104
+  quality_loss: 0.024288
+  loss_sum: 0.214688
+  one_minus_oee: 0.214688
+  effective_capacity_kiln: 70678.08
+  effective_capacity_leach: 47118.72
+  product_capacity_kiln: 50484.3428571429
+  product_capacity_leach: 47118.72
+  line_rate_t_per_yr: 47118.72
+  bottleneck_is_leach: 1.0
+  bottleneck_margin: 0.07142857142857142
+  utilisation_kiln: 0.9333333333333333
+  utilisation_leach: 1.0
+  slack_kiln: 3365.6228571429
+  slack_leach: 0.0
+tolerances:
+  oee:
+    abs: 1.0e-12
+    reason: >
+      Two multiplications of two-decimal values, none binary-exact, so two
+      roundings near 1e-17 each. 1e-12 admits that with five orders of margin.
+  availability_loss:
+    abs: 1.0e-12
+    reason: >
+      One subtraction from 1, 1 ulp near 1e-17.
+  performance_loss:
+    abs: 1.0e-12
+    reason: >
+      One subtraction and one multiplication, 2 ulp near 3e-17.
+  quality_loss:
+    abs: 1.0e-12
+    reason: >
+      Two multiplications and one subtraction, 3 ulp near 4e-17.
+  loss_sum:
+    abs: 1.0e-12
+    reason: >
+      The three losses summed. This output is the decomposition identity, so it
+      must match one_minus_oee below to the same tolerance; three terms each
+      carrying 4e-17 sum to at most 1.2e-16. 1e-12 admits that and would catch
+      the un-nested decomposition described in the arithmetic block, which
+      differs by 0.0159.
+  one_minus_oee:
+    abs: 1.0e-12
+    reason: >
+      One subtraction from 1 of the OEE, so the OEE's error plus 1 ulp, near
+      1e-16. Reported alongside loss_sum so the identity is checked between two
+      independently computed quantities rather than asserted.
+  effective_capacity_kiln:
+    abs: 1.0e-06
+    reason: >
+      Two multiplications at a magnitude near 7e4, so the bound is a few ulp of
+      7e4, near 3e-11 t/yr. 1e-6 t/yr (one gram per year) admits that with five
+      orders of margin. A tonnage tolerance of 1e-6 is far below any real
+      measurement, which is intended: the check is arithmetic, and the input
+      uncertainty is carried in the provenance block instead.
+  effective_capacity_leach:
+    abs: 1.0e-06
+    reason: >
+      Same basis as effective_capacity_kiln. Two multiplications at a magnitude
+      near 7e4, so the bound is a few ulp of 7e4, near 3e-11 t/yr. 1e-6 t/yr
+      (one gram per year) admits that with five orders of margin. A tonnage
+      tolerance of 1e-6 is far below any real measurement, which is intended:
+      the check is arithmetic, and the input uncertainty is carried in the
+      provenance block instead.
+  product_capacity_kiln:
+    abs: 1.0e-06
+    reason: >
+      One further division by 1.4, which is not binary-exact, so 1 more ulp. The
+      bound remains near 3e-11 t/yr. 1e-6 admits it.
+  product_capacity_leach:
+    abs: 1.0e-06
+    reason: >
+      Division by exactly 1.0, which is exact, so the bound is
+      effective_capacity_leach's.
+  line_rate_t_per_yr:
+    abs: 1.0e-06
+    reason: >
+      A minimum over the product capacities, so it carries whichever bound the
+      winner had, near 3e-11 t/yr.
+  bottleneck_is_leach:
+    abs: 0.0
+    reason: >
+      An identity encoded as 1.0 under a key naming the bottleneck. The dispatch
+      emits the key "bottleneck_is_<name>", so a wrong bottleneck produces a
+      MISSING key rather than a wrong value, and the test fails on the missing
+      key. That is why the tolerance can be exactly zero.
+  bottleneck_margin:
+    abs: 1.0e-12
+    reason: >
+      A ratio of differences near 3e3 over 4.7e4. The subtraction loses about
+      one decimal digit of the 5e4 magnitudes, so the bound is near 1e-15 rather
+      than 1e-17. 1e-12 admits that with three orders of margin. The exact value
+      1/14 is derived in the arithmetic block, so this checks against a rational
+      and not against a printed float.
+  utilisation_kiln:
+    abs: 1.0e-12
+    reason: >
+      One multiplication and one division giving 14/15, which is not binary-
+      exact, so 2 ulp near 2e-16. 1e-12 admits it.
+  utilisation_leach:
+    abs: 1.0e-12
+    reason: >
+      A ratio of a quantity to itself, exactly 1.0 in IEEE 754. 1e-12 guards
+      only against a different route to the same number.
+  slack_kiln:
+    abs: 1.0e-06
+    reason: >
+      A difference of two tonnages near 5e4 whose result is 3.4e3, so one
+      decimal digit of cancellation and a bound near 1e-11 t/yr. 1e-6 admits it.
+  slack_leach:
+    abs: 1.0e-09
+    reason: >
+      The bottleneck's slack is its capacity minus itself, exactly zero in IEEE
+      754. The tolerance is 1e-9 t/yr rather than zero because the two sides are
+      converted through pint separately, which can introduce one rounding.
