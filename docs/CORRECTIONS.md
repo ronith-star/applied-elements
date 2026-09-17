@@ -404,6 +404,18 @@ that a named file passed. A dot count cannot attribute passes to files, and
 skips. Pass counts per file need `-v`, or the totals line read rather than the
 dots.
 
+**Replaced by:** the surrogate control was re-run to completion and agreed
+(fold-mean denominator gives 1 failure, restored gives 18 passed), with a
+third control not originally described also firing. The capacity claim was
+corrected in the following commit, which asserts the missing `1e16` and
+re-measures the guard at the baseline count. The workbook claim was withdrawn
+and replaced with the measurement: `tests/test_workbook.py` collects 0 items
+and reports 2 skipped because `pytest.importorskip("formulas")` runs at module
+import and the Excel formula engine is not installed here, so none of its four
+test functions has been exercised by anything in this track; the integration
+figure is "36 passed, 2 skipped" rather than "36 passed". Every subsequent
+claim in this track reports the totals line, not a dot count.
+
 ## C16. Wrong order of magnitude in a committed comment, and a wrong account of why a test passes
 
 **Where:** `src/ae/plant/capacity.py` and
@@ -424,5 +436,12 @@ hours, where the two capacities are BITWISE EQUAL and the margin is exactly
 
 **Why it matters:** the correction makes the underlying finding worse. Whether
 a real tie registers as exactly zero depends on the planned hours, so a tie
-test written at one schedule certifies nothing about another. Both schedules
-are now asserted in the same test.
+test written at one schedule certifies nothing about another.
+
+**Replaced by:** the comment now states seven orders and carries the ratio
+`1e-9 / 1.343102e-16 = 7.4e6` so the claim can be checked without recomputing
+it, and the tolerance value itself is unchanged. The test's docstring now
+records both regimes and asserts both: at 7000 planned hours the capacities
+are bitwise equal with margin exactly 0.0 and bottleneck `mill`, and at 8000
+hours the margin is 1.343102e-16 with bottleneck `leach`. The wrong claim is
+quoted in place rather than deleted, so a reader sees what was corrected.
