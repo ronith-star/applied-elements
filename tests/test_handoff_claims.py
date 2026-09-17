@@ -215,48 +215,51 @@ def test_impurity_location_is_still_the_most_assumed_module() -> None:
 
 
 @pytest.mark.golden
-def test_ci_ceiling_matches_its_stated_split() -> None:
-    """The ceiling README.md quotes must equal the one CI enforces, and the
-    per-file split stated in the workflow comment must sum to it.
+def test_the_prose_audit_is_inside_the_fatal_gate() -> None:
+    """README.md states that the prose audit is now fatal rather than pinned,
+    and that the pinned step with its numeric ceiling is gone.
 
-    Guarded because the repository has already recorded getting this wrong:
-    ``docs/CORRECTIONS.md`` C2 records a ceiling attributed to two files when the
-    run in front of the author printed three, so the total was right and the
-    attribution was not. Nothing is hardcoded here. The enforced number is read
-    from the shell condition, the per-file figures are read from the comment
-    above it, and the two are reconciled, so this test cannot itself carry a
-    remembered count.
+    This assertion is the inverse of the one it replaces. An earlier version of
+    this guard asserted that the workflow enforced a ceiling and that README.md
+    quoted it with a per-file split summing to it, which was true until commit
+    56e61ff deleted the pinned step and folded the three audit files into the
+    fatal suite. Guarding the claim in its current direction is what keeps the
+    document from describing a workflow that no longer exists, which is the
+    failure the earlier version would itself have committed had it not been
+    rewritten.
     """
     ci = (ROOT / ".github/workflows/ci.yml").read_text()
-    enforced = {int(m) for m in re.findall(r'"\$FAILED" -gt (\d+)', ci)}
-    assert len(enforced) == 1, f"workflow enforces several ceilings: {enforced}"
-    ceiling = enforced.pop()
-    split = [int(x) for x in re.findall(r"(\d+) in\s+#?\s*test_\w+\.py", ci)]
-    assert len(split) == 3, (
-        f"expected a three-file split in the ceiling comment, parsed {split}; "
-        "C2 in docs/CORRECTIONS.md is exactly the error of dropping one file"
+    assert not re.search(r'"\$FAILED" -gt \d+', ci), (
+        "the workflow enforces a numeric prose-audit ceiling again, so the "
+        "README section describing the audit as fatal is now wrong"
     )
-    assert sum(split) == ceiling, (
-        f"the stated split {split} sums to {sum(split)}, but CI enforces {ceiling}"
+    audit_files = (
+        "tests/test_test_docstrings.py",
+        "tests/test_citations.py",
+        "tests/test_docstring_arithmetic.py",
     )
+    for f in audit_files:
+        assert f"--ignore={f}" not in ci, (
+            f"{f} is excluded from the CI run again, so it is no longer inside "
+            "the fatal gate as README.md states"
+        )
     readme = _text("README.md")
-    assert f"ceiling of {ceiling}" in readme, (
-        f"README.md does not state the enforced ceiling of {ceiling}"
-    )
-    words = " plus ".join(str(n) for n in split)
-    assert words in readme, f"README.md does not state the split as '{words}'"
+    assert "inside the fatal gate" in readme
+    assert "removed the pinned step" in readme
 
 
 @pytest.mark.golden
 def test_registry_counts_quoted_from_the_committed_csv_match_that_file() -> None:
-    """HANDOFF.md quotes the marked-test totals from the COMMITTED
-    validation record, and separately records that regenerating the file gives a
-    higher golden count because commits landed after the CSV was written.
+    """HANDOFF.md's summary table quotes the marked-test totals from the
+    COMMITTED validation record, and separately records that regenerating the
+    file with this guard file in the tree gives a higher golden count, because
+    these guards carry the ``golden`` marker and the exporter collects every
+    marked test.
 
-    Both numbers are therefore live, and confusing them would make the document
-    self-contradictory. This test pins the quoted pair to the file actually on
-    disk, so that if someone regenerates and commits the CSV, the document fails
-    rather than silently describing the previous state.
+    Both numbers are live, and confusing them makes the document
+    self-contradictory, which is an error I committed and had to retract. This
+    pins the quoted pair to the file actually on disk, so committing a
+    regenerated CSV fails here rather than silently falsifying the table.
     """
     vr = pd.read_csv(ROOT / "data/registry/validation_record.csv")
     kinds = vr["kind"].value_counts().to_dict()

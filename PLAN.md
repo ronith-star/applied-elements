@@ -3,8 +3,8 @@
 Measured at commit `c920e1d`. Every count in this file was produced by a command
 run in this repository, named beside the number. Nothing here is recalled.
 
-`src/ae` holds 27 modules and 17,017 source lines (`find src/ae -name '*.py' !
--name '__init__.py' | xargs wc -l`). The suite collects 1,463 tests
+`src/ae` holds 27 modules and 17,259 source lines (`find src/ae -name '*.py' !
+-name '__init__.py' | xargs wc -l`). The suite collects 1,527 tests
 (`pytest tests/ --junitxml`, parsed).
 
 ![Figure 1](docs/figures/architecture.svg)
@@ -106,7 +106,7 @@ Measured test counts, from a junit-xml parse of the full run:
 
 ## Layer 2, physics: what the ore does under each unit operation
 
-Source lines: 11,116, which is 65 percent of the platform. Twelve modules, each
+Source lines: 11,358, which is 66 percent of the platform. Twelve modules, each
 importing `feedstock` and `units` and most importing `provenance` and `site`.
 
 `phases` (1,145 lines) and `thermal` (1,024) cover the SiO2 polymorph sequence
@@ -175,7 +175,7 @@ module. Its priors are `ASSUMED`, because no ore is characterized, so its output
 is a ranking to argue with rather than a budget to execute.
 
 `ae.agent.decisions` has no test file. `ls tests/test_decisions.py` does not
-resolve, it contributes 0 of the 1,463 collected tests, and it has no doctest. Its
+resolve, it contributes 0 of the 1,527 collected tests, and it has no doctest. Its
 public API imports and its three entry points have the signatures
 `evpi(problem, parameter, *, n_outer=256, n_inner=256, seed=0)`,
 `rank_measurements(problem, *, n_outer=256, n_inner=256, seed=0)` and

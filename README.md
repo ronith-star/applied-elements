@@ -66,17 +66,23 @@ Measured at `c920e1d`, counts parsed from `--junitxml`:
 
 | | count |
 | --- | --- |
-| collected | 1,463 |
-| passed | 1,445 |
-| failed | 0 |
+| collected | 1,527 |
+| passed | 1,498 |
+| failed | 11 |
 | errors | 0 |
 | skipped | 18 |
-| wall time | 168 s |
+| wall time | 326 s |
 
-Exit code 0. These counts include the 11 guards in `tests/test_handoff_claims.py`,
-which this track adds. The prose-audit backlog described below is now closed:
-running the three audit files alone gives 532 collected, 516 passed, 0 failed, 16
-skipped.
+Exit code 1. These counts include the 11 guards in `tests/test_handoff_claims.py`,
+which this track adds and which all pass.
+
+All 11 failures are in `tests/test_test_docstrings.py`, the docstring audit, and
+all 11 are unasserted numbers in test files belonging to other tracks
+(`test_physics_audit.py` 9, `test_diffusion.py` 1, `test_registry_export.py` 1).
+I measured a fully green suite at `c920e1d` (1,463 collected, 1,445 passed, 0
+failed) before those files landed, so this is work in flight rather than a
+regression in anything documented here. Since commit `56e61ff` folded the audit
+into the fatal gate, CI goes red on them, which is the intended behaviour.
 
 The 18 skips break down as 2 in `tests/test_workbook.py`, skipped at collection
 by `pytest.importorskip("formulas")` because the Excel formula engine is not
@@ -86,6 +92,11 @@ that the module in question makes no in-text author-year citation.
 
 ### The gate that CI actually enforces
 
+As of `56e61ff` the gate is the full suite, `python -m pytest tests/`, with no
+files excluded. Before that commit the three prose-audit files were excluded and
+pinned separately, and that narrower run is still useful when you want to know
+whether a failure is a model defect or a documentation defect:
+
 ```bash
 python -m pytest tests/ \
   --ignore=tests/test_test_docstrings.py \
@@ -93,8 +104,9 @@ python -m pytest tests/ \
   --ignore=tests/test_docstring_arithmetic.py
 ```
 
-Measured: 931 collected, 929 passed, 0 failed, 0 errors, 2 skipped, 218 s, exit
-code 0.
+Measured: 970 collected, 968 passed, 0 failed, 0 errors, 2 skipped, 147 s, exit
+code 0. The 11 failures above are all in the audit files, so excluding them is
+what separates a documentation defect from a model defect.
 
 ### Doctests
 
@@ -109,16 +121,18 @@ doctests run on any path you pass that contains modules.
 ### By marker
 
 ```bash
-python -m pytest tests/ -m benchmark      # 48 collected, 0 failed, 2 skipped
-python -m pytest tests/ -m golden         # 127 collected, 0 failed, 2 skipped
+python -m pytest tests/ -m benchmark      # 50 collected, 0 failed, 2 skipped
+python -m pytest tests/ -m golden         # 128 collected, 0 failed, 2 skipped
 ```
 
 Add `-s` to see the benchmark output. Each benchmark prints its reference value,
 the model value and the error, which is the fastest way to see what the platform
 is actually checked against. Both counts above were measured from a
-`--junitxml` run; both exceed the 47 and 125 rows in
-`data/registry/validation_record.csv` because the validation-record guards in
-`tests/test_validation_record.py` are themselves marker-carrying tests.
+`--junitxml` run; both exceed the 47 benchmark and 115 golden rows in the
+committed `data/registry/validation_record.csv`, because the validation-record
+guards in `tests/test_validation_record.py` and the 11 guards in
+`tests/test_handoff_claims.py` are themselves marker-carrying tests and were not
+present when that CSV was last written.
 
 ### One file
 
@@ -126,52 +140,49 @@ is actually checked against. Both counts above were measured from a
 python -m pytest tests/test_thermal.py    # 49 collected, 0 failed, 0 skipped
 ```
 
-## The CI arrangement, and why the prose audit is pinned rather than fatal
+## The CI arrangement
 
-`.github/workflows/ci.yml` has four stages. Reading them in order tells you what
-the project treats as a gate.
+`.github/workflows/ci.yml` at `56e61ff` has four stages. Reading them in order
+tells you what the project treats as a gate.
 
-1. **Model suite (fatal).** Runs `pytest tests/` with the three prose-audit files
-   ignored. This runs BEFORE any install of the package, which is what proves a
-   fresh clone works.
-2. **Documentation audit (pinned, must not regress).** Runs the three prose-audit
-   files, counts `FAILED ` lines, and fails only if the count RISES above 149.
-3. **Lint and type checks (advisory, not fatal).** Reported with the reason
-   recorded in the workflow rather than silenced with `|| true`.
-4. **Doctests (fatal),** then both registry exporters, then an upload of
-   `data/registry/*.csv` as a build artifact.
+1. **Model suite and documentation audit (fatal).** Runs `python -m pytest
+   tests/ -q`, the whole suite, and it runs BEFORE any install of the package,
+   which is what proves a fresh clone works.
+2. **Lint and type checks (advisory, not fatal),** with the reason recorded in
+   the workflow rather than silenced with a bare `|| true`.
+3. **Doctests in modules (fatal).**
+4. **Both registry exporters,** then an upload of `data/registry/*.csv` as a
+   build artifact.
 
-The prose audit is pinned because of what those three files check and what they
-found. `tests/test_test_docstrings.py` asserts that every number written in a
-test docstring is reproduced by an assertion in that same test body.
+The prose audit is now inside the fatal gate, and that is a recent change worth
+understanding, because the three files it comprises are unusual. They do not test
+the models. `tests/test_test_docstrings.py` asserts that every number written in
+a test docstring is reproduced by an assertion in that same test body.
 `tests/test_citations.py` asserts that every in-text author-year citation appears
 in the module's reference block. `tests/test_docstring_arithmetic.py` asserts
-that arithmetic claimed in prose is reproduced in code. They were added to find
-documentation that had drifted from the code, and they found a great deal of it.
+that arithmetic claimed in prose is reproduced in code.
 
-Making them fatal today would gate every commit on a documentation backlog and
-turn a red badge into background noise that nobody reads. Deleting them would
-discard the finding. So the count is pinned: new undocumented numbers cannot
-enter, while the existing backlog is worked down. The workflow's own comment
-instructs whoever reduces the count to lower the ceiling, and at zero to delete
-the step and move the three files into the fatal gate.
+They were added to find documentation that had drifted from the code, and they
+found a great deal of it: at the time they were written the count was 148
+failures, and making them fatal then would have gated every commit on a
+documentation backlog and turned a red badge into noise. So the count was pinned
+instead, with the rule that new undocumented numbers could not enter while the
+backlog was worked down, and that at zero the step would be deleted and the three
+files folded into the fatal suite. That is what happened. Measured at
+`c920e1d`, the three files alone gave 532 collected, 516 passed, 0 failed, 16
+skipped, and `56e61ff` removed the pinned step. The 11 failures recorded in the
+full-suite table above arrived after that, from test files another track is
+still writing, and they are exactly what the now-fatal audit is meant to catch.
 
-The workflow still enforces a ceiling of 149, and the comment above it still
-records the split 138 plus 10 plus 1 that was measured when the ceiling was set.
-**That backlog has since been closed.** Measured at `c920e1d`: the three audit
-files give 532 collected, 516 passed, 0 failed, 16 skipped. The ceiling is now
-slack rather than a debt register, and the workflow's own instruction applies:
-at zero, lower the number, delete the pinned step, and move the three files into
-the fatal gate above. I have not edited the workflow, because it belongs to
-another track.
-
-The repository has been bitten by a recalled count before, which is why the
-pinned step was written to re-derive rather than recall: `docs/CORRECTIONS.md`
-C1 and C2 record a commit message asserting "1233 passed, 15 skipped, 0 errors"
-from a run that never happened, and a ceiling of 145 attributed to two files when
-the run in front of the author printed three.
-`scripts/commit_with_count.sh` exists to measure the count rather than type it,
-and it refuses to commit on any failure.
+The consequence for a contributor: a new unasserted number in a docstring, an
+unresolved citation, or an arithmetic claim not reproduced in code now fails the
+build exactly like a wrong model. Treat that as the intended state rather than
+an obstacle. The repository has been bitten by recalled numbers before, which is
+why the audit exists at all: `docs/CORRECTIONS.md` C1 and C2 record a commit
+message asserting "1233 passed, 15 skipped, 0 errors" from a run that never
+happened, and a ceiling of 145 attributed to two files when the run in front of
+the author printed three. `scripts/commit_with_count.sh` exists to measure the
+count rather than type it, and it refuses to commit on any failure.
 
 ## Build the workbook
 
@@ -249,12 +260,12 @@ regenerated CSV.
 
 ```
 src/ae/core/        units, provenance, feedstock, site, registry
-src/ae/physics/     12 modules, 11,116 lines, the bulk of the platform
+src/ae/physics/     12 modules, 11,358 lines, the bulk of the platform
 src/ae/plant/       streams, yield_cascade, capacity, scheduling
 src/ae/econ/        unit_economics, capex, valuation, uncertainty
 src/ae/ml/          surrogate (trained on synthetic data, see HANDOFF.md)
 src/ae/agent/       decisions (EVPI; no test file, see HANDOFF.md)
-tests/              36 files including conftest.py
+tests/              37 files including conftest.py
 scripts/            build_workbook.py, export_registry.py,
                     export_validation.py, commit_with_count.sh
 data/registry/      parameter_registry.csv, definitional_constants.csv,
@@ -263,7 +274,7 @@ docs/CORRECTIONS.md errors found in this repository's own committed work
 docs/figures/       architecture.svg, architecture.png
 ```
 
-27 modules, 17,017 source lines, measured with
+27 modules, 17,259 source lines, measured with
 `find src/ae -name '*.py' ! -name '__init__.py' | xargs wc -l`.
 
 ## Architecture in one figure

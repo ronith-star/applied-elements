@@ -287,7 +287,7 @@ its status:
    important the parameter is, because a confident prior says there is little left
    to learn; with `ASSUMED` priors the confidence itself is invented.
 2. **There is no test file.** `tests/test_decisions.py` does not exist, the module
-   contributes 0 of the 1,463 collected tests, and it has no doctest. I verified
+   contributes 0 of the 1,527 collected tests, and it has no doctest. I verified
    this session that its public API imports and that `evpi`, `rank_measurements`
    and `measurement_priority` have the signatures given in `PLAN.md`. Nothing
    beyond importability is verified.
