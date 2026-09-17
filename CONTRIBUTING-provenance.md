@@ -1,6 +1,6 @@
 # CONTRIBUTING: the provenance discipline
 
-Measured at commit `97c55f5`. The counts in this file come from
+Measured at commit `1d996ff`. The counts in this file come from
 `python scripts/export_registry.py`, run in this repository.
 
 Every physical parameter in `src/ae` carries a tag and, if it is external, a
@@ -144,8 +144,8 @@ closed form" mark the analytic case.
 
 Every number in a test docstring must be reproduced by an assertion in that same
 test body, or moved to a clearly marked descriptive note. The audit that enforces
-this is `tests/test_test_docstrings.py`. Measured at `97c55f5`, the three audit
-files report 633 collected, 606 passed, 11 failed, 16 skipped, the 11 failures all being unasserted
+this is `tests/test_test_docstrings.py`. Measured at `1d996ff`, the three audit
+files report 634 collected, 607 passed, 11 failed, 16 skipped, the 11 failures all being unasserted
 numbers in other tracks' test files written in the same window, so the backlog that made the
 CI step pinned rather than fatal is closed. The pinned step and its ceiling of
 149 remain in the workflow as slack; see the CI section of `README.md`.

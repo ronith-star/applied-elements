@@ -66,25 +66,24 @@ scripts it resolves to `src/ae/`.
 python -m pytest tests/
 ```
 
-Measured in the working tree at `97c55f5`, counts parsed from `--junitxml`:
+Measured in the working tree at `1d996ff`, counts parsed from `--junitxml`:
 
 | | count |
 | --- | --- |
-| collected | 1,840 |
-| passed | 1,808 |
-| failed | 14 |
+| collected | 1,842 |
+| passed | 1,812 |
+| failed | 12 |
 | errors | 0 |
 | skipped | 18 |
-| wall time | 346 s |
+| wall time | 129 s |
 
-Exit code 1. These counts include the 12 guards in `tests/test_handoff_claims.py`,
+Exit code 1. These counts include the 13 guards in `tests/test_handoff_claims.py`,
 which this track adds and which all pass.
 
-The 14 failures are 11 in `tests/test_test_docstrings.py` (the docstring audit),
-2 in `tests/golden/test_golden_vectors.py` and 1 in
-`tests/test_registry_export.py`. None is in a file this track owns. The 11 audit
-failures are unasserted docstring numbers in other tracks' test files, measured
-by parsing the parametrized test ids: `test_physics_audit.py` 9,
+The 12 failures are 11 in `tests/test_test_docstrings.py` (the docstring audit)
+and 1 in `tests/test_registry_export.py`. None is in a file this track owns. The
+11 audit failures are unasserted docstring numbers in other tracks' test files,
+measured by parsing the parametrized test ids: `test_physics_audit.py` 9,
 `test_diffusion.py` 1, `test_registry_export.py` 1.
 
 For contrast, the independent-clone run at `c920e1d`, before those files landed,
@@ -114,12 +113,18 @@ python -m pytest tests/ \
   --ignore=tests/test_docstring_arithmetic.py
 ```
 
-Measured: 1,207 collected, 1,202 passed, 3 failed, 0 errors, 2 skipped, 292 s,
-exit code 1. The gate is currently RED, and not from my track: the three
-failures are the two golden vectors and the one registry-export test named
-above. Excluding the audit files is what separates a documentation defect from a
-model defect, and right now there is one of each. The 11 failures above are all in the audit files, so excluding them is
-what separates a documentation defect from a model defect.
+Measured: 1,208 collected, 1,205 passed, 1 failed, 0 errors, 2 skipped, 129 s,
+exit code 1. The gate is currently RED, and not from my track: the single
+failure is `tests/test_registry_export.py::test_definitional_roles_are_reported_honestly`.
+
+Running with and without the audit files is what separates a documentation
+defect from a model defect, and at this commit there is one of each kind. The
+full suite's 12 failures split 11 documentation (unasserted docstring numbers,
+which only the audit files see) and 1 export (which the gate sees, and which is
+the one above). Two earlier versions of this paragraph were wrong in the same
+way: they described a failure set that a later re-measurement had already
+changed, once saying all failures were in the audit files and once counting two
+golden-vector failures that another track has since fixed.
 
 ### Doctests
 
@@ -135,13 +140,13 @@ doctests run on any path you pass that contains modules.
 
 ```bash
 python -m pytest tests/ -m benchmark      # 50 collected, 0 failed, 2 skipped
-python -m pytest tests/ -m golden         # 298 collected, 2 failed, 2 skipped
+python -m pytest tests/ -m golden         # 299 collected, 0 failed, 2 skipped
 ```
 
 Add `-s` to see the benchmark output. Each benchmark prints its reference value,
 the model value and the error, which is the fastest way to see what the platform
 is actually checked against. Both counts were measured from a `--junitxml` run
-at `97c55f5`, and both exceed the committed
+at `1d996ff`, and both exceed the committed
 `data/registry/validation_record.csv` (162 marked tests, 115 golden, 47
 benchmark). They exceed it for DIFFERENT reasons, and an earlier version of this
 paragraph gave one cause for both.
@@ -149,8 +154,8 @@ paragraph gave one cause for both.
 The golden half is the exporter's scan scope.
 `scripts/export_validation.py:190` globs `tests/test_*.py` non-recursively, so
 it never sees `tests/golden/test_golden_vectors.py`. Measured decomposition of
-the 298 golden collections: 168 from `tests/golden/`, invisible to the exporter;
-116 from the flat `tests/test_*.py` files it does scan; 12 from the guards in
+the 299 golden collections: 168 from `tests/golden/`, invisible to the exporter;
+116 from the flat `tests/test_*.py` files it does scan; 13 from the guards in
 `tests/test_handoff_claims.py`, which are flat and therefore also scanned; and 2
 skipped. The registry's golden count is a count of what the exporter can see,
 not of golden-marked tests in the repository.
@@ -161,8 +166,9 @@ collections). Running the exporter reports 49 benchmark-marked tests against the
 committed 47, the two additions coming from other tracks' commits after the CSV
 was last written.
 
-The two golden failures are in `tests/golden/test_golden_vectors.py` and belong
-to another track; none is in a file I own.
+An earlier measurement here found two failures in
+`tests/golden/test_golden_vectors.py`; another track has since fixed them, and
+the golden run is now clean.
 
 ### One file
 
@@ -200,8 +206,8 @@ instead, with the rule that new undocumented numbers could not enter while the
 backlog was worked down, and that at zero the step would be deleted and the three
 files folded into the fatal suite. That is what happened. Measured at
 `c920e1d`, the three files alone gave 532 collected, 516 passed, 0 failed, 16
-skipped, and `56e61ff` removed the pinned step. Re-measured at `97c55f5` they
-give 633 collected, 606 passed, 11 failed, 16 skipped. The 11 failures recorded in the
+skipped, and `56e61ff` removed the pinned step. Re-measured at `1d996ff` they
+give 634 collected, 607 passed, 11 failed, 16 skipped. The 11 failures recorded in the
 full-suite table above arrived after that, from test files another track is
 still writing, and they are exactly what the now-fatal audit is meant to catch.
 
@@ -260,12 +266,12 @@ definitional_constants.csv    92 rows, of which 40 are actual constants
   point estimates with no uncertainty stated: 0
 ```
 
-Measured stdout of `export_validation.py` at `97c55f5`, exit code 0. Note that
+Measured stdout of `export_validation.py` at `1d996ff`, exit code 0. Note that
 this command REWRITES the CSV before printing, so what it prints is the state of
 the tree, not the state of the committed file:
 
 ```
-validation_record.csv  177 marked tests: {'golden': 128, 'benchmark': 49}
+validation_record.csv  178 marked tests: {'golden': 129, 'benchmark': 49}
   literature benchmarks (cite a published measurement): 28
   analytic benchmarks (exact closed form or known generator): 14
   self-consistency benchmarks (two routes must agree): 7
@@ -288,11 +294,11 @@ the test's own docstring. Several of those are analytic checks.
 
 `export_registry.py` is idempotent: running it in a clean clone left
 `git status --porcelain data/` empty. `export_validation.py` is deterministic,
-but the committed CSV is now behind the tree. Measured at `97c55f5` by moving my
+but the committed CSV is now behind the tree. Measured at `1d996ff` by moving my
 guard file out and running the exporter: 165 marked tests, 116 golden, 49
 benchmark, against the committed 162 / 115 / 47. So other tracks have added one
 golden-marked and two benchmark-marked tests since the CSV was written.
-Regenerating with my guard file present gives 177 / 128 / 49: exactly 12 more
+Regenerating with my guard file present gives 178 / 129 / 49: exactly 13 more
 golden rows, one per guard, which I confirmed by asking the exporter for the
 rows it attributes to that file. The analytic count also moved, from 12 to 14. I have not committed a regenerated CSV, because that file
 belongs to another track; regenerate it before quoting any of its totals.

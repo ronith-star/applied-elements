@@ -1,10 +1,10 @@
 # PLAN: architecture of the Applied Elements platform
 
-Measured at commit `97c55f5`. Every count in this file was produced by a command
+Measured at commit `1d996ff`. Every count in this file was produced by a command
 run in this repository, named beside the number. Nothing here is recalled.
 
 `src/ae` holds 27 modules and 17,662 source lines (`find src/ae -name '*.py' !
--name '__init__.py' | xargs wc -l`). The suite collects 1,840 tests
+-name '__init__.py' | xargs wc -l`). The suite collects 1,842 tests
 (`pytest tests/ --junitxml`, parsed).
 
 ![Figure 1](docs/figures/architecture.svg)
@@ -175,7 +175,7 @@ module. Its priors are `ASSUMED`, because no ore is characterized, so its output
 is a ranking to argue with rather than a budget to execute.
 
 `ae.agent.decisions` has no test file. `ls tests/test_decisions.py` does not
-resolve, it contributes 0 of the 1,840 collected tests, and it has no doctest. Its
+resolve, it contributes 0 of the 1,842 collected tests, and it has no doctest. Its
 public API imports and its three entry points have the signatures
 `evpi(problem, parameter, *, n_outer=256, n_inner=256, seed=0)`,
 `rank_measurements(problem, *, n_outer=256, n_inner=256, seed=0)` and

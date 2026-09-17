@@ -1,6 +1,6 @@
 # HANDOFF: what is validated, what is scaffolding, what needs data
 
-Measured at commit `97c55f5`. Every number below was produced by a command run in
+Measured at commit `1d996ff`. Every number below was produced by a command run in
 this repository during the session that wrote this file. Where a quantity could
 not be measured or sourced, it says so.
 
@@ -287,7 +287,7 @@ its status:
    important the parameter is, because a confident prior says there is little left
    to learn; with `ASSUMED` priors the confidence itself is invented.
 2. **There is no test file.** `tests/test_decisions.py` does not exist, the module
-   contributes 0 of the 1,840 collected tests, and it has no doctest. I verified
+   contributes 0 of the 1,842 collected tests, and it has no doctest. I verified
    this session that its public API imports and that `evpi`, `rank_measurements`
    and `measurement_priority` have the signatures given in `PLAN.md`. Nothing
    beyond importability is verified.
@@ -450,12 +450,19 @@ the registry CSVs, and fails if a document has drifted. It checks the module and
 import-edge counts, the zero-import claim between layers in both directions, the
 fan-out figures, the evidence-class partition (13 / 2 / 7 / 5, which must sum to
 27), the registry tag totals and the empty Tier 3 column, the assumed-to-sourced
-ratio that the NEEDS DATA argument rests on, that the CI ceiling README.md quotes
-equals the one CI enforces with a per-file split that sums to it, that no
-document cites a DOI absent from `src/` or `tests/`, and that no document
-contains an em dash or en dash.
+ratio that the NEEDS DATA argument rests on, that the prose audit is still inside
+the fatal CI gate rather than pinned behind a numeric ceiling, that the
+marked-test totals quoted here match the committed registry CSV, that the
+`tests/` file count in README.md matches the tree, that the exporter's glob is
+still the narrow one the scan-scope explanation depends on, that no document
+cites a DOI absent from `src/` or `tests/`, and that no document contains an em
+dash or en dash.
 
-The 9 guards were verified by control, each defect injected and then removed:
+There are 13 guards, which the exporter confirms by attributing exactly 13
+golden rows to that file. The list grew as defects were found: the first nine
+cover the structural counts, and three more were added later, each because a
+claim drifted or turned out to be wrong. Every one was verified by control, the
+defect injected and then removed, both directions reported:
 
 | injected defect | result |
 | --- | --- |
@@ -463,6 +470,10 @@ The 9 guards were verified by control, each defect injected and then removed:
 | a real DOI in this file replaced with an invented one (Elsevier prefix, nonexistent article suffix; not reproduced here, because the guard below correctly flags any DOI-shaped string in these documents that is absent from the code) | anti-fabrication guard failed, naming the string and that it appears nowhere in `src/` or `tests/`. Removed: passes. |
 | em dash inserted into README.md, with the split drifted to 137 plus 10 plus 1 | dash guard failed naming line 159; ceiling guard failed on the split. Removed: both pass. |
 | `13 of 27 modules` in this file changed to `16 of 27` | evidence-class guard failed. Removed: passes. |
+| README.md's `tests/` file count drifted down by one | file-count guard failed with "README.md says 35 test files, the tree has 36". Removed: passes. This guard was added because that number drifted the moment I added my own test file and nothing caught it; it has since fired three more times on other tracks' additions, at 37, 40 and 41. |
+| a regenerated `validation_record.csv` committed | registry guard failed with "the committed CSV holds 173 marked tests, which HANDOFF.md's summary table does not state". Removed: passes. This is the control that exposed my attributing my own guard rows to upstream drift. |
+| the exporter's glob widened from `TESTS.glob("test_*.py")` to `TESTS.rglob(...)` | scan-scope guard failed with "the exporter no longer globs tests/test_*.py, so the scan-scope explanation in README.md and HANDOFF.md needs re-measuring". Restored: `git diff --stat scripts/` empty, passes. |
+| a `@pytest.mark.benchmark` test appended to `tests/golden/test_golden_vectors.py` | scan-scope guard failed with "tests/golden/ now carries benchmark markers, so the documents' claim that scan scope explains the golden count only must be re-measured". Restored: passes. |
 
 The one-directional cross-layer guard passing against a real violation is
 recorded here rather than quietly fixed, because it is the same failure mode as
@@ -506,13 +517,15 @@ reporting the package not found).
 **The test-file count in README.md drifted by one.** It was corrected from 34 to
 35 by measurement, and then adding `tests/test_handoff_claims.py` in the same
 session made 35 wrong. No guard covered it, which is exactly the gap this guard
-file exists to close, so a tenth guard now re-derives the count from the tree.
-Verified by control: drifting the README back to 35 fails with "README.md says 35
-test files, the tree has 36"; restoring it passes.
+file exists to close, so a guard was added that re-derives the count from the
+tree rather than asserting a literal. It has since caught the same drift three
+more times, each from another track adding a test file, at 37, 40 and 41. That
+is the clearest evidence in this track that a guard re-deriving a number beats a
+guard asserting one.
 
 ## The committed validation record, and what changes it
 
-Measured at `97c55f5`. Every count in the VALIDATED section above is read from
+Measured at `1d996ff`. Every count in the VALIDATED section above is read from
 the **committed** `data/registry/validation_record.csv`: 162 marked tests, 115
 golden, 47 benchmark.
 
@@ -520,7 +533,7 @@ Regenerating that file moves it, for two separate reasons that must not be
 confused. With `tests/test_handoff_claims.py` moved out of the tree, the
 exporter produces 165 marked tests, 116 golden, 49 benchmark: one golden and two
 benchmark rows added by other tracks' commits after the CSV was written. With my
-guard file present it produces 177 / 128 / 49, which is exactly 12 more golden
+guard file present it produces 178 / 129 / 49, which is exactly 13 more golden
 rows, one per guard, confirmed by asking the exporter for the rows it attributes
 to that file. The first difference is upstream drift, the second is my own
 additions being counted, and an earlier draft of this document attributed the
@@ -537,8 +550,8 @@ marker-driven exporter working rather than drift.
 A third cause, which I originally mistook for the other two: the exporter globs
 `tests/test_*.py` non-recursively (`scripts/export_validation.py:190`), so it
 never scans `tests/golden/test_golden_vectors.py`. Running `pytest -m golden` at
-`97c55f5` collects 298, decomposing as 168 from `tests/golden/`, 116 from the
-flat files the exporter does scan, 12 from my guards, and 2 skipped. So the
+`1d996ff` collects 299, decomposing as 168 from `tests/golden/`, 116 from the
+flat files the exporter does scan, 13 from my guards, and 2 skipped. So the
 registry's golden count is not a count of golden-marked tests in the repository;
 it is a count of those the exporter can see, and it understates by the 168 in
 that subdirectory.

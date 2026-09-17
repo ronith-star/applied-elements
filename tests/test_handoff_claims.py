@@ -24,6 +24,7 @@ from __future__ import annotations
 import ast
 import pathlib
 import re
+import sys
 
 import pandas as pd
 import pytest
@@ -337,6 +338,30 @@ def test_the_exporter_scan_scope_claim_is_still_true() -> None:
     assert "non-recursively" in docs, (
         "neither document says the glob is non-recursive, which is the whole "
         "of the explanation"
+    )
+
+
+@pytest.mark.golden
+def test_the_guard_count_stated_in_handoff_matches_this_file() -> None:
+    """HANDOFF.md states how many guards live in this file.
+
+    That sentence went stale twice: the document said nine, then nine plus a
+    tenth, while the file grew to twelve. Nothing caught it, because every other
+    guard here checks a claim about the REPOSITORY and none checked a claim
+    about this file. The count is re-derived from the module's own namespace
+    rather than parsed from source, so adding or removing a guard cannot leave
+    the inventory describing a file that no longer exists.
+    """
+    this_module = sys.modules[__name__]
+    defined = [
+        name
+        for name, obj in vars(this_module).items()
+        if name.startswith("test_") and callable(obj)
+    ]
+    handoff = _text("HANDOFF.md")
+    assert f"There are {len(defined)} guards" in handoff, (
+        f"this file defines {len(defined)} guards, which HANDOFF.md does not "
+        "state"
     )
 
 
