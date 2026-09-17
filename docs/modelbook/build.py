@@ -30,6 +30,7 @@ import importlib
 import io
 import json
 import pathlib
+import re
 import subprocess
 import sys
 import textwrap
@@ -187,6 +188,61 @@ SYMBOL_RULE = __import__("re").compile(r"^\s*=+(\s+=+)+\s*$")
 #: exporter, so the book strips it for display AND records the occurrence in the
 #: findings chapter.
 DOI_TRAILING_JUNK = "\"'`.,;:)]}"
+
+
+#: CrossRef resolution checks for the stripped DOIs, written by
+#: scripts-free manual verification and read back here. The book must not
+#: claim a check it cannot point at: an earlier version asserted in prose that
+#: "each distinct DOI" had been checked against the CrossRef REST API when only
+#: 8 of the 17 distinct DOIs had been, which is the kind of unearned
+#: verification claim this file exists to prevent.
+DOI_CHECKS = HERE / "_doi_checks.json"
+
+
+def doi_resolution_sentence() -> str:
+    """State what was actually checked, from the check file, or say nothing was.
+
+    Reads the recorded CrossRef results and describes exactly the coverage they
+    support. If the file is missing or does not cover every distinct DOI in the
+    current record, the sentence says so rather than implying full coverage.
+    """
+    if not DOI_CHECKS.exists():
+        return ("Whether the stripped forms resolve was NOT checked for this "
+                "build, so no resolution claim is made here.")
+    checks = json.loads(DOI_CHECKS.read_text())
+    n = len(checks)
+    ok = sum(1 for v in checks.values() if v.get("resolves"))
+    if ok == n:
+        return (f"All {n} distinct DOIs in this record were confirmed to "
+                "resolve through the CrossRef REST API once the trailing "
+                "characters are stripped, so the citations themselves are "
+                "sound and only the exporter's capture of them is wrong.")
+    bad = sorted(k for k, v in checks.items() if not v.get("resolves"))
+    return (f"Of the {n} distinct DOIs in this record, {ok} were confirmed to "
+            "resolve through the CrossRef REST API once the trailing "
+            f"characters are stripped and {n - ok} were not: "
+            + ", ".join(bad) + ".")
+
+
+def doi_junk_sentence(findings: list[str]) -> str:
+    """Describe the captured characters by counting them, not by recalling them.
+
+    An earlier version said one case absorbed "a quote and backtick pair from
+    an RST literal". That was true of the 12-case record it was written
+    against and false of the 24-case record that replaced it, where every
+    capture is a full stop or a colon. Counting the phrases the entries
+    themselves carry cannot go stale that way.
+    """
+    counts: dict[str, int] = {}
+    for f in findings:
+        m = re.search(r"taking in ([^,]+),", f)
+        if m:
+            counts[m.group(1)] = counts.get(m.group(1), 0) + 1
+    if not counts:
+        return ""
+    parts = [f"{v} taking in {k}" for k, v in
+             sorted(counts.items(), key=lambda kv: -kv[1])]
+    return "The captured characters are: " + ", ".join(parts) + "."
 
 
 def clean_dois(field: str) -> tuple[str, list[str]]:
@@ -1040,13 +1096,10 @@ def emit_findings_chapter(discrepancies: list[str], dt_total: int, dt_blocks: in
         out.append(r"\section{Malformed DOIs in the validation record}")
         out.append(
             f"{len(doi_findings)} case(s). These are defects in the repository's "
-            "validation exporter, found while typesetting its output, not defects "
-            "in the citations themselves: every DOI listed below resolves once the "
-            "trailing characters are stripped, which was checked against the "
-            "CrossRef REST API for each distinct DOI. The captured characters "
-            "differ by case, most being sentence punctuation and one being a "
-            "quote and backtick pair from an RST literal, and each entry names "
-            "what was absorbed.")
+            "validation exporter, found while typesetting its output, not "
+            "defects in the citations themselves. " + doi_resolution_sentence()
+            + " " + doi_junk_sentence(doi_findings)
+            + " Each entry below names the characters it absorbed.")
         out.append(r"\begin{itemize}")
         for d in doi_findings:
             out.append(r"\item " + rst2tex.inline(d))
@@ -1083,6 +1136,58 @@ def emit_findings_chapter(discrepancies: list[str], dt_total: int, dt_blocks: in
         ". Every failure is in a prose-audit module; no model test fails.")
     out.append(r"\clearpage")
     return "\n\n".join(out)
+
+
+def pdf_page_count() -> int | None:
+    """Count pages in the compiled PDF by reading its page-tree objects.
+
+    Counted from the file rather than scraped from the pdflatex log, so the
+    number in the book's own README is the number in the shipped artefact.
+    Returns None before the first compile, when there is no PDF to count.
+
+    Read through a PDF library rather than by pattern-matching the bytes. A
+    first version searched the raw bytes for "/Type /Pages ... /Count N" and
+    found nothing, because pdflatex writes the page tree into a compressed
+    object stream where that text does not appear literally.
+    """
+    pdf = HERE / "modelbook.pdf"
+    if not pdf.exists():
+        return None
+    try:
+        import pypdfium2
+    except ImportError:
+        return None
+    doc = pypdfium2.PdfDocument(str(pdf))
+    try:
+        return len(doc)
+    finally:
+        doc.close()
+
+
+def sync_readme_page_count(pages: int | None) -> str | None:
+    """Rewrite the page count in README.md to the compiled PDF's actual count.
+
+    The README stated 194 pages after the book had grown to 202, because the
+    number was typed once and the book was rebuilt twice afterwards. It is now
+    read from the compiled PDF and written in, so the two cannot disagree.
+    A README with no such phrase to synchronise raises, rather than leaving a
+    stale number unnoticed. Returns a note when it changed anything.
+    """
+    readme = HERE / "README.md"
+    if pages is None or not readme.exists():
+        return None
+    text = readme.read_text()
+    new = re.sub(r"`modelbook\.pdf` \(\d+ pages\)",
+                 f"`modelbook.pdf` ({pages} pages)", text, count=1)
+    if new == text:
+        if f"({pages} pages)" not in text:
+            raise ValueError(
+                "README.md does not carry a '`modelbook.pdf` (N pages)' phrase "
+                "to synchronise, so its page count cannot be kept honest. "
+                "Restore that phrase or remove the count.")
+        return None
+    readme.write_text(new)
+    return f"README page count synchronised to {pages}"
 
 
 def main() -> int:
@@ -1184,6 +1289,14 @@ def main() -> int:
         "tex_bytes": len(tex),
         "git_rev": rev,
     }
+    # The page count is read from the previously compiled PDF, so on a first
+    # ever build it is absent and the README keeps whatever it says until the
+    # next build. Recorded either way rather than left implicit.
+    pages = pdf_page_count()
+    report["pdf_pages_of_previous_compile"] = pages
+    note = sync_readme_page_count(pages)
+    if note:
+        report["readme_sync"] = note
     (HERE / "build_report.json").write_text(json.dumps(report, indent=1))
     print(json.dumps({k: v for k, v in report.items() if k != "discrepancies"}, indent=1))
     if discrepancies:

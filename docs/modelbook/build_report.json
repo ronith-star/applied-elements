@@ -36,19 +36,20 @@
   "uncertainty: the validation exporter captured '10.1016/j.cpc.2009.09.018.' as a DOI, taking in a full stop, which is not part of the DOI. The book prints the stripped form. The root cause is the DOI character class at scripts/export_validation.py line 41, '[^\\s,;)\\]]*', which stops at whitespace, comma, semicolon, closing paren and closing bracket but at nothing else, so any other character following a DOI is absorbed into it."
  ],
  "suite": {
-  "total": 1527,
-  "passed": 1496,
-  "failed": 13,
+  "total": 1733,
+  "passed": 1703,
+  "failed": 12,
   "errors": 0,
   "skipped": 18,
   "failures_by_file": {
-   "test_handoff_claims": 2,
+   "test_handoff_claims": 1,
    "test_test_docstrings": 11
   },
-  "measured_at_rev": "765fc3d",
-  "measured_at": "2026-09-16T23:44:55",
+  "measured_at_rev": "72ae802",
+  "measured_at": "2026-09-17T00:09:32",
   "provenance_note": "measured by this build: pytest was run over the whole suite and its junit XML parsed, at the time and commit recorded here"
  },
- "tex_bytes": 553737,
- "git_rev": "765fc3d"
+ "tex_bytes": 553768,
+ "git_rev": "72ae802",
+ "pdf_pages_of_previous_compile": 202
 }
