@@ -274,6 +274,9 @@ def test_a_tie_is_reported_as_a_tie_rather_than_as_a_float_accident():
         "the claim under test is no longer reachable here"
     )
     assert r.bottleneck_margin > 0.0
+    # One part in 1e16 is the scale of double-precision rounding, not of any
+    # physical difference between the two units.
+    assert r.bottleneck_margin < 10.0 / 1e16
     assert r.bottleneck_margin < 1e-15
     # The named unit is NOT first-in-declaration-order.
     assert list(r.product_capacity)[0] == "mill"
