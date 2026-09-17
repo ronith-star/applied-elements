@@ -489,5 +489,3 @@ def test_reconciles_tolerance_is_relative_not_absolute():
         f"after all and this docstring needs correcting"
     )
 
-    # The INR fixture in USD terms, at the rate stated in the docstring.
-    assert 2.835e10 / 83e9 == pytest.approx(0.34, abs=0.005)

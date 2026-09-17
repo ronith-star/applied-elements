@@ -404,6 +404,26 @@ that a named file passed. A dot count cannot attribute passes to files, and
 skips. Pass counts per file need `-v`, or the totals line read rather than the
 dots.
 
+**Fourth instance, and a fifth and sixth of the C14 pattern.** Two commits
+after recording this entry I did it again in three ways. (a) The commit
+message for the corrections-record fix said "pytest -q
+tests/test_corrections_record.py printed 5 passed" and the prose-coverage
+commit said "printed 43 passed", both read off bare dot lines with no totals
+line in the output, in the same commit whose own text says every subsequent
+claim reports the totals line. Re-measured with totals visible: 5 passed and
+43 passed, so the counts were right and the sourcing was not. (b) That same
+commit's accounting of the residual tree failures said "NONE of the 15 is in a
+file I own" and then enumerated only 14, the omitted one being a
+`tests/test_corrections_record.py` failure caused by MY OWN C15 and C16
+entries lacking a resolution section. The totals also predated the fix for
+that very failure and were never re-measured. Re-measured after it: 15 failed,
+1799 passed, 18 skipped, attributing as 11 in `tests/test_test_docstrings.py`,
+2 in `tests/golden/test_golden_vectors.py`, 1 in `tests/test_registry_export.py`
+and 1 in `tests/test_handoff_claims.py`, summing to 15 with none in a file I
+own. (c) A fourth literal-only assertion, `2.835e10 / 83e9 == approx(0.34)`,
+which is the C14 pattern again; removed and the figure registered in
+`_DESCRIPTIVE` with its reason.
+
 **Replaced by:** the surrogate control was re-run to completion and agreed
 (fold-mean denominator gives 1 failure, restored gives 18 passed), with a
 third control not originally described also firing. The capacity claim was

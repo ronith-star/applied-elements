@@ -167,6 +167,12 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_unit_economics.py", "277.77777777777777"),
     ("test_unit_economics.py", "22.0"),
     ("test_unit_economics.py", "1000000"),
+    # The INR fixture expressed in USD at 83 INR per USD, given in the prose so
+    # a reader can judge whether 2.835e10 INR is a plausible project scale. The
+    # test asserts the INR total, which is the quantity reconciles() acts on;
+    # the USD figure is context, and a fourth attempt to close it with a
+    # literal-only assertion (2.835e10 / 83e9 == approx(0.34)) was removed.
+    ("test_capex.py", "0.34"),
 }
 
 #: Numbers in prose, INCLUDING scientific notation. A first version matched
