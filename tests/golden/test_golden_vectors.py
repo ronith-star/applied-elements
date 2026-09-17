@@ -600,34 +600,57 @@ def test_rv01_bootstrap_standard_error_agrees_with_the_closed_form() -> None:
 
 
 @pytest.mark.golden
-def test_rv03_evpi_estimate_sits_within_three_combined_standard_errors_of_one_sixteenth() -> None:
-    """RV-03's seeded EVPI lies 0.340 combined standard errors from the exact 1/16.
+def test_rv03_evpi_estimate_sits_within_three_paired_standard_errors_of_one_sixteenth() -> None:
+    """RV-03's seeded EVPI lies 0.796 paired standard errors from the exact 1/16.
 
-    The closed form is 0.5625 - 0.5 = 0.0625. The combined standard error is
-    0.0141965902, from sqrt(0.24609375/2048) = 0.0109618869 on the resolved
-    value and sqrt(0.3333333333/4096) = 0.0090210980 on the baseline. The
-    measured 0.06732450807636592 deviates by 0.0048245081, which is 0.340 of
-    that combined error. The switch fraction 0.2548828125 deviates from the
-    exact 0.25 by 0.0048828125, which is 0.510 of the binomial standard error
-    sqrt(0.25*0.75/2048) = 0.0095683193.
+    The closed form is 0.5625 - 0.5 = 0.0625. The module pairs the baseline with
+    the resolved value on common random numbers, so at these sample sizes the
+    estimator reduces to one sample mean of max(0, -theta), whose per-draw
+    variance is 1/48 - (1/16)^2 = 13/768 = 0.016927083333333332, giving
+    sd 0.1301041249666333 and a standard error at 2048 draws of
+    0.0028749221570077625. The measured 0.064788758648048 deviates by
+    0.002288758648048006, which is 0.796 of that error. The switch fraction
+    0.2548828125 deviates from the exact 0.25 by 0.0048828125, which is 0.510 of
+    the binomial standard error sqrt(0.25*0.75/2048) = 0.0095683193.
+
+    The earlier form of this test used a combined standard error of
+    0.014196590161039404 built from two INDEPENDENT samples, which was the right
+    model for the unpaired estimator this vector was first pinned against and is
+    the wrong model now. The paired bound is 4.94 times tighter, so keeping the
+    old one would have admitted a fivefold error.
     """
     vec = _load(DATA / "RV-03-evpi.yaml")
     exp, ref = vec["expected"], vec["analytic_reference"]
     assert float(ref["resolved_value"]) == pytest.approx(0.5625, abs=1e-12)
-    assert float(exp["evpi"]) == pytest.approx(0.06732450807636592, abs=1e-15)
+    assert float(exp["evpi"]) == pytest.approx(0.064788758648048, abs=1e-15)
     assert float(exp["switch_fraction"]) == pytest.approx(0.2548828125, abs=1e-12)
-    assert math.sqrt(0.24609375 / 2048) == pytest.approx(0.0109618869, abs=1e-10)
-    assert (4.0 / 12.0) == pytest.approx(0.3333333333, abs=1e-10)
-    assert math.sqrt((4.0 / 12.0) / 4096) == pytest.approx(0.0090210980, abs=1e-10)
-    combined = float(ref["combined_standard_error"])
-    assert combined == pytest.approx(0.0141965902, abs=1e-10)
-    assert combined == pytest.approx(
-        math.sqrt(0.24609375 / 2048 + (4.0 / 12.0) / 4096), rel=1e-6
-    )
+    # The paired per-draw quantity max(0,-theta) and its exact moments.
+    e_pos = 0.5 * (0.5**2) / 2
+    assert e_pos == pytest.approx(0.0625, abs=1e-15)
+    e_pos_sq = 0.5 * (0.5**3) / 3
+    assert e_pos_sq == pytest.approx(1.0 / 48.0, abs=1e-15)
+    var = e_pos_sq - e_pos**2
+    assert var == pytest.approx(13.0 / 768.0, abs=1e-15)
+    assert var == pytest.approx(0.016927083333333332, abs=1e-15)
+    assert float(ref["paired_per_draw_variance"]) == pytest.approx(var, abs=1e-15)
+    sd = math.sqrt(var)
+    assert sd == pytest.approx(0.1301041249666333, abs=1e-12)
+    assert float(ref["paired_per_draw_sd"]) == pytest.approx(sd, abs=1e-12)
+    paired_se = sd / math.sqrt(2048)
+    assert paired_se == pytest.approx(0.0028749221570077625, abs=1e-15)
+    assert float(ref["paired_standard_error"]) == pytest.approx(paired_se, abs=1e-15)
     dev = float(exp["evpi"]) - float(ref["evpi"])
-    assert dev == pytest.approx(0.0048245081, abs=1e-9)
-    assert abs(dev) / combined == pytest.approx(0.340, abs=0.002)
-    assert abs(dev) <= 3.0 * combined
+    assert dev == pytest.approx(0.002288758648048006, abs=1e-15)
+    assert abs(dev) / paired_se == pytest.approx(0.796, abs=0.001)
+    assert abs(dev) <= 3.0 * paired_se
+    # The superseded unpaired model, kept so the tightening is under assertion.
+    unpaired = math.sqrt(0.24609375 / 2048 + (4.0 / 12.0) / 4096)
+    assert unpaired == pytest.approx(0.014196590161039404, abs=1e-15)
+    assert float(ref["superseded_unpaired_combined_standard_error"]) == pytest.approx(
+        unpaired, abs=1e-15
+    )
+    assert unpaired / paired_se == pytest.approx(4.9380781063704715, rel=1e-9)
+    assert round(unpaired / paired_se, 2) == 4.94
     binom_se = math.sqrt(0.25 * 0.75 / 2048)
     assert binom_se == pytest.approx(0.0095683193, abs=1e-9)
     sw_dev = float(exp["switch_fraction"]) - float(ref["switch_fraction"])
@@ -637,14 +660,14 @@ def test_rv03_evpi_estimate_sits_within_three_combined_standard_errors_of_one_si
 
 @pytest.mark.golden
 def test_rv03_inner_sample_size_does_not_change_the_estimate_in_this_problem() -> None:
-    """Raising n_inner from 256 to 2048 changes the EVPI by 4.44e-16, not more.
+    """Raising n_inner from 256 to 2048 changes the EVPI by 2.22e-16, not more.
 
     The nested Monte Carlo estimator is biased upward when the outer maximum is
     taken over noisy inner estimates. In THIS problem there is no residual
     uncertainty once theta is resolved, so the inner loop averages a constant
-    and no bias arises. Measured: 0.06732450807636592 at n_inner 256 against
-    0.06732450807636547 at n_inner 2048, a difference of 4.440892098500626e-16,
-    which is 3 ulp at this magnitude. The claim is checked rather than asserted
+    and no bias arises. Measured: 0.064788758648048 at n_inner 256 against
+    0.06478875864804778 at n_inner 2048, a difference of 2.220446049250313e-16,
+    which is 2 ulp at this magnitude. The claim is checked rather than asserted
     because it is the reason the vector's deviation can be attributed wholly to
     outer-loop sampling error.
     """
@@ -654,9 +677,9 @@ def test_rv03_inner_sample_size_does_not_change_the_estimate_in_this_problem() -
     inputs_2048 = dict(inputs)
     inputs_2048["n_inner"] = 2048
     at_2048 = checks.run("evpi", inputs_2048)["evpi"]
-    assert at_256 == pytest.approx(0.06732450807636592, abs=1e-12)
-    assert at_2048 == pytest.approx(0.06732450807636547, abs=1e-12)
-    assert abs(at_256 - at_2048) == pytest.approx(4.440892098500626e-16, abs=1e-18)
+    assert at_256 == pytest.approx(0.064788758648048, abs=1e-12)
+    assert at_2048 == pytest.approx(0.06478875864804778, abs=1e-12)
+    assert abs(at_256 - at_2048) == pytest.approx(2.220446049250313e-16, abs=1e-18)
     assert abs(at_256 - at_2048) < 1e-14
 
 

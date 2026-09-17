@@ -234,7 +234,22 @@ Recorded because being right is not the same as having checked.
    honest value: the fixture carries no real measurement.
 9. `g_of_conversion` returns a one-element ndarray for a scalar argument, so
    `float(np.asarray(...))` raised. Fixed with `.ravel()[0]`.
-10. Five dispatch calls were written against signatures that do not exist:
+10. A regression vector caught a real upstream change, which is the outcome
+    these vectors exist for and is recorded here as a result rather than as an
+    error of mine. Commit baadddf in `ae.agent.decisions` paired the EVPI
+    baseline with the resolved value on common random numbers; the previous
+    version drew the baseline from an independent sample, so the difference did
+    not cancel the two terms' shared noise. RV-03 failed on that commit, its
+    EVPI moving from 0.06732450807636592 to 0.064788758648048. The pin was
+    re-measured AND the error model re-derived from scratch for the paired
+    estimator, which at these sample sizes reduces to one sample mean of
+    max(0, -theta) with per-draw variance 13/768 = 0.016927083333333332 and a
+    standard error of 0.0028749221570077625 at 2048 draws. That is 4.94 times
+    tighter than the 0.014196590161039404 the unpaired estimator carried, so
+    rescaling the old bound instead of re-deriving it would have left a test
+    that admits a fivefold error. The deviation from 1/16 is 0.796 paired
+    standard errors.
+11. Five dispatch calls were written against signatures that do not exist:
    `removable_ppm` takes no `efficiencies`, `krieger_dougherty_relative_viscosity`
    takes a provenance `Value` and not a float, `volume_to_mass_fraction` names its
    first parameter `phi`, `Flowsheet` has `connect` and not `link`, and
@@ -2509,7 +2524,7 @@ that is reported" behaviour exists for.
 
 **Reference.** Howard, R.A. 1966, Information Value Theory, IEEE Transactions on Systems Science and Cybernetics 2(1):22-26, doi:10.1109/TSSC.1966.300074, verified against Crossref in this repository's corrections record. Raiffa, H. and Schlaifer, R. 1961, Applied Statistical Decision Theory, Division of Research, Graduate School of Business Administration, Harvard University, for the decision-analytic framing.
 
-**Why this is a regression vector.** The EVPI of this problem has an exact closed form, 1/16 = 0.0625, derived below with a calculator. The value the module returns does NOT equal it and cannot be expected to: the nested Monte Carlo estimator is biased UPWARD at finite inner sample size, and the baseline is itself a Monte Carlo estimate. The expected value in this file is therefore the MEASURED value at a stated seed and sample size, so the file is a REGRESSION vector. The closed form is carried alongside as analytic_reference and the test checks the seeded value against the pin AND the bias against its stated direction, which is the part that tests the model rather than the snapshot.
+**Why this is a regression vector.** The EVPI of this problem has an exact closed form, 1/16 = 0.0625, derived below with a calculator. The value the module returns does NOT equal it and cannot be expected to: it is a Monte Carlo estimate at a finite outer sample. The expected value in this file is therefore the MEASURED value at a stated seed and sample size, so the file is a REGRESSION vector. The closed form is carried alongside as analytic_reference and the test checks the seeded value against the pin AND the deviation against its derived standard error, which is the part that tests the model rather than the snapshot. THIS VECTOR HAS ALREADY DONE ITS JOB ONCE. The pins first recorded here were measured against a version of ae.agent.decisions in which the baseline was drawn from an INDEPENDENT sample (problem.best_action_now()), so the difference resolved minus baseline did not cancel the two terms' common sampling error. Commit baadddf paired both terms on the same outer and inner draws (common random numbers). This vector failed on that commit, with evpi moving from 0.06732450807636592 to 0.064788758648048 and baseline_value from 0.4928314937557836 to 0.4953672431841015, which is exactly what a regression vector is for. The pins below are the paired estimator's, and the error model in the arithmetic chain was re-derived for the paired estimator rather than rescaled.
 
 **Inputs.**
 
@@ -2539,7 +2554,8 @@ seed: 0
 - `n_inner`: ASSUMED, 256 inner draws. There is no remaining uncertainty in this problem once theta
   is resolved, so the inner loop averages a constant and the usual upward bias from
   taking a maximum over noisy inner estimates does NOT arise here. That is deliberate:
-  it isolates the outer-loop sampling error.
+  it isolates the outer-loop sampling error, and it is confirmed by measurement below
+  (raising n_inner eightfold moves the estimate by 2.2e-16).
 - `seed`: ASSUMED, 0.
 
 **Arithmetic chain.**
@@ -2555,47 +2571,62 @@ otherwise, so the value is E[max(0, theta)]:
 EVPI = 0.5625 - 0.5 = 0.0625 = 1/16 exactly.
 Switch fraction. Perfect information changes the action exactly when theta < 0,
 which has probability (0 - (-0.5))/2 = 0.25.
-Sampling error of the estimator:
-  Var(max(0, theta)) = E[max^2] - (E[max])^2
-  E[max^2] = (1/2) * (1.5^3/3) = (1/2) * 1.125 = 0.5625
-  Var = 0.5625 - 0.5625^2 = 0.5625 - 0.31640625 = 0.24609375
-  sd = sqrt(0.24609375) = 0.49607837082461076
-  SE of the resolved value at n_outer = 2048:
-    0.49607837082461076/sqrt(2048) = 0.010961886875314282
-  Var(theta) = (high - low)^2/12 = 4/12 = 0.3333333333333333
-  The baseline uses max(n_outer*2, 512) = 4096 draws, so its SE is
-    sqrt(0.3333333333333333/4096) = 0.009021097956087902
-  Combined SE of the difference:
-    sqrt(0.010961886875314282^2 + 0.009021097956087902^2) = 0.014196590161039404
-So the estimator should land within about 3 combined SE, 0.042589770483118212,
-of 0.0625.
+Sampling error of the PAIRED estimator. The module accumulates both terms over
+the same outer and inner draws, so the estimator on one outer sample of size n is
+  (1/n) sum_i max(0, theta_i)  -  max(0, (1/n) sum_i theta_i)
+At these sample sizes the sample mean of theta is positive with overwhelming
+probability, so the second term IS that sample mean and the whole estimator
+collapses to a single sample mean of a single per-draw quantity:
+  (1/n) sum_i [ max(0, theta_i) - theta_i ]  =  (1/n) sum_i max(0, -theta_i)
+That identity is the reason the pairing works, and it changes the error model
+completely: one sample mean of a bounded quantity, not a difference of two
+independently estimated means.
+Check that this route gives the same expectation:
+  E[max(0, -theta)] = (1/2) * integral from 0 to 0.5 of u du = (1/2)*(0.25/2)
+                    = 0.0625 = 1/16, which equals 0.5625 - 0.5 exactly.
+Variance of the per-draw quantity:
+  E[max(0,-theta)^2] = (1/2) * (0.5^3/3) = (1/2)*(0.041666666666666664)
+                     = 1/48 = 0.020833333333333332
+  Var = 1/48 - (1/16)^2 = 0.020833333333333332 - 0.00390625
+      = 13/768 = 0.016927083333333332
+  sd  = sqrt(0.016927083333333332) = 0.1301041249666333
+  SE at n_outer = 2048: 0.1301041249666333/sqrt(2048) = 0.0028749221570077625
+So the estimator should land within about 3 paired SE, 0.008624766471023287, of
+0.0625. That bound is 4.94 times tighter than the 0.014196590161039404 combined
+SE the unpaired estimator carried, which is the measurable benefit of the
+pairing.
 MEASURED at seed 0, n_outer = 2048, n_inner = 256:
-  evpi = 0.06732450807636592
-  baseline_value = 0.4928314937557836 (against the true 0.5)
+  evpi = 0.064788758648048
+  baseline_value = 0.4953672431841015 (against the true 0.5)
   resolved_value = 0.5601560018321495 (against the true 0.5625)
   switch_fraction = 0.2548828125 (against the true 0.25)
-The deviation of the EVPI estimate from 1/16 is +0.004824508076365919, which is
-0.3398356944617673 of a combined SE. Both the baseline and the resolved value came in LOW, and because EVPI is
-their difference the two errors partly cancel, which is why the EVPI estimate is
-closer to truth in SE terms than either input.
-Seed dependence, measured at n_outer = 8192: seed 0 gave 0.05622818277750663,
-seed 1 gave 0.07114787799362726, seed 2 gave 0.06457173732175125. The spread of
-0.014919695216120632 across three seeds at four times the sample size confirms the sampling
-error is the dominant term and not a bias, since the values straddle 0.0625.
+The deviation of the EVPI estimate from 1/16 is +0.002288758648048006, which is
+0.7961115199133464 of a paired SE. The resolved value is unchanged by the pairing
+(it never depended on the baseline sample) and sits 0.0023439981678504695 below
+0.5625. The baseline is now the paired baseline and differs from
+problem.best_action_now() by sampling error, which the module's own docstring
+states.
+Seed dependence, measured at n_outer = 2048, n_inner = 256: seed 0 gave
+0.064788758648048, seed 1 gave 0.06050028280768449, seed 2 gave
+0.06424372728470101, seed 3 gave 0.06698210459519677, seed 4 gave
+0.06256202694851598. Per-seed deviations from 1/16 in paired SE units: 0.7961,
+-0.6956, 0.6065, 1.5590, 0.0216. The spread of 0.006481821787512276 is 2.25
+paired SE, and the values straddle 0.0625, which confirms sampling error rather
+than bias.
 Inner-sample independence check: at n_outer = 2048 with n_inner raised from 256 to
-2048 the measured EVPI was 0.06732450807636547 against 0.06732450807636592, a
-difference of 4.5e-16. That confirms the claim in the provenance that the inner
-loop averages a constant in this problem, so no upward nesting bias is present
-and the entire deviation from 1/16 is outer-loop sampling error.
+2048 the measured EVPI was 0.06478875864804778 against 0.064788758648048, a
+difference of 2.220446049250313e-16. That confirms the claim in the provenance
+that the inner loop averages a constant in this problem, so no upward nesting
+bias is present and the entire deviation from 1/16 is outer-loop sampling error.
 ```
 
 **Expected outputs and tolerances.**
 
 | output | expected | tolerance | reason the tolerance is what it is |
 | --- | --- | --- | --- |
-| `evpi` | 0.06732450807636592 | abs 1e-12 | A REGRESSION pin. The seed fixes the sample, so the value is deterministic to floating point on the same numpy version, and 1e-12 admits summation- order differences across platforms. This tolerance makes NO claim about statistical accuracy; the 0.0141950 combined standard error in analytic_reference is the honest uncertainty and the test separately checks that the measured value lies within 3 of those of the closed-form 1/16. |
-| `baseline_value` | 0.4928314937557836 | abs 1e-12 | A seeded regression pin, as for evpi. Its own sampling error against the true 0.5 is sqrt(Var(theta)/4096) = 0.009021097956087902, which the test checks separately. |
-| `resolved_value` | 0.5601560018321495 | abs 1e-12 | A seeded regression pin. Its sampling error against the true 0.5625 is 0.010961886875314282. |
+| `evpi` | 0.064788758648048 | abs 1e-12 | A REGRESSION pin. The seed fixes the sample, so the value is deterministic to floating point on the same numpy version, and 1e-12 admits summation- order differences across platforms. This tolerance makes NO claim about statistical accuracy: the 0.0028749221570077625 paired standard error in analytic_reference is the honest uncertainty, and the test separately checks that the measured value lies within 3 of those of the closed-form 1/16. This pin has already caught one real change, commit baadddf pairing the baseline with the resolved sample, which moved the value by 0.0025357494283179127. |
+| `baseline_value` | 0.4953672431841015 | abs 1e-12 | A seeded regression pin, with the same floating point basis as evpi. This is the PAIRED baseline, accumulated over the same draws as the resolved value, so it is not the same quantity as problem.best_action_now() and differs from it by sampling error. Its deviation from the true 0.5 is -0.0046327568158985 at this seed, and the pairing means that deviation is correlated with the resolved value's, which is why their difference is tighter than either. |
+| `resolved_value` | 0.5601560018321495 | abs 1e-12 | A seeded regression pin, with the same floating point basis as evpi. This output is unchanged by the pairing commit, because it never depended on the baseline sample: its own standard error against the true 0.5625 is sqrt(0.24609375/2048) = 0.010961886875314282, and the measured value sits 0.0023439981678504695 below, which is 0.21 of that. |
 | `switch_fraction` | 0.2548828125 | abs 1e-12 | A seeded regression pin on a ratio of integers (switches over n_outer), so it is exactly representable and reproduces bit for bit. The statistical check against the true 0.25 uses the binomial standard error sqrt(0.25*0.75/2048) = 0.009568319307746789, which the test applies separately. |
 
 **Closed-form reference, carried alongside the seeded values.**
@@ -2606,5 +2637,7 @@ and the entire deviation from 1/16 is outer-loop sampling error.
 | `baseline_value` | 0.5 |
 | `resolved_value` | 0.5625 |
 | `switch_fraction` | 0.25 |
-| `combined_standard_error` | 0.0141965902 |
-
+| `paired_per_draw_variance` | 0.016927083333333332 |
+| `paired_per_draw_sd` | 0.1301041249666333 |
+| `paired_standard_error` | 0.0028749221570077625 |
+| `superseded_unpaired_combined_standard_error` | 0.014196590161039404 |
