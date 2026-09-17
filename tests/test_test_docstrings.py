@@ -41,6 +41,14 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_capex.py", "18"), ("test_capex.py", "97"),
     ("test_capex.py", "4"), ("test_capex.py", "5"), ("test_capex.py", "3"),
     ("test_capex.py", "1"), ("test_capex.py", "2"),
+    # Publication year of the cited Liu et al. reference, not a computed quantity.
+    ("test_chlorination.py", "2026"),
+    # Year in Xia 2024 citation, not a computed quantity
+    ("test_leaching.py", "2024"),
+    # Yang and Li 2020 leach duration, an experimental condition of the source measurement; this test converts assays to a removal fraction and runs no kinetics, so there is nothing here to derive it from.
+    ("test_leaching.py", "40"),
+    # publication year of the cited Liu et al. reference, not a computed quantity
+    ("test_diffusion.py", "2026"),
 }
 
 #: Numbers in prose, INCLUDING scientific notation. A first version matched

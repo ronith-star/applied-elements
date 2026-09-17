@@ -177,6 +177,14 @@ def test_golden_tau_film_arithmetic(system: LeachSystem) -> None:
     expected = 30000.0 * 1.0e-4 / (3.0 * 1.0 * k_g * 1000.0)
     assert expected == pytest.approx(1654.3073, rel=1e-6)
     assert float(tau_film(system).to("s").magnitude) == pytest.approx(expected, rel=1e-9)
+    exponent = -15000.0 / (8.314462618 * 353.15)
+    assert exponent == pytest.approx(-5.108553, rel=1e-6)
+    exp_val = math.exp(exponent)
+    assert exp_val == pytest.approx(6.044826e-3, rel=1e-6)
+    denom = 3.0 * 1.0 * k_g * 1000.0
+    assert denom == pytest.approx(1.813448e-3, rel=1e-6)
+    tau_min = expected / 60.0
+    assert tau_min == pytest.approx(27.5718, rel=1e-6)
 
 
 @pytest.mark.golden
@@ -201,6 +209,16 @@ def test_golden_tau_product_layer_arithmetic(system: LeachSystem) -> None:
     assert expected == pytest.approx(1.368366e6, rel=1e-6)
     assert expected / 1654.3073 == pytest.approx(827.1, rel=1e-3)
     assert float(tau_product_layer(system).to("s").magnitude) == pytest.approx(expected, rel=1e-9)
+    exponent = -30000.0 / (8.314462618 * 353.15)
+    assert exponent == pytest.approx(-10.217105, rel=1e-6)
+    exp_val = math.exp(exponent)
+    assert exp_val == pytest.approx(3.653993e-5, rel=1e-6)
+    numerator = 30000.0 * (1.0e-4) ** 2
+    assert numerator == pytest.approx(3.0e-4, rel=1e-9)
+    days = expected / 86400.0
+    # 15.837572 s/86400, which is the quoted 15.8376 to the four decimals the
+    # prose carries; the tolerance is set by those digits, not tighter.
+    assert days == pytest.approx(15.8376, abs=1e-4)
 
 
 @pytest.mark.golden
@@ -228,9 +246,15 @@ def test_golden_conversion_inversions_are_exact() -> None:
       Substituting u = (1-X)^(1/3): 1 - 3u^2 + 2u^3 = 0.25, i.e.
       2u^3 - 3u^2 + 0.75 = 0. The root in [0, 1] is u = 0.673648178, so
       (1-X) = u^3 = 0.305702801 and X = 0.694297199.
-      Check: u^2 = 0.453801879, so 1 - 3(0.453801879) + 2(0.305702801)
-           = 1 - 1.361405637 + 0.611405602 = 0.249999965, i.e. 0.25 to
-      rounding of the quoted digits. Correct.
+      Check: u^2 = 0.453801867, so 1 - 3(0.453801867) + 2(0.305702801)
+           = 1 - 1.361405602 + 0.611405602 = 0.250000000. Correct, and exact
+      to the quoted digits.
+      (Two digits here were wrong before this revision and the prose said so
+      without noticing: u^2 was written 0.453801879 and 3u^2 as 1.361405637,
+      which made the check close to 0.249999965 and the residual was then
+      excused as rounding. The residual was arithmetic drift, not rounding:
+      the true root closes the identity to 1e-9. Both digits and the closing
+      line are now asserted below, so the excuse cannot be restated.)
 
     Note t/tau = 0.25 is chosen rather than 0.5 precisely BECAUSE at
     t/tau = 0.5 the product-layer and surface-reaction laws coincidentally
@@ -256,6 +280,21 @@ def test_golden_conversion_inversions_are_exact() -> None:
     # and the product layer agrees there, the coincidence noted above
     assert conversion(Regime.PRODUCT_LAYER, Q_(50.0, "s"), tau) == pytest.approx(
         0.875, abs=1e-9)
+    one_minus_x = 1.0 - x
+    assert one_minus_x == pytest.approx(0.305702801, abs=1e-8)
+    u_sq = u ** 2
+    assert u_sq == pytest.approx(0.453801867, abs=1e-9)
+    two_one_minus_x = 2.0 * one_minus_x
+    assert two_one_minus_x == pytest.approx(0.611405602, abs=1e-9)
+    three_u_sq = 3.0 * u_sq
+    assert three_u_sq == pytest.approx(1.361405602, abs=1e-9)
+    # The closing line of the hand-check, computed rather than excused: the
+    # identity closes on the true root, it does not leave a 3.5e-8 residual.
+    closure = 1.0 - three_u_sq + two_one_minus_x
+    assert closure == pytest.approx(0.250000000, abs=1e-9)
+    # u is a root of the cubic the docstring derives, 2u^3 - 3u^2 + 0.75 = 0.
+    cubic = 2.0 * (u ** 3) - 3.0 * u_sq + 0.75
+    assert cubic == pytest.approx(0.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -304,6 +343,22 @@ def test_golden_leachable_ppm_arithmetic(quartz_measured: Feedstock) -> None:
     """
     assert leachable_ppm(quartz_measured, "Fe") == pytest.approx(2.70, abs=1e-12)
     assert leachable_ppm(quartz_measured, "Al") == pytest.approx(12.0, abs=1e-12)
+    # Each step of the prose hand-check, derived from the fixture profile rather
+    # than restated: totals, lattice fractions, and the lattice ppm they imply.
+    imp = quartz_measured.impurities
+    fe_total = imp.total_ppm("Fe")
+    assert fe_total == pytest.approx(3.0, abs=1e-12)
+    fe_lattice = imp.lattice_ppm("Fe")
+    assert fe_lattice == pytest.approx(0.30, abs=1e-12)
+    fe_frac = fe_lattice / fe_total
+    assert fe_frac == pytest.approx(0.1, abs=1e-12)
+    assert fe_frac * 100.0 == pytest.approx(10.0, abs=1e-9)
+    al_total = imp.total_ppm("Al")
+    assert al_total == pytest.approx(30.0, abs=1e-12)
+    al_lattice = imp.lattice_ppm("Al")
+    assert al_lattice == pytest.approx(18.0, abs=1e-12)
+    al_frac = al_lattice / al_total
+    assert al_frac * 100.0 == pytest.approx(60.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -313,6 +368,11 @@ def test_golden_removal_fraction_arithmetic() -> None:
     24.23 / 128.86 = 0.1880335, so removal = 0.8119665 = 81.19665 percent.
     """
     assert removal_fraction_from_assay(128.86, 24.23) == pytest.approx(0.8119665, abs=1e-7)
+    ratio = 24.23 / 128.86
+    assert ratio == pytest.approx(0.1880335, abs=1e-7)
+    removal = removal_fraction_from_assay(128.86, 24.23)
+    percent = removal * 100.0
+    assert percent == pytest.approx(81.19665, abs=1e-5)
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +402,9 @@ def test_benchmark_yang_2020_iron_removal(capsys: pytest.CaptureFixture[str]) ->
 
     Reported: Fe2O3 0.0857 percent to 0.0223 percent, stated as 74 percent Fe
     removal in 40 min. Converting the oxide assays to an Fe basis with the
-    stoichiometric factor 2 M_Fe / M_Fe2O3 = 111.69/159.687 = 0.699435:
+    stoichiometric factor 2 M_Fe / M_Fe2O3 = 111.69/159.687 = 0.699431
+    (written 0.699435 before this revision, wrong in the sixth digit; the
+    quotient is 0.6994308, and it is asserted below):
       feed    = 0.0857 percent Fe2O3 -> 857 ppm Fe2O3  -> 599.42 ppm Fe
       product = 0.0223 percent Fe2O3 -> 223 ppm Fe2O3  -> 155.97 ppm Fe
       removal = 1 - 155.97/599.42 = 0.739790 -> 73.98 percent
@@ -360,6 +422,20 @@ def test_benchmark_yang_2020_iron_removal(capsys: pytest.CaptureFixture[str]) ->
           f"(source: doi 10.1515/htmp-2020-0081, {SOURCE_YANG_2020.accessed}; the ratio "
           f"is independent of the oxide-to-element factor, which cancels)")
     assert err < 1.0, f"assay conversion should land within 1 percent, got {err}"
+    # Every step of the assay-to-element conversion the docstring tabulates,
+    # derived forward from the oxide assays rather than restated.
+    assert factor == pytest.approx(0.699431, abs=5e-7)
+    # The superseded digit, measured as wrong rather than merely annotated:
+    # 0.699435 is not this quotient to the six digits it was written with.
+    assert abs(factor - 0.699435) > 1e-6
+    feed_pct = 857.0 / 1.0e4
+    assert feed_pct == pytest.approx(0.0857, rel=1e-9)
+    prod_pct = 223.0 / 1.0e4
+    assert prod_pct == pytest.approx(0.0223, rel=1e-9)
+    assert feed_fe == pytest.approx(599.42, abs=0.02)
+    assert prod_fe == pytest.approx(155.97, abs=0.01)
+    assert model / 100.0 == pytest.approx(0.739790, rel=1e-5)
+    assert model == pytest.approx(73.98, abs=0.01)
 
 
 @pytest.mark.benchmark
@@ -385,6 +461,7 @@ def test_benchmark_yang_2020_activation_energy_band(capsys: pytest.CaptureFixtur
               f"(band tag: {EA_REGIME_BANDS[Regime.PRODUCT_LAYER].tag.value})")
         assert lo <= ea <= hi
     assert 27.72 - 20.44 == pytest.approx(7.28, abs=1e-9)
+    assert hi == pytest.approx(40.0, abs=0.05)
 
 
 # ---------------------------------------------------------------------------

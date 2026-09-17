@@ -158,6 +158,14 @@ def test_golden_diffusion_length_arithmetic() -> None:
     assert float(model.to("m").magnitude) == pytest.approx(l_m, rel=1e-9)
     assert 1.0e-4 / l_m == pytest.approx(308.05, rel=1e-4)
     assert math.log10(1.0e-4 / l_m) == pytest.approx(2.4886, abs=1e-4)
+    rt_product = 8.314462618 * 353.15
+    assert rt_product == pytest.approx(2936.2525, rel=1e-7)
+    l_nm = l_m * 1.0e9
+    assert l_nm == pytest.approx(324.62, abs=0.01)
+    grain_radius_um = 1.0e-4 * 1.0e6
+    assert grain_radius_um == pytest.approx(100.0, rel=1e-9)
+    skin_um = l_m * 1.0e6
+    assert skin_um == pytest.approx(0.32, abs=0.01)
 
 
 @pytest.mark.golden
@@ -168,7 +176,9 @@ def test_golden_critical_activation_energy_arithmetic() -> None:
       = (1.0e-4)^2 / 21600 = 1.0e-8 / 21600 = 4.629630e-13 m2/s
 
     With D0 = 1.0e-4 m2/s:
-      ln(D_req/D0) = ln(4.629630e-13 / 1.0e-4) = ln(4.629630e-9) = -19.19082
+      ln(D_req/D0) = ln(4.629630e-13 / 1.0e-4) = ln(4.629630e-9) = -19.19079
+      (written -19.19082 before this revision, wrong in the seventh digit;
+      math.log gives -19.190789, and it is asserted below)
       Ea_crit = -8.314462618 * 1473.15 * (-19.19082) J/mol
               = 12248.4506 * 19.19082 = 235057.4 J/mol = 235.0574 kJ/mol
 
@@ -209,6 +219,26 @@ def test_golden_critical_activation_energy_arithmetic() -> None:
     assert overlap_lo == pytest.approx(90.0, abs=1e-9)
     assert overlap_hi == pytest.approx(235.0574, rel=1e-6)
     assert overlap_hi > overlap_lo
+    sq_r = (1.0e-4) ** 2
+    assert sq_r == pytest.approx(1.0e-8, rel=1e-9)
+    ratio_high = d_req / 1.0e-4
+    assert ratio_high == pytest.approx(4.629630e-9, rel=1e-6)
+    ln_ratio_high = math.log(ratio_high)
+    assert ln_ratio_high == pytest.approx(-19.19079, abs=5e-6)
+    # The superseded digit, measured as wrong rather than merely annotated:
+    # -19.19082 is not this logarithm to the seven digits it was written with.
+    assert abs(ln_ratio_high - (-19.19082)) > 1e-5
+    ratio_low = d_req / 1.0e-10
+    assert ratio_low == pytest.approx(4.629630e-3, rel=1e-6)
+    ln_ratio_low = math.log(ratio_low)
+    assert ln_ratio_low == pytest.approx(-5.375278, rel=1e-6)
+    ea_high_j = -rt * ln_ratio_high
+    assert ea_high_j == pytest.approx(235057.4, rel=1e-6)
+    assert ea_high_j / 1000.0 == pytest.approx(235.06, abs=5e-3)
+    ea_low_j = -rt * ln_ratio_low
+    assert ea_low_j == pytest.approx(65838.8, rel=1e-6)
+    assert ea_low_j / 1000.0 == pytest.approx(65.84, abs=5e-3)
+    assert float(ea_band.max()) == pytest.approx(400.0, rel=1e-9)
 
 
 @pytest.mark.golden
@@ -232,6 +262,9 @@ def test_golden_sphere_extraction_short_time_arithmetic() -> None:
     assert val == pytest.approx(3.385137e-3, rel=1e-6)
     assert fractional_extraction_sphere(1.0e-6) == pytest.approx(val, rel=1e-12)
     assert val / 3.0e-3 == pytest.approx(1.128, rel=1e-3)
+    sqrt_pi = math.sqrt(math.pi)
+    assert sqrt_pi == pytest.approx(1.7724539, rel=1e-6)
+    assert val == pytest.approx(3.385e-3, rel=1e-3)
 
 
 @pytest.mark.golden
@@ -249,6 +282,10 @@ def test_golden_erf_half_defines_the_diffusion_length() -> None:
     l_m = diffusion_length(d, t)
     retained = erfc_profile(d, t, l_m)
     assert float(retained[0]) == pytest.approx(ERF_HALF, rel=1e-9)
+    assert float(erf(0.5)) == pytest.approx(0.5205, abs=1e-4)
+    depletion_fraction = 1.0 - float(retained[0])
+    depletion_pct = depletion_fraction * 100.0
+    assert depletion_pct == pytest.approx(48.0, abs=1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +367,22 @@ def test_benchmark_xia_2024_residual_is_lattice(
           f"lattice-derived floor is of the same order as a real measured residual "
           f"(source: doi 10.3390/min14070727).")
     assert 0.3 < ceiling["_sum"] / xia_residual < 3.0
+    # The lattice fractions the prose multiplies out, recovered from the profile
+    # itself so the arithmetic is checked against the fixture and not retyped.
+    imp = quartz_measured.impurities
+    al_frac = ceiling["Al"] / imp.total_ppm("Al")
+    assert al_frac == pytest.approx(0.6, abs=1e-12)
+    ti_frac = ceiling["Ti"] / imp.total_ppm("Ti")
+    assert ti_frac == pytest.approx(0.9, abs=1e-12)
+    li_frac = ceiling["Li"] / imp.total_ppm("Li")
+    assert li_frac == pytest.approx(0.8, abs=1e-12)
+    # The stated 30 percent excess of the fixture floor over the Xia residual is
+    # the quantity already computed above, so it is asserted rather than printed.
+    assert err == pytest.approx(30.0, abs=0.5)
+    # The Xia et al. 2024 feed total, closed by the removal it implies.
+    xia_feed = 128.86
+    xia_removal_pct = (xia_feed - xia_residual) / xia_feed * 100.0
+    assert xia_removal_pct == pytest.approx(81.2, abs=0.1)
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +419,13 @@ def test_al_roast_case_is_explicitly_undecided(quartz_measured: Feedstock) -> No
     lo, hi = crit["d0_low_1e-10"], crit["d0_high_1e-4"]
     assert lo == pytest.approx(65.84, rel=1e-3)
     assert hi == pytest.approx(235.06, rel=1e-3)
+    liu_band = np.atleast_1d(LIU_2026_EA_RANGE_KJ.quantity.to("kJ/mol").magnitude)
+    liu_lo = float(liu_band.min())
+    liu_hi = float(liu_band.max())
+    assert liu_lo == pytest.approx(90.0, rel=1e-3)
+    assert liu_hi == pytest.approx(400.0, rel=1e-3)
+    overlap_hi = min(hi, liu_hi)
+    assert overlap_hi == pytest.approx(235.1, rel=1e-3)
 
 
 def test_ti_roast_case_is_robustly_infeasible(quartz_measured: Feedstock) -> None:
@@ -533,6 +593,9 @@ def test_fixed_truncation_would_overstate_extraction() -> None:
     assert max(50, math.ceil(math.sqrt(28.0 / (math.pi**2 * 2.0e-4)))) == 120
     with pytest.raises(AssertionError, match="under-converged"):
         fractional_extraction_sphere(2.0e-4, n_terms=5)
+    adaptive_terms = max(50, math.ceil(math.sqrt(28.0 / (math.pi**2 * 2.0e-4))))
+    ratio = adaptive_terms / 5
+    assert ratio == pytest.approx(24.0, rel=1e-9)
 
 
 @pytest.mark.parametrize("fo,expected", [(0.0, 0.0), (10.0, 1.0)])

@@ -162,6 +162,19 @@ def test_golden_ticl4_vapour_pressure_below_boiling() -> None:
     assert float(p.to("Pa").magnitude) == pytest.approx(expected, rel=1e-6)
     assert capped is False
     assert float(p.to("Pa").magnitude) / 101325.0 == pytest.approx(0.354051, rel=1e-6)
+    # The two reciprocal temperatures the hand-check tabulates, and the SOURCED
+    # enthalpy and boiling point they are built from, checked against the
+    # platform's own species record rather than restated from the prose.
+    assert t_b == pytest.approx(409.60, abs=0.005)
+    inv_t = 1.0 / t
+    assert inv_t == pytest.approx(2.6798874e-3, rel=1e-7)
+    inv_t_b = 1.0 / t_b
+    assert inv_t_b == pytest.approx(2.4414063e-3, rel=1e-7)
+    species = CHLORIDES["TiCl4"]
+    assert float(species.transition_T.quantity.to("K").magnitude) == pytest.approx(
+        t_b, abs=0.005)
+    h_kj = float(species.enthalpy().to("kJ/mol").magnitude)
+    assert h_kj == pytest.approx(36.2, abs=0.05)
 
 
 @pytest.mark.golden
@@ -182,6 +195,8 @@ def test_golden_trouton_arithmetic() -> None:
     assert CHLORIDES["AlCl3"].enthalpy_is_trouton is True
     assert float(CHLORIDES["AlCl3"].enthalpy().to("J/mol").magnitude) == pytest.approx(
         expected, rel=1e-9)
+    h_kJ = float(h.to("kJ/mol").magnitude)
+    assert h_kJ == pytest.approx(38.52, abs=5e-3)
 
 
 @pytest.mark.golden
@@ -202,6 +217,10 @@ def test_golden_gibbs_arithmetic() -> None:
     }
     dg = gibbs_of_reaction({"B": 1.0, "A": -1.0}, Q_(1000.0, "K"), thermo=table)
     assert float(dg.to("kJ/mol").magnitude) == pytest.approx(-130.0, rel=1e-9)
+    s_a = Q_(50.0, "J/(mol*K)")
+    s_b = Q_(80.0, "J/(mol*K)")
+    delta_s = (s_b - s_a).to("kJ/(mol*K)")
+    assert float(delta_s.magnitude) == pytest.approx(0.030, abs=1e-6)
 
 
 @pytest.mark.golden
@@ -230,6 +249,20 @@ def test_golden_hertz_knudsen_arithmetic() -> None:
     assert expected == pytest.approx(1390.91, rel=1e-5)
     j = hertz_knudsen_flux(CHLORIDES["NaCl"], Q_(1465.0, "degC"))
     assert float(j.to("mol/(m**2*s)").magnitude) == pytest.approx(expected, rel=1e-4)
+    # Intermediate steps of the prose hand-check, each derived from the one before.
+    two_pi = 2.0 * math.pi
+    assert two_pi == pytest.approx(6.2831853, rel=1e-7)
+    assert m * 1000.0 == pytest.approx(58.443, rel=1e-9)
+    rt = 8.314462618 * 1738.15
+    assert rt == pytest.approx(14451.7832, rel=1e-7)
+    two_pi_m = two_pi * m
+    assert two_pi_m == pytest.approx(0.3672082, rel=1e-6)
+    # The closing claim about a lower roast temperature is a comparison, so it is
+    # measured here rather than left in prose: at 1200 degC NaCl is below its
+    # boiling point and the free molecular flux is smaller.
+    j_roast = hertz_knudsen_flux(CHLORIDES["NaCl"], Q_(1200.0, "degC"))
+    assert float(j_roast.to("mol/(m**2*s)").magnitude) < float(
+        j.to("mol/(m**2*s)").magnitude)
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +312,12 @@ def test_benchmark_alkali_chlorides_are_not_volatile_at_roast(
               f"order-of-magnitude figure, not a measurement.")
         assert t_b > 1200.0
         assert 0.0 < frac < 1.0
+    t_nacl = float(CHLORIDES["NaCl"].transition_T.quantity.to("degC").magnitude)
+    assert t_nacl == pytest.approx(1465.0, abs=1.0)
+    t_kcl = float(CHLORIDES["KCl"].transition_T.quantity.to("degC").magnitude)
+    assert t_kcl == pytest.approx(1500.0, abs=1.0)
+    t_licl = float(CHLORIDES["LiCl"].transition_T.quantity.to("degC").magnitude)
+    assert t_licl == pytest.approx(1360.0, abs=1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -439,6 +478,11 @@ def test_vapour_pressure_is_capped_far_above_boiling() -> None:
     p, capped = vapour_pressure(CHLORIDES["TiCl4"], Q_(1200.0, "degC"))
     assert capped is True
     assert float(p.to("Pa").magnitude) == pytest.approx(101325.0, rel=1e-12)
+    # The 1000 degC of over-extrapolation the docstring names is the gap between
+    # the evaluation temperature and TiCl4's sourced transition temperature.
+    t_b_c = float(CHLORIDES["TiCl4"].transition_T.quantity.to("degC").magnitude)
+    excess_c = 1200.0 - t_b_c
+    assert excess_c > 1000.0
 
 
 def test_vapour_pressure_rises_with_temperature() -> None:
