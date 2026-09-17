@@ -483,9 +483,11 @@ def test_benchmark_yang_2020_iron_acid_demand(capsys: pytest.CaptureFixture[str]
        before this revision; the quotient is 0.6994308, which rounds to
        0.699431. The same drifted digit appeared in
        test_leaching.py::test_benchmark_yang_2020_iron_removal and is corrected
-       there too. The products differ in the third decimal, 443.4393 against
-       443.4418, but agree at the two decimals the 443.44 figure carries; both
-       are asserted below.)
+       there too. Three products are in play and all three are asserted
+       below: 443.4391 from the exact quotient, 443.4393 from the rounded
+       0.699431 on the line above, and 443.4418 from the superseded 0.699435.
+       They differ in the third or fourth decimal and agree at the two
+       decimals the 443.44 figure carries.)
       Fe removed = 634 * 0.699431 = 443.44 ppm
       n_Fe       = 1000 * 443.44e-6 / 0.055845 = 7.94046 mol per tonne
       n_HCl      = 3 * 7.94046 = 23.82137 mol = 0.86847 kg per tonne
@@ -514,8 +516,10 @@ def test_benchmark_yang_2020_iron_acid_demand(capsys: pytest.CaptureFixture[str]
     # product shown to agree with 443.44 only at the two decimals quoted.
     assert abs(factor - 0.699435) > 1e-6
     assert 634.0 * factor == pytest.approx(443.4391, abs=5e-5)
+    assert 634.0 * 0.699431 == pytest.approx(443.4393, abs=5e-5)
     assert 634.0 * 0.699435 == pytest.approx(443.4418, abs=5e-5)
-    assert round(634.0 * 0.699435, 2) == round(634.0 * factor, 2) == 443.44
+    assert (round(634.0 * factor, 2) == round(634.0 * 0.699431, 2)
+            == round(634.0 * 0.699435, 2) == 443.44)
     assert fe_removed_ppm * 1e-6 == pytest.approx(443.44e-6, rel=1e-3)
     assert n_hcl == pytest.approx(23.82137, rel=1e-5)
 
