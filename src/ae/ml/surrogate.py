@@ -179,7 +179,21 @@ class FoldResult:
     rmse: float
     mae: float
     bias: float
-    r2_global: float
+    #: 1 - MSE / Var_global, a variance-normalised skill score. This field was
+    #: named ``r2_global`` and was NOT an R2: the denominator was the global
+    #: variance times the fold size, not the fold's own sum of squares about
+    #: the global mean, so the two diverge whenever a fold's distance from the
+    #: global mean differs from the global spread. The sign misled, which is
+    #: what makes the naming a defect rather than a quibble: on a fold sitting
+    #: at the global mean that the model extrapolates badly onto, this score
+    #: read +0.0525 while :attr:`r2_vs_global_mean_predictor` was -8230.5515.
+    #: The skill score is still the quantity worth reporting, for the reason
+    #: given at its computation, so it is kept under an honest name.
+    skill_vs_global_variance: float
+    #: Coefficient of determination on this fold against a predictor that
+    #: always returns the global training mean. Negative means that naive
+    #: predictor beat the model on this fold.
+    r2_vs_global_mean_predictor: float
     baseline_mean_rmse: float
     baseline_ridge_rmse: float
 
@@ -340,11 +354,20 @@ def evaluate_surrogate(
         pred_ridge = np.asarray(ridge.predict(Xte), dtype=float)
         pred_mean = np.full(yte.shape, float(np.mean(ytr)))
 
-        # R2 against the GLOBAL mean, not the fold's own mean: a single-deposit
-        # fold has little internal spread, so fold-mean R2 measures that spread
-        # rather than the model.
+        # Normalise against the GLOBAL spread, not the fold's own: a
+        # single-deposit fold has little internal spread, so a fold-mean R2
+        # measures that spread rather than the model. denom / n_samples is the
+        # global variance, so this is 1 - MSE / Var_global, a skill score. It
+        # was previously called r2_global, which it is not.
         ss_res = float(np.sum((yte - pred) ** 2))
-        r2 = 1.0 - ss_res / (denom / data.n_samples * yte.size) if denom > 0 else float("nan")
+        skill = (1.0 - ss_res / (denom / data.n_samples * yte.size)
+                 if denom > 0 else float("nan"))
+        # The actual R2 on this fold against a global-mean predictor. Reported
+        # alongside because it can disagree with the skill score in SIGN, and a
+        # reader who sees a positive number assumes the model beat the naive
+        # predictor.
+        ss_tot_fold = float(np.sum((yte - global_mean) ** 2))
+        r2_fold = 1.0 - ss_res / ss_tot_fold if ss_tot_fold > 0 else float("nan")
 
         folds.append(FoldResult(
             deposit=str(np.unique(data.groups[test])[0]),
@@ -352,7 +375,8 @@ def evaluate_surrogate(
             rmse=float(np.sqrt(mean_squared_error(yte, pred))),
             mae=float(mean_absolute_error(yte, pred)),
             bias=float(np.mean(pred - yte)),
-            r2_global=float(r2),
+            skill_vs_global_variance=float(skill),
+            r2_vs_global_mean_predictor=float(r2_fold),
             baseline_mean_rmse=float(np.sqrt(mean_squared_error(yte, pred_mean))),
             baseline_ridge_rmse=float(np.sqrt(mean_squared_error(yte, pred_ridge))),
         ))

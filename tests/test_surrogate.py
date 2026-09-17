@@ -504,3 +504,76 @@ def test_permutation_importance_has_a_working_negative_control() -> None:
         "up noise"
     )
     assert imp["al_ppm"] > imp["li_ppm"] and imp["ti_ppm"] > imp["li_ppm"]
+
+
+def test_the_global_skill_score_is_not_an_r2_and_does_not_claim_to_be():
+    """The field named r2_global was not an R2, and its sign misled.
+
+    As committed, the quantity was
+
+        1 - ss_res / (denom / n_samples * n_test)
+
+    where denom is the total sum of squares about the GLOBAL mean over ALL
+    samples. Since denom / n_samples is the global variance, that expression is
+    algebraically 1 - MSE / Var_global, a variance-normalised skill score. It
+    is NOT the coefficient of determination against a global-mean predictor on
+    the held-out fold, which would need sum((y_test - global_mean)^2) in the
+    denominator, and the two differ whenever the fold's own distance from the
+    global mean differs from the global variance.
+
+    The difference is not cosmetic, because a reader takes a positive R2 to
+    mean the model beat the naive predictor. On the fixture below, deposit C
+    sits at the global mean and the model extrapolates badly onto it: the
+    committed field reports +0.0525, which reads as mild skill, while R2
+    against a global-mean predictor on that fold is -8230.5515. The naive
+    predictor was better by four orders of magnitude and the metric said the
+    model had skill.
+
+    The skill score is the RIGHT quantity to report here, for the reason the
+    source comment gives: a denominator taken from the fold would measure the
+    fold's internal spread rather than the model, and a single-deposit fold has
+    little internal spread. So the quantity is kept and the NAME is corrected,
+    with the per-fold R2 reported alongside so the divergence is visible rather
+    than hidden behind a familiar label.
+    """
+    rng = np.random.default_rng(3)
+    groups = np.array(["A"] * 10 + ["B"] * 10 + ["C"] * 10)
+    level = {"A": 0.0, "B": 100.0, "C": 50.0}
+    y = np.array([level[g] for g in groups]) + rng.normal(0, 0.5, 30)
+    # Deposit C's feature value lies about its target, so holding C out forces
+    # an extrapolation and the model misses it badly.
+    f1 = np.where(groups == "C", 90.0, y) + rng.normal(0, 0.1, 30)
+    X = np.column_stack([f1, rng.normal(0, 1, 30)])
+    ts = TrainingSet(X=X, y=y, groups=groups, feature_names=["f1", "f2"],
+                     target_name="t")
+
+    global_mean = float(np.mean(ts.y))
+    global_var = float(np.sum((ts.y - global_mean) ** 2)) / ts.n_samples
+    assert global_var == pytest.approx(1666.3320, abs=1e-3)
+
+    res = evaluate_surrogate(ts, kind="ridge", seed=0)
+    by_dep = {f.deposit: f for f in res.folds}
+
+    # The reported quantity is exactly 1 - MSE / Var_global, on every fold.
+    for f in res.folds:
+        assert f.skill_vs_global_variance == pytest.approx(
+            1.0 - f.rmse ** 2 / global_var, rel=1e-9), (
+            f"fold {f.deposit}: reported score is not 1 - MSE/Var_global"
+        )
+
+    # And the per-fold R2 is reported separately, because on deposit C the two
+    # disagree in sign and by four orders of magnitude.
+    c = by_dep["C"]
+    assert c.skill_vs_global_variance == pytest.approx(0.0525, abs=1e-4)
+    ss_res_c = c.rmse ** 2 * c.n_test
+    ss_tot_c = float(np.sum((y[groups == "C"] - global_mean) ** 2))
+    assert ss_tot_c == pytest.approx(1.9181, abs=1e-3)
+    assert 1.0 - ss_res_c / ss_tot_c == pytest.approx(-8230.5515, rel=1e-4)
+    assert c.r2_vs_global_mean_predictor == pytest.approx(-8230.5515, rel=1e-4)
+    assert c.skill_vs_global_variance > 0.0
+    assert c.r2_vs_global_mean_predictor < 0.0, (
+        "the fold where the naive global-mean predictor wins must report a "
+        "negative R2, whatever the skill score says"
+    )
+    # beats_mean uses the training-mean predictor and is a separate question.
+    assert not c.beats_mean

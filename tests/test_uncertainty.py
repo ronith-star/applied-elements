@@ -396,3 +396,90 @@ def test_tornado_orders_by_swing_and_reports_deltas():
     assert t["b"]["swing"] == pytest.approx(2.0)
     assert t["a"]["base"] == pytest.approx(6.0)
     assert t["a"]["low_delta"] == pytest.approx(-5.0)
+
+
+def test_sobol_additive_function_indices_sum_to_one():
+    """Second analytic validation of the Sobol estimator, beside Ishigami.
+
+    Y = 3 x1 + 2 x2 + x3 with xi ~ U(0,1) independent. Each Var_i = a_i^2 / 12,
+    so V = (9 + 4 + 1)/12 = 14/12 and S_i = a_i^2 / 14: 0.642857, 0.285714 and
+    0.071429. The function is purely additive, so every total index equals its
+    first index and both sets sum to exactly 1.
+
+    Recorded because I got the reference wrong first: I divided by 13 rather
+    than 14, printed 0.6923 as the analytic value for x1 and read the
+    estimator's correct 0.6429 as a 5 percentage point error. The numbers that
+    sum to 1 are the ones over 14, and the estimator was right.
+    """
+    a = np.array([3.0, 2.0, 1.0])
+    v_i = a ** 2 / 12.0
+    assert v_i.sum() == pytest.approx(14.0 / 12.0, rel=1e-12)
+    analytic = v_i / v_i.sum()
+    assert analytic.sum() == pytest.approx(1.0, abs=1e-12)
+    assert analytic[0] == pytest.approx(9.0 / 14.0, rel=1e-12)
+    assert analytic[0] == pytest.approx(0.642857, abs=1e-6)
+    assert analytic[1] == pytest.approx(0.285714, abs=1e-6)
+    assert analytic[2] == pytest.approx(0.071429, abs=1e-6)
+
+    def additive(x1, x2, x3):
+        return 3.0 * x1 + 2.0 * x2 + 1.0 * x3
+
+    inputs = [Uncertain("x1", 0.0, 1.0), Uncertain("x2", 0.0, 1.0),
+              Uncertain("x3", 0.0, 1.0)]
+    r = sobol_analysis(additive, inputs, n_base=4096, seed=1)
+    names = ["x1", "x2", "x3"]
+    first = np.array([r.first_order[k] for k in names])
+    total = np.array([r.total_order[k] for k in names])
+    assert np.max(np.abs(first - analytic)) < 1e-4
+    assert np.max(np.abs(total - analytic)) < 1e-4
+    # Purely additive: no interaction, so total equals first index by index.
+    for k in names:
+        assert r.total_order[k] == pytest.approx(r.first_order[k], abs=1e-4)
+    assert first.sum() == pytest.approx(1.0, abs=1e-3)
+    assert total.sum() == pytest.approx(1.0, abs=1e-3)
+    d = r.diagnostics()
+    assert d["sum_first_le_one"] and d["sum_total_ge_one"] and d["converged"]
+    assert d["first_exceeds_total"] == {}
+
+
+def test_sobol_g_function_indices_match_the_closed_form():
+    """Third analytic validation: the Sobol g-function, which has interactions.
+
+    g(x) = prod_i (|4 x_i - 2| + a_i) / (1 + a_i) on the unit cube. Each
+    V_i = 1 / (3 (1 + a_i)^2), the total variance is prod_i (1 + V_i) - 1, and
+    S_Ti = V_i / (1 + V_i) x prod_j (1 + V_j) / V. With
+    a = [0, 0.5, 3, 9, 99, 99] the first indices sum to LESS than 1 and the
+    totals to MORE, which is the regime the additive test above cannot reach:
+    it checks that the estimator gets the interaction budget right, not just
+    the additive decomposition.
+    """
+    a = np.array([0.0, 0.5, 3.0, 9.0, 99.0, 99.0])
+    v_i = 1.0 / (3.0 * (1.0 + a) ** 2)
+    v_total = float(np.prod(1.0 + v_i) - 1.0)
+    s_first = v_i / v_total
+    s_total = v_i / (1.0 + v_i) * np.prod(1.0 + v_i) / v_total
+    # Interactions are present, so the two sums bracket 1 from either side.
+    assert s_first.sum() < 1.0
+    assert s_total.sum() > 1.0
+    assert s_first.sum() == pytest.approx(0.8902, abs=1e-3)
+    assert s_total.sum() == pytest.approx(1.1119, abs=1e-3)
+
+    def g(**kw):
+        x = np.array([kw[f"x{i + 1}"] for i in range(a.size)])
+        return float(np.prod((np.abs(4.0 * x - 2.0) + a) / (1.0 + a)))
+
+    inputs = [Uncertain(f"x{i + 1}", 0.0, 1.0) for i in range(a.size)]
+    r = sobol_analysis(g, inputs, n_base=8192, seed=7)
+    names = [f"x{i + 1}" for i in range(a.size)]
+    first = np.array([r.first_order[k] for k in names])
+    total = np.array([r.total_order[k] for k in names])
+    assert np.max(np.abs(first - s_first)) < 0.005
+    assert np.max(np.abs(total - s_total)) < 0.005
+    # Per-index ordering constraints, not just the sums.
+    for k in names:
+        assert r.total_order[k] >= r.first_order[k] - 0.05
+    assert first.sum() <= 1.05
+    assert total.sum() >= 0.95
+    d = r.diagnostics()
+    assert d["converged"]
+    assert d["first_exceeds_total"] == {}
