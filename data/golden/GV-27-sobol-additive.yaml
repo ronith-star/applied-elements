@@ -144,17 +144,20 @@ tolerances:
   interaction_x2:
     abs: 0.01
     reason: >
-      Same basis as interaction_x1: (ST - S)/ST is a difference of two noisy
-      estimates divided by one of them. The amplification is milder here,
-      1/0.2857142857142857 = 3.5 rather than 14, so the propagated bound is
-      0.002192896448216075 and 0.01 has more margin than on x1.
+      The interaction share (ST - S)/ST is a DIFFERENCE of two noisy estimates
+      divided by one of them, so its error exceeds either index's. The
+      amplification on x2 is 1/0.2857142857142857 = 3.5, milder than the 14 on
+      x1, so with each index within 0.000313270921173725 of truth the propagated
+      bound is 0.002192896448216075. 0.01 admits that with more margin than on
+      x1.
   interaction_x3:
     abs: 0.01
     reason: >
-      Same basis as interaction_x1: (ST - S)/ST is a difference of two noisy
-      estimates divided by one of them. The amplification here is
-      1/0.6428571428571429 = 1.556, the mildest of the three, giving a
-      propagated bound of 0.0009746206436515889.
+      The interaction share (ST - S)/ST is a difference of two noisy estimates
+      divided by one of them. The amplification on x3 is 1/0.6428571428571429 =
+      1.556, the mildest of the three because x3 carries the largest index,
+      giving a propagated bound of 0.0009746206436515889. 0.01 admits that with
+      an order of margin.
   additive_fraction:
     abs: 0.005
     reason: >

@@ -68,10 +68,9 @@ tolerances:
   sio2_percent_from_floor:
     abs: 1.0e-12
     reason: >
-      Same basis as sio2_percent_from_product. A subtraction of 0.002423 from
-      100. This is the catastrophic-cancellation case in the vector: the result
-      keeps only about 11 significant digits of the small term, because 100 has
-      an exponent 5 orders above 0.002423. The absolute error is therefore about
-      1 ulp of 100, near 1.4e-14. 1e-12 admits that with two orders of margin,
-      which is why this tolerance is not set to 1e-15: at that level the check
-      would fail on a legitimate reordering of the subtraction.
+      A subtraction of 0.00786 from 100, the catastrophic-cancellation case in
+      this vector alongside sio2_percent_from_product. The result keeps only
+      about 11 significant digits of the small term, because 100 has an exponent
+      4 orders above 0.00786. The absolute error is therefore about 1 ulp of
+      100, near 1.4e-14, and 1e-12 admits it with two orders of margin. A 1e-15
+      tolerance here would fail, which is why it is not used.

@@ -71,17 +71,17 @@ tolerances:
   composition_1:
     abs: 1.0e-10
     reason: >
-      Same basis as composition_0. The normalisation divides by 0.947265625, and
-      64/97 is not exactly representable, so one rounding of about 1e-17 enters.
-      1e-10 admits it with seven orders of margin and is tighter than the last
-      digit quoted.
+      The normalisation divides by 0.947265625, and the exact value 24/97 is not
+      representable in binary, so one rounding of about 3e-17 enters. 1e-10
+      admits it with seven orders of margin and is tighter than the last digit
+      quoted.
   composition_2:
     abs: 1.0e-10
     reason: >
-      Same basis as composition_0. The normalisation divides by 0.947265625, and
-      64/97 is not exactly representable, so one rounding of about 1e-17 enters.
-      1e-10 admits it with seven orders of margin and is tighter than the last
-      digit quoted.
+      The normalisation divides by 0.947265625, and the exact value 9/97 is not
+      representable in binary, so one rounding of about 1e-17 enters. 1e-10
+      admits it with seven orders of margin and is tighter than the last digit
+      quoted.
   composition_sum:
     abs: 1.0e-12
     reason: >
@@ -98,8 +98,8 @@ tolerances:
   size_ratio_1:
     abs: 1.0e-12
     reason: >
-      Same basis as size_ratio_0. 490e-6/70e-6 in double precision. Neither
-      operand is exactly representable after the micron-to-metre conversion, so
-      the quotient may differ from 7 by about 1 ulp, near 1e-15. 1e-12 admits
-      that and is far tighter than the sevenfold threshold the ratio is compared
-      against.
+      70e-6/10e-6 in double precision, the second of the two successive ratios.
+      Neither operand is exactly representable after the micron-to-metre
+      conversion, so the quotient may differ from 7 by about 1 ulp, near 1e-15.
+      1e-12 admits that and is far tighter than the sevenfold threshold the
+      ratio is compared against.

@@ -125,12 +125,11 @@ tolerances:
   effective_capacity_leach:
     abs: 1.0e-06
     reason: >
-      Same basis as effective_capacity_kiln. Two multiplications at a magnitude
-      near 7e4, so the bound is a few ulp of 7e4, near 3e-11 t/yr. 1e-6 t/yr
-      (one gram per year) admits that with five orders of margin. A tonnage
-      tolerance of 1e-6 is far below any real measurement, which is intended:
-      the check is arithmetic, and the input uncertainty is carried in the
-      provenance block instead.
+      Two multiplications at a magnitude near 4.7e4, so the bound is a few ulp
+      of 4.7e4, near 2e-11 t/yr. 1e-6 t/yr (one gram per year) admits that with
+      five orders of margin. A tonnage tolerance of 1e-6 is far below any real
+      measurement, which is intended: the check is on the OEE arithmetic, not on
+      plant metering.
   product_capacity_kiln:
     abs: 1.0e-06
     reason: >

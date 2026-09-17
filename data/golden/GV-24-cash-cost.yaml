@@ -107,11 +107,11 @@ tolerances:
   line_HCl:
     abs: 1.0e-09
     reason: >
-      Same basis as line_electricity. One multiplication and one division by
-      0.65, which is not binary-exact, so 2 ulp near 7e-15 USD/t. 1e-9 USD/t
-      admits that with six orders of margin and is six orders below the cent, so
-      it tests the arithmetic and makes no claim about the accuracy of the
-      ASSUMED input price.
+      One multiplication (25 kg/t feed times 0.22 USD/kg) and one division by
+      the cascade yield 0.65, which is not binary-exact, so 2 ulp near 3e-15
+      USD/t. 1e-9 USD/t admits that with six orders of margin and is six orders
+      below the cent, so it tests the arithmetic and makes no claim about the
+      accuracy of the ASSUMED reagent price, which is NOT SOURCED.
   line_labour:
     abs: 1.0e-09
     reason: >
@@ -120,8 +120,9 @@ tolerances:
   line_maintenance:
     abs: 1.0e-09
     reason: >
-      Same basis as line_labour. One division of exact integers, 2400000/8000 =
-      300 exactly in IEEE 754. 1e-9 guards only against a different route.
+      One division of exact integers, 800000/8000 = 100 exactly in IEEE 754,
+      since both operands and the quotient are representable. 1e-9 guards only
+      against a different route to the same number.
   line_freight:
     abs: 0.0
     reason: >

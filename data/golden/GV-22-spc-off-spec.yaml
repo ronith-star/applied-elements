@@ -113,15 +113,12 @@ tolerances:
   ci_high:
     abs: 1.0e-08
     reason: >
-      Same basis as ci_low. The chain runs Cpk -> Cpk^2 -> Var -> sqrt -> times
-      the normal quantile -> subtract. The normal quantile is the least accurate
-      step: it is computed by a rational approximation or an iterative inverse-
-      erf, whose accuracy is typically 1e-15 relative rather than 1 ulp.
-      Propagating 1e-15 relative through a 0.8017 half width gives 8e-16
-      absolute. 1e-8 admits that with seven orders of margin and covers a
-      slightly different quantile implementation (scipy against a bisection on
-      erf), which is the practical reason this tolerance is two orders looser
-      than cpk's.
+      The chain runs Cpk -> Cpk^2 -> Var -> sqrt -> times the normal quantile ->
+      ADD, the upper end of the interval. The normal quantile is the least
+      accurate step: it is computed by a rational approximation or an iterative
+      inverse erf, whose accuracy is typically 1e-15 relative rather than 1 ulp.
+      Propagating that through a magnitude of 2.14 gives about 2e-15, and 1e-9
+      admits it with six orders of margin.
   off_spec_normal:
     rel: 1.0e-09
     reason: >

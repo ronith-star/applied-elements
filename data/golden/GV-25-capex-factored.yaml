@@ -123,9 +123,12 @@ tolerances:
   total_installed:
     abs: 0.01
     reason: >
-      As total_purchased. The measured value 12477499.999999998 differs from the
-      exact 12477500 by 1.9e-9 USD, which one cent admits with seven orders of
-      margin.
+      A currency tolerance of one cent. The MEASURED value 12477499.999999998
+      differs from the exact 12477500 by 1.9e-9 USD, arising from the escalation
+      index ratio 826/708 and the 1.15 location factor, neither exactly
+      representable. One cent admits that with seven orders of margin while
+      sitting far below the AACE Class 5 accuracy band, which spans minus 50 to
+      plus 100 percent of this figure.
   indirect_cost:
     abs: 0.01
     reason: >

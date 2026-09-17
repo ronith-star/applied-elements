@@ -75,21 +75,21 @@ tolerances:
   conc_fluid_ppm:
     abs: 1.0e-09
     reason: >
-      Same basis as conc_surface_ppm. One multiplication of exact decimals that
-      are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it
+      One multiplication, 120 ppm times the fluid-inclusion partition 0.05,
+      which is not binary-exact, so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it
       with six orders of margin and is far below any assay resolution.
   conc_mineral_ppm:
     abs: 1.0e-09
     reason: >
-      Same basis as conc_surface_ppm. One multiplication of exact decimals that
-      are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it
+      One multiplication, 120 ppm times the mineral-inclusion partition 0.35,
+      which is not binary-exact, so 1 ulp near 7e-15 ppm. 1e-9 ppm admits it
       with six orders of margin and is far below any assay resolution.
   conc_lattice_ppm:
     abs: 1.0e-09
     reason: >
-      Same basis as conc_surface_ppm. One multiplication of exact decimals that
-      are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it
-      with six orders of margin and is far below any assay resolution.
+      One multiplication, 120 ppm times the lattice partition 0.50, which IS
+      binary-exact, so the product 60.0 is exact. 1e-9 ppm guards only against a
+      different route to the same number and is far below any assay resolution.
   conc_sum_ppm:
     abs: 1.0e-09
     reason: >

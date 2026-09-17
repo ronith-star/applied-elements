@@ -186,21 +186,21 @@ tolerances:
   rmse_B:
     abs: 1.0e-06
     reason: >
-      Same basis as rmse_A. A REGRESSION pin on a fitted model. The gbm is
-      deterministic at a fixed seed, so it reproduces exactly on the same
-      scikit- learn version, but a version change can alter the histogram
-      binning in the last bits. 1e-6 admits that while still detecting any real
-      change in fit. It is looser than the hand-derived baselines in the same
-      file precisely because its provenance is weaker, and the file says so.
+      A REGRESSION pin on a fitted model, here the easy fold whose RMSE is
+      exactly 1.0. The gbm is deterministic at a fixed seed, so it reproduces
+      exactly on the same scikit-learn version, but a version change can alter
+      the tree-building in the last bits. 1e-6 admits that while still detecting
+      any real change in fit, and is looser than the hand-derived baseline in
+      this file precisely because its provenance is weaker.
   rmse_C:
     abs: 1.0e-06
     reason: >
-      Same basis as rmse_A. A REGRESSION pin on a fitted model. The gbm is
-      deterministic at a fixed seed, so it reproduces exactly on the same
-      scikit- learn version, but a version change can alter the histogram
-      binning in the last bits. 1e-6 admits that while still detecting any real
-      change in fit. It is looser than the hand-derived baselines in the same
-      file precisely because its provenance is weaker, and the file says so.
+      A REGRESSION pin on a fitted model, fold C, whose value coincides with the
+      hand-derived mean baseline sqrt(226) because the ensemble has no skill on
+      this fixture. The gbm is deterministic at a fixed seed but a scikit-learn
+      version change can alter the tree-building in the last bits, so 1e-6
+      admits that. Looser than baseline_mean_rmse_C, which carries the same
+      number by hand derivation, because this one's provenance is the code.
   baseline_ridge_rmse_A:
     rel: 1.0e-06
     reason: >
@@ -213,18 +213,17 @@ tolerances:
   baseline_ridge_rmse_B:
     rel: 1.0e-06
     reason: >
-      Same basis as baseline_ridge_rmse_A. A RELATIVE tolerance on a regression
-      pin, because the value is 2.3e-3 and a 1e-6 absolute tolerance would be a
-      0.04 percent band that a RidgeCV alpha-grid change could break, while an
-      absolute tolerance scaled to the other outputs would pass anything. The
-      alpha is selected by internal cross-validation over a 25-point grid, so
-      this value is the least portable in the suite and is pinned relatively.
+      A RELATIVE tolerance on a regression pin, because the value is 1.7e-3 and
+      a 1e-6 absolute tolerance would be a 0.06 percent band that a RidgeCV
+      alpha-grid change could break, while an absolute tolerance scaled to the
+      other outputs in this file would pass anything. The alpha is selected by
+      internal cross-validation over a 25-point grid, so this value is among the
+      least portable in the suite and is pinned relatively.
   baseline_ridge_rmse_C:
     rel: 1.0e-06
     reason: >
-      Same basis as baseline_ridge_rmse_A. A RELATIVE tolerance on a regression
-      pin, because the value is 2.3e-3 and a 1e-6 absolute tolerance would be a
-      0.04 percent band that a RidgeCV alpha-grid change could break, while an
-      absolute tolerance scaled to the other outputs would pass anything. The
-      alpha is selected by internal cross-validation over a 25-point grid, so
-      this value is the least portable in the suite and is pinned relatively.
+      A RELATIVE tolerance on a regression pin, because the value is 2.3e-3
+      (fold C mirrors fold A) and a 1e-6 absolute tolerance would be a 0.04
+      percent band that a RidgeCV alpha-grid change could break. The alpha is
+      selected by internal cross-validation over a 25-point grid, so this value
+      is among the least portable in the suite and is pinned relatively.

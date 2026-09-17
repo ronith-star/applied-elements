@@ -112,9 +112,11 @@ tolerances:
   element_closure:
     abs: 1.0e-10
     reason: >
-      As closure_error, set by the 1e-10 solver tolerance. The element balance
-      is enforced by construction inside each unit (the reject composition is
-      the residual), so the only error is the unconverged part of the recycle.
+      A SOLVER tolerance set by the flowsheet's own 1e-10 convergence criterion,
+      not a floating point bound. The element balance is enforced by
+      construction inside each unit (the reject composition is the residual), so
+      the only error is the unconverged part of the recycle. An exactly zero
+      tolerance would demand more of the solver than the solver promises.
   recycle_kg_s:
     abs: 1.0e-09
     reason: >
@@ -130,18 +132,23 @@ tolerances:
   rougher_product_kg_s:
     abs: 1.0e-09
     reason: >
-      Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the
-      recycle's 1e-10 convergence error.
+      The rougher product is its feed times the mass yield, so it inherits the
+      recycle's 1e-10 convergence error through the feed. A SOLVER tolerance,
+      not a floating point one: the flowsheet iterates to 1e-10 and no output
+      downstream of the recycle can be tighter than the criterion that produced
+      it.
   cleaner_product_kg_s:
     abs: 1.0e-09
     reason: >
-      Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the
-      recycle's 1e-10 convergence error.
+      The cleaner product is the rougher product times the cleaner mass yield,
+      two stages downstream of the recycle, so it inherits the same 1e-10 solver
+      convergence error. Not a floating point tolerance.
   rougher_reject_kg_s:
     abs: 1.0e-09
     reason: >
-      Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the
-      recycle's 1e-10 convergence error.
+      The rougher reject is its feed times one minus the mass yield, so it
+      inherits the recycle's 1e-10 convergence error through the feed. A solver
+      tolerance, matching the flowsheet's own stopping criterion.
   rougher_feed_ppm:
     abs: 1.0e-06
     reason: >
@@ -153,33 +160,35 @@ tolerances:
   rougher_product_ppm:
     abs: 1.0e-06
     reason: >
-      Same basis as rougher_feed_ppm. A concentration in ppm, so the same
-      relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm.
-      1e-6 ppm admits that with three orders of margin and is still six orders
-      below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves
-      perhaps 1 ppm), so the tolerance tests the solver and not the instrument.
+      A concentration in ppm, so the same 1e-12 relative convergence error
+      becomes 5e-10 absolute at 500 ppm. 1e-6 ppm admits that with three orders
+      of margin and is still far below any real assay resolution (ICP-MS on a
+      500 ppm Fe stream resolves perhaps 1 ppm), which is intended: the check is
+      on the balance arithmetic, not on measurability.
   cleaner_product_ppm:
     abs: 1.0e-06
     reason: >
-      As rougher_feed_ppm. This output is 1000/3 ppm, which is not exactly
-      representable, so it also carries one rounding near 6e-14 ppm. The
-      convergence term dominates.
+      A concentration in ppm carrying the solver's 1e-12 relative convergence
+      error, which at 333.33 ppm is 3e-10 absolute. This output is 1000/3 ppm,
+      which is not exactly representable, so it also carries one rounding near
+      6e-14 ppm; the convergence term dominates. 1e-6 ppm admits both with three
+      orders of margin and remains far below any real assay resolution.
   rougher_reject_ppm:
     abs: 1.0e-06
     reason: >
-      Same basis as rougher_feed_ppm. A concentration in ppm, so the same
-      relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm.
-      1e-6 ppm admits that with three orders of margin and is still six orders
-      below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves
-      perhaps 1 ppm), so the tolerance tests the solver and not the instrument.
+      A concentration in ppm, so the same 1e-12 relative convergence error
+      becomes 3e-9 absolute at 3000 ppm, the highest concentration in the
+      vector. 1e-6 ppm admits that with two orders of margin and remains far
+      below any real assay resolution.
   recycle_ppm:
     abs: 1.0e-06
     reason: >
-      Same basis as rougher_feed_ppm. A concentration in ppm, so the same
-      relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm.
-      1e-6 ppm admits that with three orders of margin and is still six orders
-      below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves
-      perhaps 1 ppm), so the tolerance tests the solver and not the instrument.
+      A concentration in ppm, so the same 1e-12 relative convergence error
+      becomes 1e-9 absolute at 1000 ppm. 1e-6 ppm admits that with three orders
+      of margin. This output returning exactly the feed grade is a coincidence
+      of equal solids and element loop gains in this fixture, noted in the
+      arithmetic block, so the tolerance must not be so tight that the
+      coincidence reads as an identity.
   max_feasible_feed_fraction_rougher:
     abs: 1.0e-12
     reason: >
@@ -190,7 +199,8 @@ tolerances:
   max_feasible_feed_fraction_cleaner:
     abs: 1.0e-12
     reason: >
-      Same basis as max_feasible_feed_fraction_rougher. A closed-form ratio (1 -
-      y)/r computed once, not iterated, so the bound is one division, 1 ulp near
-      6e-17. 1e-12 admits it. Tighter than the other outputs in this vector
-      precisely because this one does not pass through the solver.
+      A closed-form ratio (1 - y)/r for the cleaner stage, computed once and not
+      iterated, so the bound is one division, 1 ulp near 6e-17 on a value of
+      0.5. 1e-12 admits it. Tighter than the flow and concentration outputs in
+      this vector precisely because this one does not pass through the solver,
+      so it inherits no convergence error.

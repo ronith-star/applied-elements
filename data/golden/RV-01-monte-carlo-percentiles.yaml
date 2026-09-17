@@ -106,42 +106,38 @@ tolerances:
   p10:
     abs: 1.0e-09
     reason: >
-      As mean: a fixed seed makes this exact, so the tolerance is floating point
-      and the value is a bit-stream pin. It is emphatically NOT a statement that
-      the tenth percentile of U(100,200) is known to 1e-9; that quantity is 110
-      and this sample estimates it to 0.21.
+      A REGRESSION tolerance at the floating point level, not a statistical one.
+      The seed fixes the sample, so this percentile is a deterministic function
+      of the bit stream and of numpy's percentile interpolation convention, and
+      reproduces to full precision on the same numpy version; 1e-9 admits
+      platform differences in the interpolation arithmetic. It is emphatically
+      NOT a statement that the tenth percentile of U(100,200) is known to 1e-9:
+      that quantity is 110.0 and this sample estimates it to 0.21, which is 1.57
+      of the 0.1341640786 order-statistic standard error recorded in
+      analytic_reference.
   p50:
     abs: 1.0e-09
     reason: >
-      Same basis as p10. Same basis as mean. A REGRESSION tolerance at the
-      floating point level, not a statistical one. The seed fixes the sample
-      exactly, so the mean of that sample is a deterministic function of the bit
-      stream and reproduces to full precision on the same numpy version. 1e-9
-      admits summation-order differences across platforms. The statistical
-      question (is 150.0676 close to 150?) is answered by the analytic_reference
-      block: the standard error of the mean here is (100/sqrt(12))/sqrt(50000) =
-      0.1290994448735806, and the measured mean sits 0.0676 from 150, which is
-      0.52 of that. This tolerance says nothing about that question.
-      Additionally for this output: : a fixed seed makes this exact, so the
-      tolerance is floating point and the value is a bit-stream pin. It is
-      emphatically NOT a statement that the tenth percentile of U(100,200) is
-      known to 1e-9; that quantity is 110 and this sample estimates it to 0.21.
+      A REGRESSION tolerance at the floating point level, not a statistical one.
+      The seed fixes the sample exactly, so the median of that sample is a
+      deterministic function of the bit stream and of numpy's percentile
+      interpolation convention, and reproduces to full precision on the same
+      numpy version. 1e-9 admits platform differences in the interpolation
+      arithmetic. It is emphatically NOT a statement that the median of
+      U(100,200) is known to 1e-9: that quantity is 150.0 and this sample
+      estimates it to 0.057, which is 0.25 of the 0.2236067977 order-statistic
+      standard error recorded in analytic_reference.
   p90:
     abs: 1.0e-09
     reason: >
-      Same basis as p10. Same basis as mean. A REGRESSION tolerance at the
-      floating point level, not a statistical one. The seed fixes the sample
-      exactly, so the mean of that sample is a deterministic function of the bit
-      stream and reproduces to full precision on the same numpy version. 1e-9
-      admits summation-order differences across platforms. The statistical
-      question (is 150.0676 close to 150?) is answered by the analytic_reference
-      block: the standard error of the mean here is (100/sqrt(12))/sqrt(50000) =
-      0.1290994448735806, and the measured mean sits 0.0676 from 150, which is
-      0.52 of that. This tolerance says nothing about that question.
-      Additionally for this output: : a fixed seed makes this exact, so the
-      tolerance is floating point and the value is a bit-stream pin. It is
-      emphatically NOT a statement that the tenth percentile of U(100,200) is
-      known to 1e-9; that quantity is 110 and this sample estimates it to 0.21.
+      A REGRESSION tolerance at the floating point level, not a statistical one.
+      The seed fixes the sample, so this percentile is a deterministic function
+      of the bit stream and reproduces to full precision; 1e-9 admits platform
+      differences in the interpolation arithmetic. It is NOT a statement that
+      the ninetieth percentile of U(100,200) is known to 1e-9: that quantity is
+      190.0 and this sample estimates it to 0.21, which is 1.56 of the
+      0.1341640786 order-statistic standard error recorded in
+      analytic_reference.
   bootstrap_se_p10:
     abs: 1.0e-09
     reason: >
@@ -153,9 +149,10 @@ tolerances:
   bootstrap_se_p50:
     abs: 1.0e-09
     reason: >
-      Same basis as bootstrap_se_p10. Also seeded (the bootstrap resampling uses
-      the same seed argument), so it reproduces exactly. The interesting
-      comparison, against the analytic 0.1342, is checked by the test with a 10
-      percent relative band rather than by this tolerance, because the bootstrap
-      is a consistent but not exact estimator of the asymptotic standard error
-      at n_boot = 400.
+      Also seeded (the bootstrap resampling uses the same seed argument), so it
+      reproduces exactly and 1e-9 is a bit-stream pin. The interesting
+      comparison is against the analytic order-statistic standard error at the
+      median, 0.2236067977, which the test checks with a 6 percent relative band
+      (the measured ratio is 1.058) rather than by this tolerance, because a
+      400-resample bootstrap is a consistent but not exact estimator of the
+      asymptotic standard error.

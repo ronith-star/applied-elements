@@ -51,7 +51,7 @@ produced the number, and is never tighter than that criterion.
 
 ## What the loader enforces
 
-`tests/golden/test_golden_vectors.py` loads every file and checks five structural
+`tests/golden/test_golden_vectors.py` loads every file and checks seven structural
 properties, each with its own test and each verified by control (the defect was
 injected, the guard confirmed to fire, the defect removed, the guard confirmed to
 pass):
@@ -63,9 +63,15 @@ pass):
    either an absolute or a relative bound but never both, and every reason must
    be substantive.
 3. Every tolerance bound must parse as a number rather than as a string.
-4. Every file must declare its kind, and a regression file must state why its
+4. No tolerance reason may defer to another output. A reason of the form
+   "As <other key>" is rejected, because a reason the reader must follow to a
+   second row is not a reason.
+5. Two outputs may share a reason verbatim only when their expected values are
+   identical. A reason names a magnitude, so shared wording across different
+   magnitudes means it is wrong for one of them.
+6. Every file must declare its kind, and a regression file must state why its
    values could only come from the code.
-5. A golden file must declare `derivation: independent`. A file whose expected
+7. A golden file must declare `derivation: independent`. A file whose expected
    values came from running the code cannot be golden, whatever it is called.
 
 `tests/golden/checks.py` holds the dispatch layer. Two rules govern it: no
@@ -111,11 +117,11 @@ twice.
 
 ## Control results
 
-Eleven defects were injected into the loader one at a time, each confirmed to be
-reported, then removed and confirmed to pass. The script is
+Thirteen defects were injected into the loader one at a time, each confirmed to
+be reported, then removed and confirmed to pass. The script is
 `tests/golden/control.py`, runnable from the repository root. Measured output:
-eleven defects injected, eleven reported, then fourteen clean checks with zero
-failures.
+thirteen defects injected, thirteen reported, then nineteen clean checks with
+zero failures.
 
 | defect injected | guard that reported it |
 | --- | --- |
@@ -130,16 +136,45 @@ failures.
 | tolerance giving both `abs` and `rel` | `_tolerance_of` |
 | vector naming the wrong bottleneck (missing-key path) | `test_vector_outputs_match_expected` |
 | suite shape assertion against a one-vector suite | `test_the_suite_has_the_declared_shape` |
+| tolerance reason of the form "As \<other key\>" | `test_no_tolerance_reason_defers_to_another_output` |
+| two differing outputs sharing a verbatim reason | `test_no_two_outputs_in_a_file_share_a_verbatim_reason_unless_identical` |
 
 The count is reported rather than a pass or fail verdict because a control whose
-partial failure looks like success is worse than no control: had nine of eleven
-been caught, printing only the first result would have read as success.
+partial failure looks like success is worse than no control: had eleven of
+thirteen been caught, printing only the first result would have read as success.
+
+The last two rows were added after a reviewer found the defect they guard
+against in the committed files. Both were then run against the committed
+version of `RV-01-monte-carlo-percentiles.yaml` retrieved from git, and both
+fire on it: the deferral guard names `p10`, `p50`, `p90` and
+`bootstrap_se_p50`, and the duplicate guard names `p50` and `p90` at values
+150.0565756103 and 189.7903414569. A guard added after the fact is worth
+nothing until it is shown to catch the original.
 
 ## Defects this suite found in its own construction
 
 Recorded because being right is not the same as having checked.
 
-1. Every tolerance bound was written with `repr()`, which emits an exponent form
+1. Sixty-one tolerance reasons were first written as bare cross-references of
+   the form "As <other key>", and a script then expanded them mechanically by
+   prepending the referenced output's text. The expansion produced reasons that
+   describe the WRONG output. In RV-01, `p50` and `p90` acquired the sentence
+   about the sample mean, and `bootstrap_se_p50` acquired the p10 standard
+   error 0.1342 while its own `analytic_reference` gives 0.2236, so the file
+   contradicted itself. In RV-02, `baseline_ridge_rmse_B` said "the value is
+   2.3e-3" against its own expected 0.0017341949999050144. Thirty-seven
+   reasons were affected. A reviewer found this in the committed files; it was
+   not found by the suite, because no test read the reasons for meaning. Every
+   affected reason was rewritten by hand against its own expected value and
+   magnitude, and two guards were added: one rejecting the cross-reference form
+   outright, one rejecting a verbatim reason shared across outputs with
+   different expected values. Both were then run against the committed file
+   retrieved from git and confirmed to fire on it. The tolerance BOUNDS were
+   never affected, so no conclusion in this suite changed, but an annotation
+   that misdescribes its own output is exactly the defect this document exists
+   to prevent, and an automatic expansion of a cross-reference is worse than
+   the cross-reference it replaced.
+2. Every tolerance bound was written with `repr()`, which emits an exponent form
    with no decimal point in the mantissa, and PyYAML's float resolver requires
    one. All 174 exponent-form bounds therefore parsed as strings rather than
    floats. A `float()` coercion inside the loader's tolerance helper made every
@@ -148,13 +183,13 @@ Recorded because being right is not the same as having checked.
    rewritten in the form 1.0e-9, and two tests added: one asserting the type per
    vector, one pinning the count at 174 of 224. This is the worst defect found,
    because the masking mechanism was a convenience coercion that looked harmless.
-2. `sobol_additive` in the dispatch layer tested `not diagnostics()` as its pass
+3. `sobol_additive` in the dispatch layer tested `not diagnostics()` as its pass
    condition. `diagnostics()` returns a mapping of named flags and is never
    empty, so the expression was always false and every Sobol run was reported as
    failing its own diagnostics. The pass condition is now the conjunction of the
    two sum checks, the absence of materially negative indices, the absence of a
    first-order index exceeding its total, and the converged flag.
-3. GV-14 asserted a Trouton enthalpy of 34816.0 J/mol for TiCl4. TiCl4 carries a
+4. GV-14 asserted a Trouton enthalpy of 34816.0 J/mol for TiCl4. TiCl4 carries a
    MEASURED PubChem heat of vaporization of 36.2 kJ/mol in the module, so the
    Trouton estimate is not used for it and the predicted pressure is
    78509.86077995766 Pa rather than 79279.34025051698 Pa, a 1.0 percent
@@ -162,26 +197,26 @@ Recorded because being right is not the same as having checked.
    `transition_enthalpy` and a second output, `enthalpy_is_trouton`, added so the
    file records which basis is in use per species. Calling a measurement an
    estimate is the kind of error a provenance tag exists to prevent.
-4. GV-27 asserted a worst Sobol index deviation of 0.000313 against seed 0. That
+5. GV-27 asserted a worst Sobol index deviation of 0.000313 against seed 0. That
    figure is the worst across seeds 0 to 4 and belongs to seed 4; seed 0's own
    worst deviation is 1.8216682789187755e-05. Both are now measured and asserted
    separately.
-5. Twelve vectors carried expected values rounded to ten significant digits while
+6. Twelve vectors carried expected values rounded to ten significant digits while
    their tolerances sat at the floating point floor of 1e-12, so the rounding of
    the literal exceeded the tolerance by one to two orders. The expected values
    now carry full double precision. This is the failure mode where a tolerance
    chosen on analysis collides with a literal written for readability, and the
    right fix is the literal, not the tolerance.
-6. Sixty-one tolerance reasons were written as bare cross-references of the form
-   "As <other key>", which are not self-contained and fell below the loader's own
-   substance floor. They were expanded so each reason stands alone.
-7. `_leach_system` built its fixture `Feedstock` with `characterized=True`, which
+7. Sixty-one tolerance reasons fell below the loader's own substance floor of
+   forty characters. They were expanded, which is what introduced defect 1
+   above.
+8. `_leach_system` built its fixture `Feedstock` with `characterized=True`, which
    the model rejects because a one-element profile sits at tier `screened` while
    the flag requires tier `located`. The flag is now False, which is also the
    honest value: the fixture carries no real measurement.
-8. `g_of_conversion` returns a one-element ndarray for a scalar argument, so
+9. `g_of_conversion` returns a one-element ndarray for a scalar argument, so
    `float(np.asarray(...))` raised. Fixed with `.ravel()[0]`.
-9. Five dispatch calls were written against signatures that do not exist:
+10. Five dispatch calls were written against signatures that do not exist:
    `removable_ppm` takes no `efficiencies`, `krieger_dougherty_relative_viscosity`
    takes a provenance `Value` and not a float, `volume_to_mass_fraction` names its
    first parameter `phi`, `Flowsheet` has `connect` and not `link`, and
@@ -356,11 +391,11 @@ Geometric surface area: S = 6/(rho * d32 * psi), psi = 1
 | output | expected | tolerance | reason the tolerance is what it is |
 | --- | --- | --- | --- |
 | `d10_um` | 18.9373581848 | abs 1e-06 | Floating point plus one fractional power. The quantile is a closed form, so the only error is IEEE 754 rounding through log and pow, about 1e-15 relative, which is 2e-14 um here. 1e-6 um is eight orders looser than that bound and still eight orders tighter than any plausible formula error (dropping the 1/n exponent moves d10 by 26 um), so it separates the two cleanly. The looser 1e-6 rather than 1e-9 is used because pow with a non- dyadic exponent is permitted a slightly larger error than a single arithmetic operation. |
-| `d50_um` | 39.0833279866 | abs 1e-06 | Same basis as d10_um. Floating point plus one fractional power. The quantile is a closed form, so the only error is IEEE 754 rounding through log and pow, about 1e-15 relative, which is 2e-14 um here. 1e-6 um is eight orders looser than that bound and still eight orders tighter than any plausible formula error (dropping the 1/n exponent moves d10 by 26 um), so it separates the two cleanly. The looser 1e-6 rather than 1e-9 is used because pow with a non-dyadic exponent is permitted a slightly larger error than a single arithmetic operation. |
-| `d90_um` | 62.0192114709 | abs 1e-06 | Same basis as d10_um. Floating point plus one fractional power. The quantile is a closed form, so the only error is IEEE 754 rounding through log and pow, about 1e-15 relative, which is 2e-14 um here. 1e-6 um is eight orders looser than that bound and still eight orders tighter than any plausible formula error (dropping the 1/n exponent moves d10 by 26 um), so it separates the two cleanly. The looser 1e-6 rather than 1e-9 is used because pow with a non-dyadic exponent is permitted a slightly larger error than a single arithmetic operation. |
+| `d50_um` | 39.0833279866 | abs 1e-06 | Floating point plus one fractional power, the same chain as d10_um. The quantile is a closed form, so the only error is IEEE 754 rounding through log and pow, about 1e-15 relative, which at 39.08 um is 4e-14 um. 1e-6 um is eight orders looser than that bound and still far tighter than any plausible sizing measurement. |
+| `d90_um` | 62.0192114709 | abs 1e-06 | Floating point plus one fractional power, the same chain as d10_um. At 62.02 um the 1e-15 relative rounding bound is 6e-14 um. 1e-6 um admits that with eight orders of margin. The upper quantile is the most sensitive of the three to a wrong exponent, since 1/n enters the power. |
 | `span` | 1.1023076976 | abs 1e-09 | A ratio of differences of three quantities each accurate to about 1e-14 um at a magnitude near 40 um, so the propagated absolute error in the dimensionless span is near 1e-15. 1e-9 admits that with six orders of margin. |
 | `sauter_d32_um` | 30.9293658255 | abs 1e-06 | One Gamma function evaluation. Gamma is implemented by a series or by the Lanczos approximation, which is accurate to roughly 1e-15 relative but not to the last bit, so this quantity carries slightly more error than a plain arithmetic chain. At 31 um an error of 1e-15 relative is 3e-14 um; 1e-6 um admits that and still catches a wrong exponent sign, which would give 40 um. |
-| `volume_weighted_mean_um` | 39.969469563 | abs 1e-06 | Same basis as sauter_d32_um. One Gamma function evaluation. Gamma is implemented by a series or by the Lanczos approximation, which is accurate to roughly 1e-15 relative but not to the last bit, so this quantity carries slightly more error than a plain arithmetic chain. At 31 um an error of 1e-15 relative is 3e-14 um; 1e-6 um admits that and still catches a wrong exponent sign, which would give 40 um. |
+| `volume_weighted_mean_um` | 39.969469563 | abs 1e-06 | One Gamma function evaluation, as for sauter_d32_um, here of Gamma(1 + 1/n) rather than Gamma(1 - 1/n). Gamma is implemented by a series or by the Lanczos approximation, accurate to roughly 1e-15 relative but not to the last bit, so this carries slightly more error than a plain arithmetic chain. At 39.97 um an error of 1e-15 relative is 4e-14 um, and 1e-6 um admits it with eight orders of margin. |
 | `specific_surface_area_m2_per_kg` | 73.2039239398 | abs 1e-06 | One division of the Gamma-derived d32 into a constant. Absolute error inherits d32's relative error, so at 73 m^2/kg it is near 1e-13. 1e-6 is seven orders looser and still catches a factor-of-6 or sphericity error. |
 | `cumulative_undersize_at_d_prime` | 0.6321205588285577 | abs 1e-12 | One exponential of exactly -1, so the only error is the rounding of exp(-1), bounded at 1 ulp near 1e-16. 1e-12 admits that with four orders of margin. This output is the sharpest check in the vector because 1 - exp(-1) is the definition of d': if the module scaled d' the value moves visibly. |
 
@@ -422,8 +457,8 @@ The span is independent of d_gn, which is the structural fact this output checks
 | `s` | 0.5877866649021191 | abs 1e-12 | One natural logarithm of 1.8, accurate to 1 ulp near 1e-16. 1e-12 admits that with four orders of margin and is far tighter than any change in the sigma_g convention, which would move s by order 0.1. |
 | `number_median_um` | 8.0 | abs 1e-12 | The count median is the stored input multiplied by exp(0), so the only error is one multiplication by exactly 1.0, which in IEEE 754 is exact. A non-zero deviation here would mean the weighting exponent is wrong, so the tightest tolerance in the vector belongs on this output. |
 | `area_median_um` | 15.9654636684 | abs 1e-08 | Two floating point operations (one exp, one multiply) at a magnitude near 16 um, so the bound is near 2e-15 um. 1e-8 admits it with seven orders of margin and still separates the three medians, which differ by 6 um. |
-| `volume_median_um` | 22.5541939242 | abs 1e-08 | Same basis as area_median_um. Two floating point operations (one exp, one multiply) at a magnitude near 16 um, so the bound is near 2e-15 um. 1e-8 admits it with seven orders of margin and still separates the three medians, which differ by 6 um. |
-| `sauter_d32_um` | 18.9759891354 | abs 1e-08 | Same basis as area_median_um. Two floating point operations (one exp, one multiply) at a magnitude near 16 um, so the bound is near 2e-15 um. 1e-8 admits it with seven orders of margin and still separates the three medians, which differ by 6 um. |
+| `volume_median_um` | 22.5541939242 | abs 1e-08 | Two floating point operations (one exp, one multiply), the same chain as area_median_um but with the exponent 3 s^2 rather than 2 s^2. At 22.55 um the bound is near 4e-15 um. 1e-8 admits it with six orders of margin and still separates the three medians, which differ by 6 um. |
+| `sauter_d32_um` | 18.9759891354 | abs 1e-08 | Two floating point operations (one exp, one multiply), the same chain as area_median_um but with the exponent 2.5 s^2. At 18.98 um the bound is near 3e-15 um. 1e-8 admits it with six orders of margin. The exponent is the whole content of this check: 2, 2.5 and 3 give three different diameters from one distribution, and confusing them is the classic PSD error. |
 | `specific_surface_area_m2_per_kg` | 119.3166230882 | abs 1e-06 | One division into the exp-derived d32, so the relative error is d32's, near 1e-15, which at 119 m^2/kg is 1e-13 absolute. 1e-6 is seven orders looser and still catches a wrong moment (using the volume median instead of d32 would give 99 m^2/kg). |
 | `volume_span` | 1.6531326475 | abs 1e-09 | A difference of two exponentials, each accurate to 1 ulp, at magnitudes near 2 and 0.5, so the absolute bound is near 5e-16. 1e-9 admits it with six orders of margin. Reported to nine places because the value must not depend on d_gn, and a d_gn-dependent implementation would fail by a large margin. |
 
@@ -483,11 +518,11 @@ Size ratios: 490/70 = 7, 70/10 = 7.
 | `phi_monomodal` | 0.625 | abs 0.0 | A constant passed through from the module default. Exactly representable in binary (0.625 = 5/8) and subjected to no arithmetic, so equality is the correct test and any non-zero tolerance would be a fudge factor. |
 | `phi_max` | 0.947265625 | abs 0.0 | 0.625 and 0.375 are both exactly representable in binary (5/8 and 3/8), and 0.375^3 = 27/512 is exact in double precision, as is the subtraction from 1. The whole chain is therefore exact and the tolerance is zero. Choosing a non-zero tolerance here would be a fudge factor: there is no error to admit. |
 | `composition_0` | 0.6597938144 | abs 1e-10 | The normalisation divides by 0.947265625, and 64/97 is not exactly representable, so one rounding of about 1e-17 enters. 1e-10 admits it with seven orders of margin and is tighter than the last digit quoted. |
-| `composition_1` | 0.2474226804 | abs 1e-10 | Same basis as composition_0. The normalisation divides by 0.947265625, and 64/97 is not exactly representable, so one rounding of about 1e-17 enters. 1e-10 admits it with seven orders of margin and is tighter than the last digit quoted. |
-| `composition_2` | 0.0927835052 | abs 1e-10 | Same basis as composition_0. The normalisation divides by 0.947265625, and 64/97 is not exactly representable, so one rounding of about 1e-17 enters. 1e-10 admits it with seven orders of margin and is tighter than the last digit quoted. |
+| `composition_1` | 0.2474226804 | abs 1e-10 | The normalisation divides by 0.947265625, and the exact value 24/97 is not representable in binary, so one rounding of about 3e-17 enters. 1e-10 admits it with seven orders of margin and is tighter than the last digit quoted. |
+| `composition_2` | 0.0927835052 | abs 1e-10 | The normalisation divides by 0.947265625, and the exact value 9/97 is not representable in binary, so one rounding of about 1e-17 enters. 1e-10 admits it with seven orders of margin and is tighter than the last digit quoted. |
 | `composition_sum` | 1.0 | abs 1e-12 | Three roundings of about 1e-17 each summing to at most 3e-17. The module asserts closure to 1e-12 internally, so this tolerance matches the invariant the module itself enforces rather than inventing a looser one. |
 | `size_ratio_0` | 7.0 | abs 1e-12 | 490e-6/70e-6 in double precision. Neither operand is exactly representable after the micron-to-metre conversion, so the quotient may differ from 7 by about 1 ulp, near 1e-15. 1e-12 admits that and is far tighter than the sevenfold threshold the ratio is compared against. |
-| `size_ratio_1` | 7.0 | abs 1e-12 | Same basis as size_ratio_0. 490e-6/70e-6 in double precision. Neither operand is exactly representable after the micron-to-metre conversion, so the quotient may differ from 7 by about 1 ulp, near 1e-15. 1e-12 admits that and is far tighter than the sevenfold threshold the ratio is compared against. |
+| `size_ratio_1` | 7.0 | abs 1e-12 | 70e-6/10e-6 in double precision, the second of the two successive ratios. Neither operand is exactly representable after the micron-to-metre conversion, so the quotient may differ from 7 by about 1 ulp, near 1e-15. 1e-12 admits that and is far tighter than the sevenfold threshold the ratio is compared against. |
 
 ---
 
@@ -663,7 +698,7 @@ ceiling, so the cap does not bind and the vector tests the sum rather than the c
 | output | expected | tolerance | reason the tolerance is what it is |
 | --- | --- | --- | --- |
 | `exposure_fluid` | 0.18696296296296297 | abs 1e-12 | One division, one cube, one subtraction, all in double precision on values that are not binary-exact (1/15 and 14/15), so the bound is a few ulp, near 5e-16 absolute. 1e-12 admits it with three orders of margin. |
-| `exposure_mineral` | 0.6056296296296296 | abs 1e-12 | Same basis as exposure_fluid. One division, one cube, one subtraction, all in double precision on values that are not binary-exact (1/15 and 14/15), so the bound is a few ulp, near 5e-16 absolute. 1e-12 admits it with three orders of margin. |
+| `exposure_mineral` | 0.6056296296296296 | abs 1e-12 | One division, one cube, one subtraction, all in double precision on values that are not binary-exact (4/15 and 11/15 for the 20 um inclusion in a 75 um particle), so the bound is a few ulp, near 7e-16 absolute. 1e-12 admits it with three orders of margin. |
 | `leachable_fraction` | 0.2503851851851852 | abs 1e-12 | A weighted sum of three terms, each carrying at most 5e-16, so the total bound is near 1.5e-15. 1e-12 admits that with three orders of margin. The value is the one a flowsheet designer reads, so the tolerance is set by the arithmetic bound and not by any engineering judgment about how precisely it is known: the partition inputs themselves are ASSUMED, and that uncertainty is stated in the provenance rather than smuggled into the tolerance. |
 | `ceiling_one_minus_lattice` | 0.45 | abs 1e-12 | One subtraction from 1 of a value that is not binary-exact, so 1 ulp near 1e-17. 1e-12 admits it. The output exists so the vector records that the cap was checked and found not binding, which is why it is reported rather than assumed. |
 
@@ -738,9 +773,9 @@ floor, is what an extra stage buys.
 | output | expected | tolerance | reason the tolerance is what it is |
 | --- | --- | --- | --- |
 | `conc_surface_ppm` | 12.0 | abs 1e-09 | One multiplication of exact decimals that are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it with six orders of margin and is far below any assay resolution. |
-| `conc_fluid_ppm` | 6.0 | abs 1e-09 | Same basis as conc_surface_ppm. One multiplication of exact decimals that are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it with six orders of margin and is far below any assay resolution. |
-| `conc_mineral_ppm` | 42.0 | abs 1e-09 | Same basis as conc_surface_ppm. One multiplication of exact decimals that are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it with six orders of margin and is far below any assay resolution. |
-| `conc_lattice_ppm` | 60.0 | abs 1e-09 | Same basis as conc_surface_ppm. One multiplication of exact decimals that are not binary-exact (0.10), so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it with six orders of margin and is far below any assay resolution. |
+| `conc_fluid_ppm` | 6.0 | abs 1e-09 | One multiplication, 120 ppm times the fluid-inclusion partition 0.05, which is not binary-exact, so 1 ulp near 1e-15 ppm. 1e-9 ppm admits it with six orders of margin and is far below any assay resolution. |
+| `conc_mineral_ppm` | 42.0 | abs 1e-09 | One multiplication, 120 ppm times the mineral-inclusion partition 0.35, which is not binary-exact, so 1 ulp near 7e-15 ppm. 1e-9 ppm admits it with six orders of margin and is far below any assay resolution. |
+| `conc_lattice_ppm` | 60.0 | abs 1e-09 | One multiplication, 120 ppm times the lattice partition 0.50, which IS binary-exact, so the product 60.0 is exact. 1e-9 ppm guards only against a different route to the same number and is far below any assay resolution. |
 | `conc_sum_ppm` | 120.0 | abs 1e-09 | Four terms each carrying at most 1e-15 ppm, so 4e-15 ppm. 1e-9 admits it. This output is the closure check: if the partition did not sum to 1, or if the module normalised it silently, the sum would move by ppm and not by ulp. |
 | `floor_ppm` | 78.6 | abs 1e-09 | Four products and three additions on values near 100 ppm, so the bound is about 1e-14 ppm. 1e-9 ppm admits it with five orders of margin. The floor is the number a purity claim rests on, so the tolerance is set by the arithmetic and the input uncertainty is carried in the provenance instead: the inputs are ASSUMED and the floor inherits their status, which no tolerance can repair. |
 | `removable_ppm` | 60.0 | abs 1e-09 | A sum of three exact products. The output is here because it must NOT depend on the efficiencies: an implementation that subtracted the floor from the bulk would return 41.4 rather than 60.0, an error of 18.6 ppm which this tolerance detects by ten orders of magnitude. |
@@ -799,7 +834,7 @@ marketing claim, which is why the conversion is pinned here.
 | `implied_removal_fraction` | 0.8119664752444513 | abs 1e-12 | One division and one subtraction from 1. The division carries 1 ulp near 2e-17; the subtraction from 1 of a value near 0.19 is exact to within 1 ulp of the result, near 1e-16. 1e-12 admits that with four orders of margin. |
 | `implied_removal_percent` | 81.1966475244 | abs 1e-09 | The fraction times 100, so the absolute error scales by 100 to near 1e-14. 1e-9 admits it with five orders of margin. Reported separately from the fraction because the published figure in the module docstring is a percentage (81.2), and the vector checks the scaling explicitly. |
 | `sio2_percent_from_product` | 99.997577 | abs 1e-12 | A subtraction of 0.002423 from 100. This is the catastrophic-cancellation case in the vector: the result keeps only about 11 significant digits of the small term, because 100 has an exponent 5 orders above 0.002423. The absolute error is therefore about 1 ulp of 100, near 1.4e-14. 1e-12 admits that with two orders of margin, which is why this tolerance is not set to 1e-15: at that level the check would fail on a legitimate reordering of the subtraction. |
-| `sio2_percent_from_floor` | 99.99214 | abs 1e-12 | Same basis as sio2_percent_from_product. A subtraction of 0.002423 from 100. This is the catastrophic-cancellation case in the vector: the result keeps only about 11 significant digits of the small term, because 100 has an exponent 5 orders above 0.002423. The absolute error is therefore about 1 ulp of 100, near 1.4e-14. 1e-12 admits that with two orders of margin, which is why this tolerance is not set to 1e-15: at that level the check would fail on a legitimate reordering of the subtraction. |
+| `sio2_percent_from_floor` | 99.99214 | abs 1e-12 | A subtraction of 0.00786 from 100, the catastrophic-cancellation case in this vector alongside sio2_percent_from_product. The result keeps only about 11 significant digits of the small term, because 100 has an exponent 4 orders above 0.00786. The absolute error is therefore about 1 ulp of 100, near 1.4e-14, and 1e-12 admits it with two orders of margin. A 1e-15 tolerance here would fail, which is why it is not used. |
 
 ---
 
@@ -876,8 +911,8 @@ reports all three rather than one.
 | output | expected | tolerance | reason the tolerance is what it is |
 | --- | --- | --- | --- |
 | `tau_film_s` | 10.0 | abs 1e-09 | All operands are exactly representable powers of ten times small integers, so the chain 30000*1e-4/(3*1e-4*1000) is exact in binary except for the final division, at most 1 ulp near 2e-15 s. 1e-9 s admits that with six orders of margin. It is not set to zero because the module carries the quantity through pint unit conversions, which may reassociate the products. |
-| `tau_product_layer_s` | 50.0 | abs 1e-09 | As tau_film_s, with one additional squaring of 1e-4, which is exact. The R^2 dependence is the substance of the check: an implementation using R rather than R^2 would return 5e5 s, detected by 14 orders of magnitude. |
-| `tau_surface_reaction_s` | 30.0 | abs 1e-09 | As tau_film_s. The absence of the factor 3 is what distinguishes this from film control; an implementation carrying the 3 would return 10 s, detected by 20 s. |
+| `tau_product_layer_s` | 50.0 | abs 1e-09 | With the activation energy set to exactly zero, k(T) equals the prefactor and the expression is a product and quotient of exact decimals, plus one additional squaring of 1e-4 which is exact in binary. The bound is 1 ulp near 7e-15 s. 1e-9 s is not zero because the pint unit conversions may reassociate the product. The R^2 dependence is the substance of the check: an implementation using R rather than R^2 would return 5e5 s, detected by 14 orders of magnitude. |
+| `tau_surface_reaction_s` | 30.0 | abs 1e-09 | With the activation energy set to exactly zero, k(T) equals the prefactor and the expression is a product and quotient of exact decimals, so the bound is 1 ulp near 4e-15 s. 1e-9 s is not zero because the pint unit conversions may reassociate the product. The absence of the factor 3 is what distinguishes this from film control; an implementation carrying the 3 would return 10 s, detected by 20 s. |
 
 ---
 
@@ -1090,7 +1125,7 @@ of magnitude lower", not as 1.42e-10 Pa.
 | `TiCl4_transition_enthalpy_J_per_mol` | 36200.0 | abs 1e-09 | A SOURCED constant passed straight through, 36.2 kJ/mol converted to 36200.0 J/mol, so the only error is the pint unit conversion, one multiplication by 1000, which is exact in binary. 1e-9 J/mol admits any conversion rounding. The output exists to pin which enthalpy basis is in use, checked together with TiCl4_enthalpy_is_trouton below. |
 | `TiCl4_enthalpy_is_trouton` | 0.0 | abs 0.0 | A boolean encoded as 0.0, recording that TiCl4's enthalpy is the MEASURED PubChem value and not a Trouton estimate. Exactly zero tolerance: this is a provenance assertion, and a 1.0 here would mean the measured value was silently discarded in favour of an estimate, which is the substitution this output exists to catch. |
 | `TiCl4_transition_T_K` | 409.6 | abs 1e-09 | A degC to K conversion, 136.45 + 273.15, where neither operand is binary- exact, so 1 ulp near 6e-14 K. 1e-9 K admits it. The output is reported so that the enthalpy above can be checked against its own input. |
-| `AlCl3_pressure_Pa` | 26047.768243731298 | rel 1e-12 | Same basis as TiCl4_pressure_Pa. A RELATIVE tolerance is correct here because the quantity is an exponential: the absolute error scales with the value, and the same absolute tolerance cannot serve both 79279 Pa and 1.4e-10 Pa in one vector. The chain is one reciprocal difference, one multiplication and one exp, each 1 ulp, so the relative bound is near 4e-16. 1e-12 relative admits that with three orders of margin and still detects a wrong Trouton constant, which moves the pressure by tens of percent. |
+| `AlCl3_pressure_Pa` | 26047.768243731298 | rel 1e-12 | A RELATIVE tolerance is correct here because the quantity is an exponential: the absolute error scales with the value, and the same absolute tolerance cannot serve both 26047.77 Pa and the 1.4e-10 Pa of NaCl in one vector. The chain is one reciprocal difference, one multiplication by the Trouton enthalpy over R, and one exp, so about 4 ulp relative, near 1e-15. 1.0e-12 admits that with three orders of margin and still detects a wrong Trouton entropy, which moves the pressure by tens of percent. |
 | `AlCl3_capped` | 0.0 | abs 0.0 | A boolean encoded as 0.0 or 1.0, recording that the total-pressure cap did not bind. There is no rounding to admit, so the tolerance is exactly zero. |
 | `AlCl3_transition_enthalpy_J_per_mol` | 38517.75 | abs 1e-09 | A Trouton estimate, one multiplication of 85 by the transition temperature in K. 85 * 453.15 = 38517.75 is exact to the last digit quoted here, so the bound is 1 ulp near 4e-12 J/mol. 1e-9 admits that with two orders of margin. The tolerance bounds the ARITHMETIC of the estimate; the estimate itself carries a plus or minus 15 J/(mol K) uncertainty on the Trouton entropy, stated in the provenance. |
 | `AlCl3_enthalpy_is_trouton` | 1.0 | abs 0.0 | A boolean encoded as 1.0, recording that AlCl3 has no measured enthalpy in the module and falls back to Trouton. Exactly zero tolerance, as a provenance assertion. A 0.0 would mean an unsourced measurement appeared. |
@@ -1458,19 +1493,19 @@ balance is feasible with large margin.
 | `converged` | 1.0 | abs 0.0 | A boolean encoded as 1.0. No rounding to admit, so the tolerance is exactly zero. If the solver did not converge every other output in this vector is meaningless, so this one is checked exactly. |
 | `overall_yield` | 0.75 | abs 1e-09 | The fixed point is approached iteratively, not solved in closed form, so the error is set by the solver tolerance of 1e-10 on the recycle mass flow rather than by floating point. A 1e-10 kg/s error in a 25 kg/s recycle propagates to about 1e-12 in the yield. 1e-9 admits that with three orders of margin. This is the reason the tolerance is looser than the 1e-12 used for closed-form vectors: the convergence criterion, not the arithmetic, is the binding term. |
 | `closure_error` | 0.0 | abs 1e-10 | The module raises a MassBalanceError if this exceeds its own CLOSURE_TOL, so any value it returns is already below that threshold. The tolerance here matches the solver tolerance of 1e-10, which is the level at which the iteration was stopped. |
-| `element_closure` | 0.0 | abs 1e-10 | As closure_error, set by the 1e-10 solver tolerance. The element balance is enforced by construction inside each unit (the reject composition is the residual), so the only error is the unconverged part of the recycle. |
+| `element_closure` | 0.0 | abs 1e-10 | A SOLVER tolerance set by the flowsheet's own 1e-10 convergence criterion, not a floating point bound. The element balance is enforced by construction inside each unit (the reject composition is the residual), so the only error is the unconverged part of the recycle. An exactly zero tolerance would demand more of the solver than the solver promises. |
 | `recycle_kg_s` | 25.0 | abs 1e-09 | The quantity the iteration converges on, stopped at 1e-10 absolute by the tol input. 1e-9 admits one order above the stopping criterion, which covers the final damped step. Reported because it is the algebraic answer 25.0 kg/s derived above, so agreement means the solver found the right fixed point and not merely a stationary one. |
 | `rougher_feed_kg_s` | 125.0 | abs 1e-09 | Feed plus recycle, so it inherits the recycle's 1e-10 convergence error. |
-| `rougher_product_kg_s` | 100.0 | abs 1e-09 | Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the recycle's 1e-10 convergence error. |
-| `cleaner_product_kg_s` | 75.0 | abs 1e-09 | Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the recycle's 1e-10 convergence error. |
-| `rougher_reject_kg_s` | 25.0 | abs 1e-09 | Same basis as rougher_feed_kg_s. Feed plus recycle, so it inherits the recycle's 1e-10 convergence error. |
+| `rougher_product_kg_s` | 100.0 | abs 1e-09 | The rougher product is its feed times the mass yield, so it inherits the recycle's 1e-10 convergence error through the feed. A SOLVER tolerance, not a floating point one: the flowsheet iterates to 1e-10 and no output downstream of the recycle can be tighter than the criterion that produced it. |
+| `cleaner_product_kg_s` | 75.0 | abs 1e-09 | The cleaner product is the rougher product times the cleaner mass yield, two stages downstream of the recycle, so it inherits the same 1e-10 solver convergence error. Not a floating point tolerance. |
+| `rougher_reject_kg_s` | 25.0 | abs 1e-09 | The rougher reject is its feed times one minus the mass yield, so it inherits the recycle's 1e-10 convergence error through the feed. A solver tolerance, matching the flowsheet's own stopping criterion. |
 | `rougher_feed_ppm` | 1000.0 | abs 1e-06 | A concentration in ppm, so the same relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm. 1e-6 ppm admits that with three orders of margin and is still six orders below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves perhaps 1 ppm), so the tolerance tests the solver and not the instrument. |
-| `rougher_product_ppm` | 500.0 | abs 1e-06 | Same basis as rougher_feed_ppm. A concentration in ppm, so the same relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm. 1e-6 ppm admits that with three orders of margin and is still six orders below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves perhaps 1 ppm), so the tolerance tests the solver and not the instrument. |
-| `cleaner_product_ppm` | 333.3333333333 | abs 1e-06 | As rougher_feed_ppm. This output is 1000/3 ppm, which is not exactly representable, so it also carries one rounding near 6e-14 ppm. The convergence term dominates. |
-| `rougher_reject_ppm` | 3000.0 | abs 1e-06 | Same basis as rougher_feed_ppm. A concentration in ppm, so the same relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm. 1e-6 ppm admits that with three orders of margin and is still six orders below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves perhaps 1 ppm), so the tolerance tests the solver and not the instrument. |
-| `recycle_ppm` | 1000.0 | abs 1e-06 | Same basis as rougher_feed_ppm. A concentration in ppm, so the same relative convergence error of 1e-12 becomes 1e-9 absolute at 1000 ppm. 1e-6 ppm admits that with three orders of margin and is still six orders below any real assay resolution (ICP-MS on a 1000 ppm Fe stream resolves perhaps 1 ppm), so the tolerance tests the solver and not the instrument. |
+| `rougher_product_ppm` | 500.0 | abs 1e-06 | A concentration in ppm, so the same 1e-12 relative convergence error becomes 5e-10 absolute at 500 ppm. 1e-6 ppm admits that with three orders of margin and is still far below any real assay resolution (ICP-MS on a 500 ppm Fe stream resolves perhaps 1 ppm), which is intended: the check is on the balance arithmetic, not on measurability. |
+| `cleaner_product_ppm` | 333.3333333333 | abs 1e-06 | A concentration in ppm carrying the solver's 1e-12 relative convergence error, which at 333.33 ppm is 3e-10 absolute. This output is 1000/3 ppm, which is not exactly representable, so it also carries one rounding near 6e-14 ppm; the convergence term dominates. 1e-6 ppm admits both with three orders of margin and remains far below any real assay resolution. |
+| `rougher_reject_ppm` | 3000.0 | abs 1e-06 | A concentration in ppm, so the same 1e-12 relative convergence error becomes 3e-9 absolute at 3000 ppm, the highest concentration in the vector. 1e-6 ppm admits that with two orders of margin and remains far below any real assay resolution. |
+| `recycle_ppm` | 1000.0 | abs 1e-06 | A concentration in ppm, so the same 1e-12 relative convergence error becomes 1e-9 absolute at 1000 ppm. 1e-6 ppm admits that with three orders of margin. This output returning exactly the feed grade is a coincidence of equal solids and element loop gains in this fixture, noted in the arithmetic block, so the tolerance must not be so tight that the coincidence reads as an identity. |
 | `max_feasible_feed_fraction_rougher` | 0.3333333333333333 | abs 1e-12 | A closed-form ratio (1 - y)/r computed once, not iterated, so the bound is one division, 1 ulp near 6e-17. 1e-12 admits it. Tighter than the other outputs in this vector precisely because this one does not pass through the solver. |
-| `max_feasible_feed_fraction_cleaner` | 0.5 | abs 1e-12 | Same basis as max_feasible_feed_fraction_rougher. A closed-form ratio (1 - y)/r computed once, not iterated, so the bound is one division, 1 ulp near 6e-17. 1e-12 admits it. Tighter than the other outputs in this vector precisely because this one does not pass through the solver. |
+| `max_feasible_feed_fraction_cleaner` | 0.5 | abs 1e-12 | A closed-form ratio (1 - y)/r for the cleaner stage, computed once and not iterated, so the bound is one division, 1 ulp near 6e-17 on a value of 0.5. 1e-12 admits it. Tighter than the flow and concentration outputs in this vector precisely because this one does not pass through the solver, so it inherits no convergence error. |
 
 ---
 
@@ -1563,7 +1598,7 @@ Slack:
 | `loss_sum` | 0.214688 | abs 1e-12 | The three losses summed. This output is the decomposition identity, so it must match one_minus_oee below to the same tolerance; three terms each carrying 4e-17 sum to at most 1.2e-16. 1e-12 admits that and would catch the un-nested decomposition described in the arithmetic block, which differs by 0.0159. |
 | `one_minus_oee` | 0.214688 | abs 1e-12 | One subtraction from 1 of the OEE, so the OEE's error plus 1 ulp, near 1e-16. Reported alongside loss_sum so the identity is checked between two independently computed quantities rather than asserted. |
 | `effective_capacity_kiln` | 70678.08 | abs 1e-06 | Two multiplications at a magnitude near 7e4, so the bound is a few ulp of 7e4, near 3e-11 t/yr. 1e-6 t/yr (one gram per year) admits that with five orders of margin. A tonnage tolerance of 1e-6 is far below any real measurement, which is intended: the check is arithmetic, and the input uncertainty is carried in the provenance block instead. |
-| `effective_capacity_leach` | 47118.72 | abs 1e-06 | Same basis as effective_capacity_kiln. Two multiplications at a magnitude near 7e4, so the bound is a few ulp of 7e4, near 3e-11 t/yr. 1e-6 t/yr (one gram per year) admits that with five orders of margin. A tonnage tolerance of 1e-6 is far below any real measurement, which is intended: the check is arithmetic, and the input uncertainty is carried in the provenance block instead. |
+| `effective_capacity_leach` | 47118.72 | abs 1e-06 | Two multiplications at a magnitude near 4.7e4, so the bound is a few ulp of 4.7e4, near 2e-11 t/yr. 1e-6 t/yr (one gram per year) admits that with five orders of margin. A tonnage tolerance of 1e-6 is far below any real measurement, which is intended: the check is on the OEE arithmetic, not on plant metering. |
 | `product_capacity_kiln` | 50484.3428571429 | abs 1e-06 | One further division by 1.4, which is not binary-exact, so 1 more ulp. The bound remains near 3e-11 t/yr. 1e-6 admits it. |
 | `product_capacity_leach` | 47118.72 | abs 1e-06 | Division by exactly 1.0, which is exact, so the bound is effective_capacity_leach's. |
 | `line_rate_t_per_yr` | 47118.72 | abs 1e-06 | A minimum over the product capacities, so it carries whichever bound the winner had, near 3e-11 t/yr. |
@@ -1631,8 +1666,8 @@ that unit.
 | --- | --- | --- | --- |
 | `cascade_yield` | 0.7614288 | abs 1e-12 | Three multiplications of two-decimal values, none binary-exact, so three roundings of about 1e-17 each. 1e-12 admits that with five orders of margin and is four orders tighter than the fourth-decimal error this class of calculation actually suffered in this repository. |
 | `throughput_factor_0` | 1.3133204313 | abs 1e-09 | One division into a four-term product, so four roundings plus one, near 6e-16 relative or 8e-16 absolute at 1.31. 1e-9 admits that with six orders of margin and is six orders tighter than the 0.0920 discrepancy an off-by- one index produces, so it separates a rounding difference from the real defect. |
-| `throughput_factor_1` | 1.2476544097 | abs 1e-09 | As throughput_factor_0, one fewer multiplication. The 0.0919 gap to the off- by-one value is seven orders above this tolerance. |
-| `throughput_factor_2` | 1.0979358805 | abs 1e-09 | Same basis as throughput_factor_0. One division into a four-term product, so four roundings plus one, near 6e-16 relative or 8e-16 absolute at 1.31. 1e-9 admits that with six orders of margin and is six orders tighter than the 0.0920 discrepancy an off-by-one index produces, so it separates a rounding difference from the real defect. |
+| `throughput_factor_1` | 1.2476544097 | abs 1e-09 | One division into a three-term tail product, so four roundings, near 6e-16 relative or 7e-16 absolute at 1.2477. 1e-9 admits that with six orders of margin. The 0.0919 gap to the value an off-by-one stage index produces (1.1557219795206064 rather than 1.2476544097097457) is seven orders above this tolerance, so an indexing error cannot hide inside it. |
+| `throughput_factor_2` | 1.0979358805 | abs 1e-09 | One division into a two-term tail product, so three roundings, near 5e-16 relative or 5e-16 absolute at 1.098. 1e-9 admits that with six orders of margin and is six orders tighter than the discrepancy an off-by-one stage index produces, so it separates a rounding difference from an indexing error. |
 | `throughput_factor_3` | 1.0101010101 | abs 1e-09 | One division, 1/0.99, whose exact value 100/99 is not binary-exact, so 1 ulp near 2e-16. 1e-9 admits it. This is the output that pins the index convention at the downstream end: a factor of 1.0 here would mean the last stage's own yield was excluded. |
 
 ---
@@ -1728,7 +1763,7 @@ Required mean for the target Cpk:
 | `n_lots` | 6.0 | abs 0.0 | An integer count of lots. Any other value means samples were dropped or duplicated, which is a wrong answer and not a rounding difference, so the tolerance is exactly zero. |
 | `cpk` | 1.3363062096 | abs 1e-09 | One division by 3 sigma, so it inherits sigma's relative error of 1e-16, giving 1.3e-16 absolute. 1e-9 admits it with six orders of margin. |
 | `ci_low` | 0.5345682323 | abs 1e-08 | The chain runs Cpk -> Cpk^2 -> Var -> sqrt -> times the normal quantile -> subtract. The normal quantile is the least accurate step: it is computed by a rational approximation or an iterative inverse-erf, whose accuracy is typically 1e-15 relative rather than 1 ulp. Propagating 1e-15 relative through a 0.8017 half width gives 8e-16 absolute. 1e-8 admits that with seven orders of margin and covers a slightly different quantile implementation (scipy against a bisection on erf), which is the practical reason this tolerance is two orders looser than cpk's. |
-| `ci_high` | 2.1380441868 | abs 1e-08 | Same basis as ci_low. The chain runs Cpk -> Cpk^2 -> Var -> sqrt -> times the normal quantile -> subtract. The normal quantile is the least accurate step: it is computed by a rational approximation or an iterative inverse- erf, whose accuracy is typically 1e-15 relative rather than 1 ulp. Propagating 1e-15 relative through a 0.8017 half width gives 8e-16 absolute. 1e-8 admits that with seven orders of margin and covers a slightly different quantile implementation (scipy against a bisection on erf), which is the practical reason this tolerance is two orders looser than cpk's. |
+| `ci_high` | 2.1380441868 | abs 1e-08 | The chain runs Cpk -> Cpk^2 -> Var -> sqrt -> times the normal quantile -> ADD, the upper end of the interval. The normal quantile is the least accurate step: it is computed by a rational approximation or an iterative inverse erf, whose accuracy is typically 1e-15 relative rather than 1 ulp. Propagating that through a magnitude of 2.14 gives about 2e-15, and 1e-9 admits it with six orders of margin. |
 | `off_spec_normal` | 3.0498714448247723e-05 | rel 1e-09 | A RELATIVE tolerance, because the value is 3e-05 and an absolute tolerance suited to the other outputs in this vector would pass any tail probability. The chain is one division and one complementary error function. erfc is accurate to about 1e-15 relative in its argument, and at z/sqrt(2) = 2.835 the tail is not in the regime where erfc loses precision (that begins above about z = 6, where the result underflows toward zero), so the relative bound is near 1e-15. 1e-9 relative admits that with six orders of margin. |
 | `off_spec_lognormal` | 0.0016195750169 | rel 1e-09 | A relative tolerance for the same reason as off_spec_normal. One extra log1p, one log and one sqrt enter, each 1 ulp, so the relative bound rises to about 5e-15. 1e-9 relative admits it and is five orders tighter than the factor-of-53.10 difference from the normal model, so the two models cannot be confused by a tolerance this size. |
 | `required_mean_at_target_cpk` | 15.0707870268 | abs 1e-09 | One multiplication and one subtraction from 30, where the subtracted term is 14.93, so no significant cancellation. The bound is a few ulp of 30, near 7e-15. 1e-9 admits it with five orders of margin. |
@@ -1893,9 +1928,9 @@ the cash cost lines sum to the cash cost and nothing else.
 | output | expected | tolerance | reason the tolerance is what it is |
 | --- | --- | --- | --- |
 | `line_electricity` | 22.1538461538 | abs 1e-09 | One multiplication and one division by 0.65, which is not binary-exact, so 2 ulp near 7e-15 USD/t. 1e-9 USD/t admits that with six orders of margin and is six orders below the cent, so it tests the arithmetic and makes no claim about the accuracy of the ASSUMED input price. |
-| `line_HCl` | 8.4615384615 | abs 1e-09 | Same basis as line_electricity. One multiplication and one division by 0.65, which is not binary-exact, so 2 ulp near 7e-15 USD/t. 1e-9 USD/t admits that with six orders of margin and is six orders below the cent, so it tests the arithmetic and makes no claim about the accuracy of the ASSUMED input price. |
+| `line_HCl` | 8.4615384615 | abs 1e-09 | One multiplication (25 kg/t feed times 0.22 USD/kg) and one division by the cascade yield 0.65, which is not binary-exact, so 2 ulp near 3e-15 USD/t. 1e-9 USD/t admits that with six orders of margin and is six orders below the cent, so it tests the arithmetic and makes no claim about the accuracy of the ASSUMED reagent price, which is NOT SOURCED. |
 | `line_labour` | 300.0 | abs 1e-09 | One division of exact integers, 2400000/8000 = 300 exactly in IEEE 754. 1e-9 guards only against a different route. |
-| `line_maintenance` | 100.0 | abs 1e-09 | Same basis as line_labour. One division of exact integers, 2400000/8000 = 300 exactly in IEEE 754. 1e-9 guards only against a different route. |
+| `line_maintenance` | 100.0 | abs 1e-09 | One division of exact integers, 800000/8000 = 100 exactly in IEEE 754, since both operands and the quotient are representable. 1e-9 guards only against a different route to the same number. |
 | `line_freight` | 0.0 | abs 0.0 | An exact zero, placed there by an explicit waiver rather than computed. There is no rounding to admit. The output is checked because an implementation that silently omitted freight rather than recording a waiver would drop the line entirely, and the test then fails on a missing key. |
 | `gross_cost` | 430.6153846154 | abs 1e-09 | A sum of five lines, two of which carry 7e-15, so the bound is near 2e-14 USD/t. 1e-9 admits it with five orders of margin. |
 | `cash_cost` | 415.6153846154 | abs 1e-09 | Gross less one credit, one subtraction at a magnitude near 430, so the bound is near 6e-14 USD/t. |
@@ -2005,7 +2040,7 @@ Escalation alone: 1,000,000 * 7/6 = 1,166,666.6666666667
 | `index_ratio` | 1.1666666666666667 | abs 1e-12 | One division giving 7/6, not binary-exact, so 1 ulp near 2e-16. 1e-12 admits it with four orders of margin. |
 | `location_factor` | 1.15 | abs 1e-12 | A constant passed through from the Site. 1.15 is not binary-exact, so 1 ulp near 2e-16, but no operation is applied. 1e-12 admits any conversion rounding. |
 | `total_purchased` | 6037500.0 | abs 0.01 | A RELATIVE-scale absolute tolerance of one cent on a 6.04 MUSD figure, which is 1.7e-9 relative. The arithmetic is two multiplications on a 4.5e6 magnitude, so the floating point bound is a few ulp of 6e6, near 2e-9 USD, and the measured value 6037499.999999999 differs from the exact 6037500 by 9.3e-10 USD. One cent admits that with seven orders of margin. A cent rather than 1e-9 USD is chosen because currency below the cent is not meaningful and because the value is the product of three inexact decimals, so pinning it to the nanodollar would test the multiplication order rather than the estimate. |
-| `total_installed` | 12477500.0 | abs 0.01 | As total_purchased. The measured value 12477499.999999998 differs from the exact 12477500 by 1.9e-9 USD, which one cent admits with seven orders of margin. |
+| `total_installed` | 12477500.0 | abs 0.01 | A currency tolerance of one cent. The MEASURED value 12477499.999999998 differs from the exact 12477500 by 1.9e-9 USD, arising from the escalation index ratio 826/708 and the 1.15 location factor, neither exactly representable. One cent admits that with seven orders of margin while sitting far below the AACE Class 5 accuracy band, which spans minus 50 to plus 100 percent of this figure. |
 | `indirect_cost` | 3743250.0 | abs 0.01 | One further multiplication by 0.30, so the bound is near 5e-10 USD. One cent admits it. |
 | `contingency` | 4055187.5 | abs 0.01 | One addition and one multiplication by 0.25, which is binary-exact, so the bound is inherited from the subtotal, near 2e-9 USD. One cent admits it. |
 | `total_project_cost` | 20275937.5 | abs 0.01 | The sum of three components each within 2e-9 USD, so the bound is near 6e-9 USD. One cent admits that with six orders of margin and is nine orders below the plus 100 percent Class 5 uncertainty, which is the real uncertainty on this number and is stated in the provenance rather than in the tolerance. |
@@ -2207,8 +2242,8 @@ departure from a known constant rather than as a difference from another estimat
 | `total_x2` | 0.2857142857 | abs 0.005 | Same measured basis as total_x1, the same per-seed worst deviations with a maximum of 0.000313270921173725 at seed 4 against a 0.005 tolerance. Checked separately from first_x2 because the total-order estimator is a different formula. |
 | `total_x3` | 0.6428571429 | abs 0.005 | Same measured basis as total_x1, the same per-seed worst deviations with a maximum of 0.000313270921173725 at seed 4 against a 0.005 tolerance. Checked separately from first_x3 because the total-order estimator is a different formula. |
 | `interaction_x1` | 0.0 | abs 0.01 | The interaction share is (ST - S)/ST, a DIFFERENCE of two noisy estimates divided by one of them, so its error is larger than either index's. With each index within 0.000313 of truth, the numerator can be off by 0.000626, and dividing by ST1 = 0.0714 amplifies that to 0.0088. 0.01 admits the propagated figure. Note this is the one output whose tolerance had to be LOOSENED relative to the indices themselves, and the amplification factor 1/ST is the reason: the same absolute index error is a much larger relative error on the smallest index. |
-| `interaction_x2` | 0.0 | abs 0.01 | Same basis as interaction_x1: (ST - S)/ST is a difference of two noisy estimates divided by one of them. The amplification is milder here, 1/0.2857142857142857 = 3.5 rather than 14, so the propagated bound is 0.002192896448216075 and 0.01 has more margin than on x1. |
-| `interaction_x3` | 0.0 | abs 0.01 | Same basis as interaction_x1: (ST - S)/ST is a difference of two noisy estimates divided by one of them. The amplification here is 1/0.6428571428571429 = 1.556, the mildest of the three, giving a propagated bound of 0.0009746206436515889. |
+| `interaction_x2` | 0.0 | abs 0.01 | The interaction share (ST - S)/ST is a DIFFERENCE of two noisy estimates divided by one of them, so its error exceeds either index's. The amplification on x2 is 1/0.2857142857142857 = 3.5, milder than the 14 on x1, so with each index within 0.000313270921173725 of truth the propagated bound is 0.002192896448216075. 0.01 admits that with more margin than on x1. |
+| `interaction_x3` | 0.0 | abs 0.01 | The interaction share (ST - S)/ST is a difference of two noisy estimates divided by one of them. The amplification on x3 is 1/0.6428571428571429 = 1.556, the mildest of the three because x3 carries the largest index, giving a propagated bound of 0.0009746206436515889. 0.01 admits that with an order of margin. |
 | `additive_fraction` | 1.0 | abs 0.005 | The sum of the three first-order indices. Errors in a Sobol estimate are not independent across indices (they share the same base sample), so the sum's error is not sqrt(3) times one index's; the measured deviations summed to less than 0.0005 in this session. 0.005 admits that with an order of margin. |
 | `diagnostics_pass` | 1.0 | abs 0.0 | A boolean: the module's diagnostics flag fires when the first-order sum exceeds 1.05, the total-order sum falls below 0.95, an index is below -0.05, or a first-order index exceeds its total by more than 0.05. For a correct additive estimate none of these fire. Encoded as 1.0 with nothing to round. |
 
@@ -2291,11 +2326,11 @@ within 6 percent, which is the real check in this file: it tests the uncertainty
 | `n_draws` | 50000.0 | abs 0.0 | An integer count of completed draws. Any other value means draws were lost. |
 | `n_failed` | 0.0 | abs 0.0 | An integer count of model failures, which must be zero for an identity model. A non-zero value would mean the error-recording path fired on a function that cannot fail. |
 | `mean` | 150.0675525824 | abs 1e-09 | A REGRESSION tolerance at the floating point level, not a statistical one. The seed fixes the sample exactly, so the mean of that sample is a deterministic function of the bit stream and reproduces to full precision on the same numpy version. 1e-9 admits summation-order differences across platforms. The statistical question (is 150.0676 close to 150?) is answered by the analytic_reference block: the standard error of the mean here is (100/sqrt(12))/sqrt(50000) = 0.1290994448735806, and the measured mean sits 0.0676 from 150, which is 0.52 of that. This tolerance says nothing about that question. |
-| `p10` | 109.7887651789 | abs 1e-09 | As mean: a fixed seed makes this exact, so the tolerance is floating point and the value is a bit-stream pin. It is emphatically NOT a statement that the tenth percentile of U(100,200) is known to 1e-9; that quantity is 110 and this sample estimates it to 0.21. |
-| `p50` | 150.0565756103 | abs 1e-09 | Same basis as p10. Same basis as mean. A REGRESSION tolerance at the floating point level, not a statistical one. The seed fixes the sample exactly, so the mean of that sample is a deterministic function of the bit stream and reproduces to full precision on the same numpy version. 1e-9 admits summation-order differences across platforms. The statistical question (is 150.0676 close to 150?) is answered by the analytic_reference block: the standard error of the mean here is (100/sqrt(12))/sqrt(50000) = 0.1290994448735806, and the measured mean sits 0.0676 from 150, which is 0.52 of that. This tolerance says nothing about that question. Additionally for this output: : a fixed seed makes this exact, so the tolerance is floating point and the value is a bit-stream pin. It is emphatically NOT a statement that the tenth percentile of U(100,200) is known to 1e-9; that quantity is 110 and this sample estimates it to 0.21. |
-| `p90` | 189.7903414569 | abs 1e-09 | Same basis as p10. Same basis as mean. A REGRESSION tolerance at the floating point level, not a statistical one. The seed fixes the sample exactly, so the mean of that sample is a deterministic function of the bit stream and reproduces to full precision on the same numpy version. 1e-9 admits summation-order differences across platforms. The statistical question (is 150.0676 close to 150?) is answered by the analytic_reference block: the standard error of the mean here is (100/sqrt(12))/sqrt(50000) = 0.1290994448735806, and the measured mean sits 0.0676 from 150, which is 0.52 of that. This tolerance says nothing about that question. Additionally for this output: : a fixed seed makes this exact, so the tolerance is floating point and the value is a bit-stream pin. It is emphatically NOT a statement that the tenth percentile of U(100,200) is known to 1e-9; that quantity is 110 and this sample estimates it to 0.21. |
+| `p10` | 109.7887651789 | abs 1e-09 | A REGRESSION tolerance at the floating point level, not a statistical one. The seed fixes the sample, so this percentile is a deterministic function of the bit stream and of numpy's percentile interpolation convention, and reproduces to full precision on the same numpy version; 1e-9 admits platform differences in the interpolation arithmetic. It is emphatically NOT a statement that the tenth percentile of U(100,200) is known to 1e-9: that quantity is 110.0 and this sample estimates it to 0.21, which is 1.57 of the 0.1341640786 order-statistic standard error recorded in analytic_reference. |
+| `p50` | 150.0565756103 | abs 1e-09 | A REGRESSION tolerance at the floating point level, not a statistical one. The seed fixes the sample exactly, so the median of that sample is a deterministic function of the bit stream and of numpy's percentile interpolation convention, and reproduces to full precision on the same numpy version. 1e-9 admits platform differences in the interpolation arithmetic. It is emphatically NOT a statement that the median of U(100,200) is known to 1e-9: that quantity is 150.0 and this sample estimates it to 0.057, which is 0.25 of the 0.2236067977 order-statistic standard error recorded in analytic_reference. |
+| `p90` | 189.7903414569 | abs 1e-09 | A REGRESSION tolerance at the floating point level, not a statistical one. The seed fixes the sample, so this percentile is a deterministic function of the bit stream and reproduces to full precision; 1e-9 admits platform differences in the interpolation arithmetic. It is NOT a statement that the ninetieth percentile of U(100,200) is known to 1e-9: that quantity is 190.0 and this sample estimates it to 0.21, which is 1.56 of the 0.1341640786 order-statistic standard error recorded in analytic_reference. |
 | `bootstrap_se_p10` | 0.1325916214 | abs 1e-09 | Also seeded (the bootstrap resampling uses the same seed argument), so it reproduces exactly. The interesting comparison, against the analytic 0.1342, is checked by the test with a 10 percent relative band rather than by this tolerance, because the bootstrap is a consistent but not exact estimator of the asymptotic standard error at n_boot = 400. |
-| `bootstrap_se_p50` | 0.2366398887 | abs 1e-09 | Same basis as bootstrap_se_p10. Also seeded (the bootstrap resampling uses the same seed argument), so it reproduces exactly. The interesting comparison, against the analytic 0.1342, is checked by the test with a 10 percent relative band rather than by this tolerance, because the bootstrap is a consistent but not exact estimator of the asymptotic standard error at n_boot = 400. |
+| `bootstrap_se_p50` | 0.2366398887 | abs 1e-09 | Also seeded (the bootstrap resampling uses the same seed argument), so it reproduces exactly and 1e-9 is a bit-stream pin. The interesting comparison is against the analytic order-statistic standard error at the median, 0.2236067977, which the test checks with a 6 percent relative band (the measured ratio is 1.058) rather than by this tolerance, because a 400-resample bootstrap is a consistent but not exact estimator of the asymptotic standard error. |
 
 **Closed-form reference, carried alongside the seeded values.**
 
@@ -2439,11 +2474,11 @@ that is reported" behaviour exists for.
 | `baseline_mean_rmse_B` | 1.0 | abs 1e-09 | Independently derived as sqrt(1) = 1.0, exact. 1e-9 admits any rounding in the mean. |
 | `baseline_mean_rmse_C` | 15.0332963784 | abs 1e-09 | INDEPENDENTLY DERIVED as sqrt(226) = 15.033296378372908, as for fold A, which fold C mirrors: it trains on y = [10,12,20,22] with mean 16.0 and tests on [30,32], giving errors of +14 and +16, MSE (196+256)/2 = 226.0. One square root of an exact integer, so 1 ulp near 2e-15, and 1e-9 admits that with six orders of margin. |
 | `rmse_A` | 15.0332963784 | abs 1e-06 | A REGRESSION pin on a fitted model. The gbm is deterministic at a fixed seed, so it reproduces exactly on the same scikit-learn version, but a version change can alter the histogram binning in the last bits. 1e-6 admits that while still detecting any real change in fit. It is looser than the hand-derived baselines in the same file precisely because its provenance is weaker, and the file says so. |
-| `rmse_B` | 1.0 | abs 1e-06 | Same basis as rmse_A. A REGRESSION pin on a fitted model. The gbm is deterministic at a fixed seed, so it reproduces exactly on the same scikit- learn version, but a version change can alter the histogram binning in the last bits. 1e-6 admits that while still detecting any real change in fit. It is looser than the hand-derived baselines in the same file precisely because its provenance is weaker, and the file says so. |
-| `rmse_C` | 15.0332963784 | abs 1e-06 | Same basis as rmse_A. A REGRESSION pin on a fitted model. The gbm is deterministic at a fixed seed, so it reproduces exactly on the same scikit- learn version, but a version change can alter the histogram binning in the last bits. 1e-6 admits that while still detecting any real change in fit. It is looser than the hand-derived baselines in the same file precisely because its provenance is weaker, and the file says so. |
+| `rmse_B` | 1.0 | abs 1e-06 | A REGRESSION pin on a fitted model, here the easy fold whose RMSE is exactly 1.0. The gbm is deterministic at a fixed seed, so it reproduces exactly on the same scikit-learn version, but a version change can alter the tree-building in the last bits. 1e-6 admits that while still detecting any real change in fit, and is looser than the hand-derived baseline in this file precisely because its provenance is weaker. |
+| `rmse_C` | 15.0332963784 | abs 1e-06 | A REGRESSION pin on a fitted model, fold C, whose value coincides with the hand-derived mean baseline sqrt(226) because the ensemble has no skill on this fixture. The gbm is deterministic at a fixed seed but a scikit-learn version change can alter the tree-building in the last bits, so 1e-6 admits that. Looser than baseline_mean_rmse_C, which carries the same number by hand derivation, because this one's provenance is the code. |
 | `baseline_ridge_rmse_A` | 0.0022628130162319375 | rel 1e-06 | A RELATIVE tolerance on a regression pin, because the value is 2.3e-3 and a 1e-6 absolute tolerance would be a 0.04 percent band that a RidgeCV alpha- grid change could break, while an absolute tolerance scaled to the other outputs would pass anything. The alpha is selected by internal cross- validation over a 25-point grid, so this value is the least portable in the suite and is pinned relatively. |
-| `baseline_ridge_rmse_B` | 0.0017341949999050144 | rel 1e-06 | Same basis as baseline_ridge_rmse_A. A RELATIVE tolerance on a regression pin, because the value is 2.3e-3 and a 1e-6 absolute tolerance would be a 0.04 percent band that a RidgeCV alpha-grid change could break, while an absolute tolerance scaled to the other outputs would pass anything. The alpha is selected by internal cross-validation over a 25-point grid, so this value is the least portable in the suite and is pinned relatively. |
-| `baseline_ridge_rmse_C` | 0.0022628130162319375 | rel 1e-06 | Same basis as baseline_ridge_rmse_A. A RELATIVE tolerance on a regression pin, because the value is 2.3e-3 and a 1e-6 absolute tolerance would be a 0.04 percent band that a RidgeCV alpha-grid change could break, while an absolute tolerance scaled to the other outputs would pass anything. The alpha is selected by internal cross-validation over a 25-point grid, so this value is the least portable in the suite and is pinned relatively. |
+| `baseline_ridge_rmse_B` | 0.0017341949999050144 | rel 1e-06 | A RELATIVE tolerance on a regression pin, because the value is 1.7e-3 and a 1e-6 absolute tolerance would be a 0.06 percent band that a RidgeCV alpha-grid change could break, while an absolute tolerance scaled to the other outputs in this file would pass anything. The alpha is selected by internal cross-validation over a 25-point grid, so this value is among the least portable in the suite and is pinned relatively. |
+| `baseline_ridge_rmse_C` | 0.0022628130162319375 | rel 1e-06 | A RELATIVE tolerance on a regression pin, because the value is 2.3e-3 (fold C mirrors fold A) and a 1e-6 absolute tolerance would be a 0.04 percent band that a RidgeCV alpha-grid change could break. The alpha is selected by internal cross-validation over a 25-point grid, so this value is among the least portable in the suite and is pinned relatively. |
 
 ---
 

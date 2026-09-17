@@ -226,6 +226,98 @@ def test_the_suite_writes_174_exponent_form_bounds_all_parsing_as_floats() -> No
 
 
 @pytest.mark.golden
+@pytest.mark.parametrize("name,vec", _VECTORS, ids=_IDS)
+def test_no_tolerance_reason_defers_to_another_output(
+    name: str, vec: dict[str, Any]
+) -> None:
+    """No reason may point at another output instead of stating its own basis.
+
+    This guard exists because of a defect in this suite's own construction. Many
+    reasons were first written as bare cross-references of the form "As <other
+    key>", and a script then expanded them mechanically by prepending the
+    referenced output's text. The expansion produced reasons that describe the
+    WRONG output: the median and ninetieth percentile in the seeded Monte Carlo
+    vector acquired the sentence about the sample mean, and the bootstrap
+    standard error at the median acquired the tenth-percentile standard error,
+    contradicting that same file's own analytic reference block. The two
+    figures are asserted against each other in the companion test below. Every
+    affected reason was rewritten by hand against its own expected value. The
+    loader now rejects the cross-reference form outright, because a reason a
+    reader must follow to a second row is not a reason, and an automatic
+    expansion of one is worse than the cross-reference it replaced.
+    """
+    offenders = []
+    for key, spec in vec["tolerances"].items():
+        reason = " ".join(str(spec["reason"]).split())
+        if (
+            reason.startswith("As ")
+            or "Same basis as" in reason
+            or "Additionally for this output" in reason
+        ):
+            offenders.append(key)
+    assert not offenders, (
+        f"{name}: tolerance reasons deferring to another output: {offenders}. "
+        f"State the basis for THIS output, including its own magnitude."
+    )
+
+
+@pytest.mark.golden
+def test_the_two_bootstrap_standard_errors_are_different_numbers() -> None:
+    """The p10 and p50 order-statistic standard errors are not interchangeable.
+
+    Stated because a mechanical expansion put one under the other's output in
+    RV-01, so the file contradicted its own analytic reference block. The
+    median's error is larger by the square root of the ratio of the p(1-p)
+    terms: 0.25 / 0.09 = 2.7777777777777777, root 1.6666666666666667, and
+    0.1341640786499874 times that is 0.223606797749979.
+    """
+    rv01 = dict(_VECTORS)["RV-01-monte-carlo-percentiles.yaml"]
+    ref = rv01["analytic_reference"]
+    se10 = float(ref["order_statistic_se_p10"])
+    se50 = float(ref["order_statistic_se_p50"])
+    assert se10 != se50, "the two standard errors must not be the same number"
+    assert se10 == pytest.approx(0.1341640786499874, abs=1.0e-9)
+    assert se50 == pytest.approx(0.223606797749979, abs=1.0e-9)
+    assert 0.25 / 0.09 == pytest.approx(2.7777777777777777, abs=1.0e-12)
+    assert math.sqrt(0.25 / 0.09) == pytest.approx(1.6666666666666667, abs=1.0e-12)
+    assert se10 * math.sqrt(0.25 / 0.09) == pytest.approx(se50, rel=1.0e-9)
+    p50_reason = " ".join(str(rv01["tolerances"]["bootstrap_se_p50"]["reason"]).split())
+    assert "0.2236067977" in p50_reason, (
+        "the p50 bootstrap reason must name its OWN analytic standard error"
+    )
+    assert "0.1341640786" not in p50_reason, (
+        "the p50 bootstrap reason must not name the p10 standard error"
+    )
+
+
+@pytest.mark.golden
+def test_no_two_outputs_in_a_file_share_a_verbatim_reason_unless_identical() -> None:
+    """Outputs sharing a reason verbatim must have identical expected values.
+
+    Two outputs may legitimately share wording when they are the same kind of
+    quantity at the same magnitude (two booleans, two equal integer counts).
+    They may not when their magnitudes differ, because the reason names a
+    magnitude and would then be wrong for one of them. This is the residue of
+    the same copy defect, checked rather than trusted.
+    """
+    offenders = []
+    for name, vec in _VECTORS:
+        by_reason: dict[str, list[str]] = {}
+        for key, spec in vec["tolerances"].items():
+            by_reason.setdefault(" ".join(str(spec["reason"]).split()), []).append(key)
+        for keys in by_reason.values():
+            if len(keys) < 2:
+                continue
+            values = {float(vec["expected"][k]) for k in keys}
+            if len(values) > 1:
+                offenders.append(f"{name}:{keys} values {sorted(values)}")
+    assert not offenders, (
+        "outputs sharing a verbatim tolerance reason while holding different "
+        f"expected values: {offenders}"
+    )
+
+
+@pytest.mark.golden
 def test_every_provenance_tag_is_one_of_the_five() -> None:
     """Every provenance entry names one of the five tags.
 

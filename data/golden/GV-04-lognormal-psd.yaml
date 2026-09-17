@@ -72,17 +72,19 @@ tolerances:
   volume_median_um:
     abs: 1.0e-08
     reason: >
-      Same basis as area_median_um. Two floating point operations (one exp, one
-      multiply) at a magnitude near 16 um, so the bound is near 2e-15 um. 1e-8
-      admits it with seven orders of margin and still separates the three
-      medians, which differ by 6 um.
+      Two floating point operations (one exp, one multiply), the same chain as
+      area_median_um but with the exponent 3 s^2 rather than 2 s^2. At 22.55 um
+      the bound is near 4e-15 um. 1e-8 admits it with six orders of margin and
+      still separates the three medians, which differ by 6 um.
   sauter_d32_um:
     abs: 1.0e-08
     reason: >
-      Same basis as area_median_um. Two floating point operations (one exp, one
-      multiply) at a magnitude near 16 um, so the bound is near 2e-15 um. 1e-8
-      admits it with seven orders of margin and still separates the three
-      medians, which differ by 6 um.
+      Two floating point operations (one exp, one multiply), the same chain as
+      area_median_um but with the exponent 2.5 s^2. At 18.98 um the bound is
+      near 3e-15 um. 1e-8 admits it with six orders of margin. The exponent is
+      the whole content of this check: 2, 2.5 and 3 give three different
+      diameters from one distribution, and confusing them is the classic PSD
+      error.
   specific_surface_area_m2_per_kg:
     abs: 1.0e-06
     reason: >

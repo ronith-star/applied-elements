@@ -60,16 +60,19 @@ tolerances:
   throughput_factor_1:
     abs: 1.0e-09
     reason: >
-      As throughput_factor_0, one fewer multiplication. The 0.0919 gap to the
-      off- by-one value is seven orders above this tolerance.
+      One division into a three-term tail product, so four roundings, near 6e-16
+      relative or 7e-16 absolute at 1.2477. 1e-9 admits that with six orders of
+      margin. The 0.0919 gap to the value an off-by-one stage index produces
+      (1.1557219795206064 rather than 1.2476544097097457) is seven orders above
+      this tolerance, so an indexing error cannot hide inside it.
   throughput_factor_2:
     abs: 1.0e-09
     reason: >
-      Same basis as throughput_factor_0. One division into a four-term product,
-      so four roundings plus one, near 6e-16 relative or 8e-16 absolute at 1.31.
-      1e-9 admits that with six orders of margin and is six orders tighter than
-      the 0.0920 discrepancy an off-by-one index produces, so it separates a
-      rounding difference from the real defect.
+      One division into a two-term tail product, so three roundings, near 5e-16
+      relative or 5e-16 absolute at 1.098. 1e-9 admits that with six orders of
+      margin and is six orders tighter than the discrepancy an off-by-one stage
+      index produces, so it separates a rounding difference from an indexing
+      error.
   throughput_factor_3:
     abs: 1.0e-09
     reason: >

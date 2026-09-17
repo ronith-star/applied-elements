@@ -68,25 +68,18 @@ tolerances:
   d50_um:
     abs: 1.0e-06
     reason: >
-      Same basis as d10_um. Floating point plus one fractional power. The
+      Floating point plus one fractional power, the same chain as d10_um. The
       quantile is a closed form, so the only error is IEEE 754 rounding through
-      log and pow, about 1e-15 relative, which is 2e-14 um here. 1e-6 um is
-      eight orders looser than that bound and still eight orders tighter than
-      any plausible formula error (dropping the 1/n exponent moves d10 by 26
-      um), so it separates the two cleanly. The looser 1e-6 rather than 1e-9 is
-      used because pow with a non-dyadic exponent is permitted a slightly larger
-      error than a single arithmetic operation.
+      log and pow, about 1e-15 relative, which at 39.08 um is 4e-14 um. 1e-6 um
+      is eight orders looser than that bound and still far tighter than any
+      plausible sizing measurement.
   d90_um:
     abs: 1.0e-06
     reason: >
-      Same basis as d10_um. Floating point plus one fractional power. The
-      quantile is a closed form, so the only error is IEEE 754 rounding through
-      log and pow, about 1e-15 relative, which is 2e-14 um here. 1e-6 um is
-      eight orders looser than that bound and still eight orders tighter than
-      any plausible formula error (dropping the 1/n exponent moves d10 by 26
-      um), so it separates the two cleanly. The looser 1e-6 rather than 1e-9 is
-      used because pow with a non-dyadic exponent is permitted a slightly larger
-      error than a single arithmetic operation.
+      Floating point plus one fractional power, the same chain as d10_um. At
+      62.02 um the 1e-15 relative rounding bound is 6e-14 um. 1e-6 um admits
+      that with eight orders of margin. The upper quantile is the most sensitive
+      of the three to a wrong exponent, since 1/n enters the power.
   span:
     abs: 1.0e-09
     reason: >
@@ -106,12 +99,12 @@ tolerances:
   volume_weighted_mean_um:
     abs: 1.0e-06
     reason: >
-      Same basis as sauter_d32_um. One Gamma function evaluation. Gamma is
-      implemented by a series or by the Lanczos approximation, which is accurate
-      to roughly 1e-15 relative but not to the last bit, so this quantity
-      carries slightly more error than a plain arithmetic chain. At 31 um an
-      error of 1e-15 relative is 3e-14 um; 1e-6 um admits that and still catches
-      a wrong exponent sign, which would give 40 um.
+      One Gamma function evaluation, as for sauter_d32_um, here of Gamma(1 +
+      1/n) rather than Gamma(1 - 1/n). Gamma is implemented by a series or by
+      the Lanczos approximation, accurate to roughly 1e-15 relative but not to
+      the last bit, so this carries slightly more error than a plain arithmetic
+      chain. At 39.97 um an error of 1e-15 relative is 4e-14 um, and 1e-6 um
+      admits it with eight orders of margin.
   specific_surface_area_m2_per_kg:
     abs: 1.0e-06
     reason: >

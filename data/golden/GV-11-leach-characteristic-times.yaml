@@ -76,12 +76,19 @@ tolerances:
   tau_product_layer_s:
     abs: 1.0e-09
     reason: >
-      As tau_film_s, with one additional squaring of 1e-4, which is exact. The
-      R^2 dependence is the substance of the check: an implementation using R
-      rather than R^2 would return 5e5 s, detected by 14 orders of magnitude.
+      With the activation energy set to exactly zero, k(T) equals the prefactor
+      and the expression is a product and quotient of exact decimals, plus one
+      additional squaring of 1e-4 which is exact in binary. The bound is 1 ulp
+      near 7e-15 s. 1e-9 s is not zero because the pint unit conversions may
+      reassociate the product. The R^2 dependence is the substance of the check:
+      an implementation using R rather than R^2 would return 5e5 s, detected by
+      14 orders of magnitude.
   tau_surface_reaction_s:
     abs: 1.0e-09
     reason: >
-      As tau_film_s. The absence of the factor 3 is what distinguishes this from
-      film control; an implementation carrying the 3 would return 10 s, detected
-      by 20 s.
+      With the activation energy set to exactly zero, k(T) equals the prefactor
+      and the expression is a product and quotient of exact decimals, so the
+      bound is 1 ulp near 4e-15 s. 1e-9 s is not zero because the pint unit
+      conversions may reassociate the product. The absence of the factor 3 is
+      what distinguishes this from film control; an implementation carrying the
+      3 would return 10 s, detected by 20 s.

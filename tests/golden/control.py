@@ -108,6 +108,36 @@ def main() -> int:
     results.append(("D10 vector naming the wrong bottleneck",
                     *ran(T.test_vector_outputs_match_expected, "D10", v)))
 
+    # D12: a tolerance reason that defers to another output instead of stating
+    # its own basis. This is the defect a reviewer found in the committed files:
+    # a mechanical expansion of "As <other key>" pasted the referenced output's
+    # text under a different output, including a standard error that
+    # contradicted the same file's own analytic_reference block.
+    v = load(GV1)
+    v["tolerances"]["specific_energy_kwh_per_short_ton"]["reason"] = (
+        "As specific_energy_kwh_per_metric_tonne. The same floating point "
+        "basis applies here, so nothing further is stated for this output."
+    )
+    results.append(("D12 tolerance reason defers to another output",
+                    *ran(T.test_no_tolerance_reason_defers_to_another_output,
+                         "D12", v)))
+
+    # D13: two outputs at different magnitudes sharing a verbatim reason, which
+    # is what the bad expansion produced: a reason naming the p10 standard
+    # error 0.1342 sitting on an output whose value is 0.2366. This guard is
+    # suite-level, so the injection replaces the loaded vector list.
+    v = load(RV1)
+    v["tolerances"]["bootstrap_se_p50"]["reason"] = (
+        v["tolerances"]["bootstrap_se_p10"]["reason"]
+    )
+    saved = T._VECTORS
+    T._VECTORS = [("RV-01-monte-carlo-percentiles.yaml", v)]
+    results.append((
+        "D13 differing outputs share a verbatim reason",
+        *ran(T.test_no_two_outputs_in_a_file_share_a_verbatim_reason_unless_identical),
+    ))
+    T._VECTORS = saved
+
     # D11: suite shape claim contradicted
     v = load(GV27)
     saved = T._VECTORS
@@ -132,11 +162,13 @@ def main() -> int:
         v = load(p)
         for fn in (T.test_vector_outputs_match_expected,
                    T.test_every_expected_output_has_a_reasoned_tolerance,
-                   T.test_vector_declares_its_kind_and_provenance):
+                   T.test_vector_declares_its_kind_and_provenance,
+                   T.test_no_tolerance_reason_defers_to_another_output):
             failed, msg = ran(fn, p.name, v)
             clean.append((p.name, fn.__name__, failed, msg))
     for fn in (T.test_every_provenance_tag_is_one_of_the_five,
-               T.test_the_suite_has_the_declared_shape):
+               T.test_the_suite_has_the_declared_shape,
+               T.test_no_two_outputs_in_a_file_share_a_verbatim_reason_unless_identical):
         failed, msg = ran(fn)
         clean.append(("suite", fn.__name__, failed, msg))
     bad = [c for c in clean if c[2]]

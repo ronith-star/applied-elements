@@ -139,13 +139,13 @@ tolerances:
   AlCl3_pressure_Pa:
     rel: 1.0e-12
     reason: >
-      Same basis as TiCl4_pressure_Pa. A RELATIVE tolerance is correct here
-      because the quantity is an exponential: the absolute error scales with the
-      value, and the same absolute tolerance cannot serve both 79279 Pa and
-      1.4e-10 Pa in one vector. The chain is one reciprocal difference, one
-      multiplication and one exp, each 1 ulp, so the relative bound is near
-      4e-16. 1e-12 relative admits that with three orders of margin and still
-      detects a wrong Trouton constant, which moves the pressure by tens of
+      A RELATIVE tolerance is correct here because the quantity is an
+      exponential: the absolute error scales with the value, and the same
+      absolute tolerance cannot serve both 26047.77 Pa and the 1.4e-10 Pa of
+      NaCl in one vector. The chain is one reciprocal difference, one
+      multiplication by the Trouton enthalpy over R, and one exp, so about 4 ulp
+      relative, near 1e-15. 1.0e-12 admits that with three orders of margin and
+      still detects a wrong Trouton entropy, which moves the pressure by tens of
       percent.
   AlCl3_capped:
     abs: 0.0

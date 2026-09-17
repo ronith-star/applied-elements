@@ -56,10 +56,10 @@ tolerances:
   exposure_mineral:
     abs: 1.0e-12
     reason: >
-      Same basis as exposure_fluid. One division, one cube, one subtraction, all
-      in double precision on values that are not binary-exact (1/15 and 14/15),
-      so the bound is a few ulp, near 5e-16 absolute. 1e-12 admits it with three
-      orders of margin.
+      One division, one cube, one subtraction, all in double precision on values
+      that are not binary-exact (4/15 and 11/15 for the 20 um inclusion in a 75
+      um particle), so the bound is a few ulp, near 7e-16 absolute. 1e-12 admits
+      it with three orders of margin.
   leachable_fraction:
     abs: 1.0e-12
     reason: >
