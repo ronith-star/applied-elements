@@ -520,6 +520,18 @@ def rectangular_distribution_recovery(
 
     >>> round(rectangular_distribution_recovery(Q_(60.0, "s"), Q_(0.10, "1/s"), 0.90), 8)
     0.75037181
+
+    Small-argument behaviour. As :math:`k_{max} t \\to 0` the bracket goes to
+    zero like :math:`k_{max}t/2 - (k_{max}t)^2/6`, so recovery goes to zero from
+    ABOVE. Evaluating :math:`(1 - e^{-x})/x` directly destroys that: at
+    :math:`x = 10^{-9}` the numerator has no significant figures left and the
+    function returned a recovery of -7.446633369934119e-08, which raised on the
+    fraction check, while at :math:`x = 10^{-8}` it returned 2.545374e-08
+    against the analytic 4.5e-10, a factor of 56.56 too high. ``-expm1(-x)``
+    computes the same numerator without cancellation and reproduces the analytic
+    limit to 1e-9 relative at every argument down to 1e-12. The old code
+    special-cased only ``x == 0.0`` exactly, which is the one argument where
+    catastrophic cancellation does not occur.
     """
     require_dimensionality(time, "time", "time")
     require_dimensionality(k_max, "rate_first_order", "k_max")
@@ -531,8 +543,8 @@ def rectangular_distribution_recovery(
     x = km * t
     if x == 0.0:
         return 0.0
-    r = r_inf * (1.0 - (1.0 - math.exp(-x)) / x)
-    return require_fraction(r, "rectangular distribution recovery")
+    r = r_inf * (1.0 + math.expm1(-x) / x)
+    return require_fraction(max(0.0, r), "rectangular distribution recovery")
 
 
 # --- Eq. E3 -----------------------------------------------------------------
@@ -727,6 +739,17 @@ def imperfection(ep: float, x50: float, basis: PropertyBasis) -> float:
 
     >>> round(imperfection(0.05, 1.60, PropertyBasis.DENSITY), 7)
     0.0833333
+
+    Ceiling. :math:`I > 1` means the probable error exceeds the whole property
+    difference driving the separation, so the partition curve is flatter than
+    the cut it is meant to make and no separation is described. That is
+    definitional, not a sourced threshold, and it is enforced because the
+    ``x50 > 1`` guard alone does not bound the DENSITY denominator away from
+    zero: at ``x50 = 1.0000001`` the denominator is 1e-7 and this function
+    returned an imperfection of 499999.99970806646 rather than refusing. A cut
+    point that close to the medium density is a measurement artefact or a unit
+    error, and half a million reported as an imperfection is the kind of number
+    that survives review because nobody expects it to be possible.
     """
     if ep <= 0.0:
         raise ValueError(f"Ep must be positive, got {ep}")
@@ -744,6 +767,13 @@ def imperfection(ep: float, x50: float, basis: PropertyBasis) -> float:
     i = ep / denom
     if i < 0.0:
         raise AssertionError("imperfection cannot be negative")
+    if i > 1.0:
+        raise ValueError(
+            f"imperfection {i} exceeds 1: Ep ({ep}) is larger than the property "
+            f"difference driving the separation ({denom} on the {basis.value} "
+            f"basis), so this describes no separation. Check the cut point for a "
+            f"unit error or a value at the medium density."
+        )
     return i
 
 

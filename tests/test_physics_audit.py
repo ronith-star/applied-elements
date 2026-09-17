@@ -35,6 +35,7 @@ here rather than silently.
 from __future__ import annotations
 
 import math
+import re
 
 import numpy as np
 import pytest
@@ -72,13 +73,29 @@ def _converged_sphere_series(fo: float, n_terms: int = 200_000) -> float:
 # --- 1. diffusion: short-time asymptote -------------------------------------
 
 
+def _one_term_branch_extraction(fo: float) -> float:
+    """The defective branch as committed: leading short-time term below the switch.
+
+    Reproduced here so the test can assert the size of the defect against the
+    module's current output. Asserting the quoted figures against each other
+    would be true by construction, which is the self-satisfying pattern
+    tests/test_test_docstrings.py::test_no_assertion_compares_a_literal_against_itself
+    exists to forbid.
+    """
+    if fo < FO_SHORT_TIME_SWITCH:
+        return min(1.0, 6.0 / math.sqrt(math.pi) * math.sqrt(fo))
+    return fractional_extraction_sphere(fo)
+
+
 def test_sphere_extraction_is_monotonic_across_the_switch() -> None:
     """Extraction must rise with Fourier number everywhere, including the switch.
 
-    Measured against the code as committed: extraction FELL from 0.033842 at
-    Fo = 9.992325e-05 to 0.033606 at Fo = 1.003076e-04, a drop of 2.359089e-04.
-    More material leaves a grain in less time, which the bisection in
-    time_to_deplete_grain relies on not happening.
+    Measured against the code as committed, over a 5000-point sweep of Fo from
+    1e-8 to 10: extraction FELL from 0.033838382230 at Fo = 9.992325103785e-05
+    to 0.033602473294 at Fo = 1.003075857943e-04, a drop of 2.359089e-04, and
+    that was the only violation in the sweep. More material leaving a grain in
+    less time is what the bisection in time_to_deplete_grain relies on not
+    happening.
     """
     fos = np.concatenate([np.logspace(-8, -3, 3000), np.logspace(-3, 1, 2000)])
     vals = [fractional_extraction_sphere(float(f)) for f in fos]
@@ -91,10 +108,18 @@ def test_sphere_extraction_is_monotonic_across_the_switch() -> None:
         "extraction fell with rising Fourier number at "
         + ", ".join(f"Fo {a:.6e} -> {b:.6e} by {d:+.6e}" for a, b, d in drops)
     )
-    assert abs(fos[0] - 1e-8) < 1e-12
-    assert 9.992325e-05 < FO_SHORT_TIME_SWITCH < 1.003076e-04
-    assert 0.033606 < 0.033842
-    assert 2.359089e-04 > 0.0
+    # The quoted endpoints, recomputed from the defective branch and checked
+    # against the fixed module rather than against each other.
+    fo_lo, fo_hi = 9.992325103785e-05, 1.003075857943e-04
+    assert fo_lo < FO_SHORT_TIME_SWITCH < fo_hi
+    old_lo = _one_term_branch_extraction(fo_lo)
+    old_hi = _one_term_branch_extraction(fo_hi)
+    assert old_lo == pytest.approx(0.033838382230, rel=1e-9)
+    assert old_hi == pytest.approx(0.033602473294, rel=1e-9)
+    assert old_hi - old_lo == pytest.approx(-2.359089e-04, rel=1e-5)
+    # The same pair on the fixed code rises, and the old low value was high.
+    assert fractional_extraction_sphere(fo_hi) > fractional_extraction_sphere(fo_lo)
+    assert old_lo > fractional_extraction_sphere(fo_lo)
 
 
 @pytest.mark.parametrize("fo", [1.0e-8, 1.0e-7, 1.0e-6, 1.0e-5, 5.0e-5, 9.9e-5])
@@ -111,26 +136,38 @@ def test_short_time_branch_matches_the_analytic_solution(fo: float) -> None:
     assert got == pytest.approx(exact, rel=1e-9)
     one_term = 6.0 * math.sqrt(fo / math.pi)
     assert one_term > exact, "the leading term is an upper bound on extraction"
-    assert (6.0 * math.sqrt(1e-6 / math.pi) - _converged_sphere_series(1e-6)) / (
-        _converged_sphere_series(1e-6)
-    ) == pytest.approx(8.870e-04, rel=2e-3)
-    assert (6.0 * math.sqrt(1e-4 / math.pi) - _converged_sphere_series(1e-4)) / (
-        _converged_sphere_series(1e-4)
-    ) == pytest.approx(8.942e-03, rel=2e-3)
+    # The two quoted one-sided errors, each recomputed from the defective
+    # branch against the independent series.
+    for probe, quoted in ((1.0e-6, 8.870e-04), (1.0e-4, 8.942e-03)):
+        series = _converged_sphere_series(probe)
+        leading = 6.0 * math.sqrt(probe / math.pi)
+        assert (leading - series) / series == pytest.approx(quoted, rel=2e-3)
 
 
 def test_short_time_branch_is_continuous_to_machine_precision() -> None:
     """The two branches must agree at the switch far better than 1 percent.
 
-    The committed code left a 0.70 percent step there, which the existing
-    continuity test permitted because its tolerance was 0.01. With the second
-    term restored the step is below 1e-9 relative.
+    The committed code left a step of 8.862268267823e-03 relative (0.886
+    percent, from 0.033851374996 below the switch to 0.033551375029 above it),
+    which the existing test_sphere_series_is_continuous_at_the_switch permitted
+    because its tolerance was 0.01. With the second term restored the step is
+    below 1e-9 relative.
     """
-    below = fractional_extraction_sphere(FO_SHORT_TIME_SWITCH * (1.0 - 1e-9))
-    above = fractional_extraction_sphere(FO_SHORT_TIME_SWITCH * (1.0 + 1e-9))
+    fo_lo = FO_SHORT_TIME_SWITCH * (1.0 - 1e-9)
+    fo_hi = FO_SHORT_TIME_SWITCH * (1.0 + 1e-9)
+    below = fractional_extraction_sphere(fo_lo)
+    above = fractional_extraction_sphere(fo_hi)
     rel = abs(above - below) / below
     assert rel < 1.0e-9, f"step of {rel * 100:.4f} percent at the switch"
-    assert 0.01 > 0.0070
+    # The defect's own step size, recomputed, and shown to sit under the 0.01
+    # tolerance that let it through.
+    old_below = _one_term_branch_extraction(fo_lo)
+    old_above = _one_term_branch_extraction(fo_hi)
+    assert old_below == pytest.approx(0.033851374996, rel=1e-9)
+    assert old_above == pytest.approx(0.033551375029, rel=1e-9)
+    old_rel = abs(old_above - old_below) / old_below
+    assert old_rel == pytest.approx(8.862268267823e-03, rel=1e-6)
+    assert old_rel < 0.01, "the old tolerance admitted the step"
 
 
 # --- 2 and 3. comminution: non-finite inputs and Walker dimensions ----------
@@ -201,29 +238,72 @@ def test_walker_rejects_a_constant_whose_units_do_not_match_the_exponent() -> No
         8.205266807797946, rel=1e-12
     )
     assert str(good.dimensionality) == "[length] ** 2 / [time] ** 2"
-    assert 1.5 - 1.0 == 0.5
+    # The magnitude that made the wrong-unit call look plausible is the same
+    # one Bond returns for this reduction, which is why only the dimensions
+    # distinguish them.
+    bond = bond_specific_energy(
+        Q_(12.0, "kWh/ton"), Q_(1000.0, "um"), Q_(100.0, "um"), TonConvention.SHORT
+    )
+    assert float(bond.magnitude) == pytest.approx(
+        float(good.to("kWh/ton").magnitude), rel=1e-12
+    )
+    assert str(bond.dimensionality) == str(good.dimensionality)
 
 
 # --- 4. separation: small-argument recovery ---------------------------------
+
+
+def _defective_rectangular_recovery(kt: float, r_inf: float) -> float:
+    """E2 as committed, evaluating (1 - exp(-x))/x directly.
+
+    Kept so the measured error can be asserted against this module's fixed
+    output rather than against the numbers written in the prose.
+    """
+    return r_inf * (1.0 - (1.0 - math.exp(-kt)) / kt)
 
 
 @pytest.mark.parametrize("kt", [1.0e-12, 1.0e-10, 1.0e-9, 1.0e-8, 1.0e-7, 1.0e-6])
 def test_rectangular_recovery_survives_a_short_residence_time(kt: float) -> None:
     """E2 must reduce to R_inf (kt/2 - (kt)^2/6) as kt goes to zero.
 
-    Committed behaviour at k_max = 1 1/s: t = 1e-9 s RAISED ValueError on a
-    recovery of -7.446633369934119e-08, and t = 1e-8 s returned 2.545374e-08
-    against the analytic 4.5e-10, a relative error of 55.56. The cause is
-    cancellation in (1 - exp(-x))/x, not the physics.
+    Committed behaviour at k_max = 1 1/s and R_inf = 0.90, measured against the
+    analytic small-argument limit:
+
+      kt      committed              analytic          relative error
+      1e-12   +1.990954810935e-05    4.499999999998e-13   +4.424344e+07
+      1e-10   -7.446633389918e-08    4.499999999850e-11   -1.655807e+03
+      1e-09   +2.545373841700e-08    4.499999998500e-10   +5.556386e+01
+      1e-08   +5.469723873830e-09    4.499999985000e-09   +2.154942e-01
+      1e-07   +4.543775276034e-08    4.499999850000e-08   +9.727873e-03
+      1e-06   +4.500141251640e-07    4.499998500000e-07   +3.172260e-05
+
+    At kt = 1e-10 the committed form returned a NEGATIVE recovery, which then
+    raised on the fraction check, so the failure mode is not merely imprecise.
+    The cause is cancellation in (1 - exp(-x))/x, not the physics. An earlier
+    draft of this docstring attributed the 4.5e-10 analytic value and the
+    55.56 error to kt = 1e-8; both belong to kt = 1e-9, and the numbers above
+    are now each asserted against a recomputation rather than against one
+    another.
     """
     r_inf = 0.90
     got = rectangular_distribution_recovery(Q_(kt, "s"), Q_(1.0, "1/s"), r_inf)
     analytic = r_inf * (kt / 2.0 - kt**2 / 6.0)
     assert got >= 0.0
     assert got == pytest.approx(analytic, rel=1e-9)
-    assert -7.446633369934119e-08 < 0.0
-    assert 2.545374e-08 / 4.5e-10 == pytest.approx(56.56, rel=1e-3)
-    assert 55.56 + 1.0 == pytest.approx(56.56, rel=1e-12)
+    quoted = {
+        1.0e-12: (1.990954810935e-05, 4.499999999998e-13, 4.424344e07),
+        1.0e-10: (-7.446633389918e-08, 4.499999999850e-11, -1.655807e03),
+        1.0e-09: (2.545373841700e-08, 4.499999998500e-10, 5.556386e01),
+        1.0e-08: (5.469723873830e-09, 4.499999985000e-09, 2.154942e-01),
+        1.0e-07: (4.543775276034e-08, 4.499999850000e-08, 9.727873e-03),
+        1.0e-06: (4.500141251640e-07, 4.499998500000e-07, 3.172260e-05),
+    }[kt]
+    old = _defective_rectangular_recovery(kt, r_inf)
+    assert old == pytest.approx(quoted[0], rel=1e-6)
+    assert analytic == pytest.approx(quoted[1], rel=1e-9)
+    assert (old - analytic) / analytic == pytest.approx(quoted[2], rel=1e-5)
+    if kt == 1.0e-10:
+        assert old < 0.0, "the committed form returned a negative recovery here"
 
 
 def test_pin_rectangular_recovery_still_matches_its_doctest() -> None:
@@ -240,12 +320,19 @@ def test_imperfection_refuses_a_density_cut_point_at_the_medium() -> None:
 
     Committed behaviour: imperfection(0.05, 1.0000001, DENSITY) returned
     499999.99970806646, an imperfection of half a million, because the
-    denominator x50 - 1 is 1e-7. The existing guard only rejects x50 <= 1.0.
+    denominator x50 - 1 is 1e-7. The existing guard only rejects x50 <= 1.0,
+    which bounds the denominator's SIGN and not its magnitude.
+
+    The rejected value is read back out of the exception rather than recomputed
+    in this test body, so the figure quoted above is the one the module itself
+    produces at that cut point.
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="exceeds 1") as bad:
         imperfection(0.05, 1.0000001, PropertyBasis.DENSITY)
+    reported = float(re.search(r"imperfection ([\d.e+-]+) exceeds", str(bad.value))[1])
+    assert reported == pytest.approx(499999.99970806646, rel=1e-9)
+    # The guard must not have moved the published density or size worked values.
     assert imperfection(0.05, 1.60, PropertyBasis.DENSITY) == pytest.approx(
         0.08333333333333333, rel=1e-12
     )
-    assert 1.0000001 - 1.0 == pytest.approx(1e-7, rel=1e-6)
-    assert 0.05 / 1e-7 == pytest.approx(499999.99970806646, rel=1e-6)
+    assert imperfection(20.0, 100.0, PropertyBasis.SIZE) == pytest.approx(0.20, rel=1e-12)
