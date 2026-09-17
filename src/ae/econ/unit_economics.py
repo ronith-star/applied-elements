@@ -256,6 +256,20 @@ def cash_cost(
     cur = site.currency.value
     lines: list[CostLine] = []
 
+    # SIGN DISCIPLINE. Every cost line is non-negative and every credit is
+    # stored POSITIVE and subtracted, because cash = gross - sum(credits). A
+    # caller who pre-flips a credit's sign has it added to the cost instead,
+    # and the build stays internally consistent while being wrong by twice the
+    # credit: measured on an 18.0 USD/t gross with a credit entered as
+    # -50.0 USD/t, the cash cost came back 68.0 USD/t with a credit_share of
+    # -2.7777777777777777 and breakdown_sums_to_cash_cost() returning True.
+    # The checks are here, at the boundary, rather than as a final sanity test
+    # on the total, so the error names the line that caused it.
+    # Negative specific consumptions are NOT checked here: InputDemand's own
+    # __post_init__ already refuses them ("consumption cannot be negative"). I
+    # wrote a duplicate check at this line and the per-defect control showed it
+    # was unreachable, which is the CORRECTIONS.md C7 failure mode (a guard
+    # added for a defect that a check upstream already covers), so it is gone.
     for d in demands:
         price = _resolve_price(site, d.name)
         cost_per_feed_tonne = (d.per_tonne_feed * price.quantity).to(f"{cur}/tonne")
@@ -277,6 +291,12 @@ def cash_cost(
         if v is None:
             continue
         _require_currency(v.quantity, site, f"annual {label}")
+        if v.quantity.magnitude < 0:
+            raise ValueError(
+                f"annual {label} is negative ({v.quantity:~P}). Measured before "
+                f"this check, an annual labour of -1000000 USD over 1000 t/yr "
+                f"gave a cash cost of -1000.0 USD/t."
+            )
         require_dimensionality(v.quantity / annual_rate, "cost_per_mass_usd"
                                if cur == "USD" else "cost_per_mass_inr",
                                f"annual {label} spread over output")
@@ -288,6 +308,14 @@ def cash_cost(
         ))
 
     if freight is not None:
+        if freight.quantity.magnitude < 0:
+            raise ValueError(
+                f"freight is negative ({freight.quantity:~P}). A netback quote "
+                f"carries the opposite sign convention to a delivered cost; "
+                f"convert it before passing it. Measured before this check, a "
+                f"freight of -40.0 USD/t turned an 18.0 USD/t gross cost into "
+                f"a cash cost of -22.0 USD/t."
+            )
         lines.append(CostLine(name="freight", amount=freight.quantity.to(f"{cur}/tonne"),
                               tag=freight.tag, note="delivered basis"))
     else:
@@ -297,12 +325,38 @@ def cash_cost(
 
     credit_lines: list[CostLine] = []
     for name, v in (credits or []):
+        if v.quantity.magnitude < 0:
+            raise ValueError(
+                f"credit {name!r} is negative ({v.quantity:~P}). Credits are "
+                f"stored POSITIVE and subtracted, so a pre-flipped sign is "
+                f"added to the cost: a credit entered as -50.0 USD/t against "
+                f"an 18.0 USD/t gross gave a cash cost of 68.0 USD/t. If this "
+                f"is genuinely a cost, put it in demands or a fixed-cost line."
+            )
         credit_lines.append(CostLine(name=name, amount=v.quantity.to(f"{cur}/tonne"),
                                      tag=v.tag, note="by-product credit"))
 
     gross = sum((ln.amount for ln in lines), Q_(0.0, f"{cur}/tonne"))
     credit_total = sum((c.amount for c in credit_lines), Q_(0.0, f"{cur}/tonne"))
     cash = gross - credit_total
+    # A check for a NEGATIVE GROSS COST was written here and removed: with the
+    # freight and annual-cost guards above, and the pre-existing price check in
+    # _resolve_price ("price of ... is negative"), no reachable input can drive
+    # the gross negative, and the per-defect control confirmed that removing
+    # the check failed nothing. Keeping an unreachable guard is the C7 failure
+    # mode. What the attempt DID find is recorded on the check below, whose
+    # message was misattributing the case.
+    if credit_total > gross:
+        raise ValueError(
+            f"by-product credits {credit_total:~P} exceed the gross cost "
+            f"{gross:~P}, giving a cash cost of {cash:~P}. That means "
+            f"the by-product is worth more than the whole cost of production, "
+            f"so the build is organised around the wrong output. This is "
+            f"reachable rather than hypothetical: credits are quoted per tonne "
+            f"of BY-PRODUCT, and converting to a per-tonne-of-product basis "
+            f"needs the by-product yield, which an uncharacterized deposit "
+            f"does not have."
+        )
 
     full: Quantity | None = None
     if capex is not None and fixed_charge_rate is not None:
