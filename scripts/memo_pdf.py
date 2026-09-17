@@ -80,12 +80,12 @@ MARGIN_TOP = 11 * mm
 MARGIN_BOT = 12 * mm
 FRAME_W = A4[0] - 2 * MARGIN_X
 #: Figure width as a fraction of the text frame. See the image branch.
-FIG_SCALE = 0.68
+FIG_SCALE = 0.60
 #: Lines in docs/decision-memo.md that begin with an inline code span and
 #: continue a paragraph. This is the shape that made the first parser loop
 #: forever. Asserted against the memo by tests/test_memo_pdf.py rather than
 #: stated in prose, because the count drifted twice during authoring.
-BACKTICK_LINE_COUNT = 13
+BACKTICK_LINE_COUNT = 12
 
 S = {
     "h1": ParagraphStyle("h1", fontName="Helvetica-Bold", fontSize=13.6,
@@ -98,8 +98,12 @@ S = {
                          spaceAfter=2),
     "p": ParagraphStyle("p", fontName="Helvetica", fontSize=7.9, leading=10.3,
                         alignment=TA_JUSTIFY, spaceAfter=3.8),
+    # Left-aligned, not justified. The numbered controls contain long unbreakable
+    # identifiers (test_every_load_bearing_quantity_has_a_csv_row), and
+    # justifying a narrow line around one stretches the inter-word spaces to the
+    # point of looking like a rendering fault. Ragged right is the lesser evil.
     "li": ParagraphStyle("li", fontName="Helvetica", fontSize=7.9, leading=10.3,
-                         alignment=TA_JUSTIFY, leftIndent=12,
+                         alignment=TA_LEFT, leftIndent=12,
                          firstLineIndent=-12, spaceAfter=3.0),
     "cap": ParagraphStyle("cap", fontName="Helvetica", fontSize=6.9, leading=8.6,
                           textColor=GREY, alignment=TA_LEFT, spaceBefore=1.5,

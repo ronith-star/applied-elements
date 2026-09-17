@@ -238,6 +238,32 @@ def test_memo_states_no_second_test_count_anywhere():
         f"{banned}. Refer to the guarded total instead of restating a number.")
 
 
+def test_memo_per_file_test_counts_match_each_file():
+    """The per-file breakdown was unguarded and had already drifted.
+
+    The total was checked against the sum, but the memo also names a count for
+    each file, and a sed edit once credited a new test to the wrong file: the
+    breakdown was wrong while the total was right, because two errors cancelled
+    in the sum. Each named count is now compared against its own file.
+    """
+    # The sentence wraps in the source, so collapse whitespace before matching.
+    # A first version of this pattern assumed single-line and silently found
+    # nothing, which would have made the guard vacuous.
+    text = " ".join(MEMO.read_text().split())
+    pat = (r"(\d+) test functions in `tests/(\w+\.py)`, (\d+) in "
+           r"`tests/(\w+\.py)`, and (\d+) in `tests/(\w+\.py)`")
+    m = re.search(pat, text)
+    assert m, "memo must name a per-file test count breakdown"
+    pairs = [(m.group(2), int(m.group(1))), (m.group(4), int(m.group(3))),
+             (m.group(6), int(m.group(5)))]
+    for fname, claimed in pairs:
+        src = (ROOT / "tests" / fname).read_text()
+        actual = len(re.findall(r"^def test_", src, flags=re.M))
+        assert claimed == actual, (
+            f"memo claims {claimed} test functions in {fname}; it defines "
+            f"{actual}")
+
+
 def test_memo_quoted_test_count_matches_the_files_it_names():
     """The memo quotes a pytest total. It went stale twice; this catches that."""
     text = MEMO.read_text()

