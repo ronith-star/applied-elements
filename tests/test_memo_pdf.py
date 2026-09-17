@@ -5,8 +5,10 @@ ever produced a page. Its paragraph branch treated any line starting with a
 backtick as the start of a new block, while the dispatch chain only recognised
 a TRIPLE backtick fence. A paragraph whose continuation line opens with an
 inline code span therefore fell into the paragraph branch, collected zero
-lines, reset the cursor to where it already was, and looped forever. The memo
-has nine such lines.
+lines, reset the cursor to where it already was, and looped forever. How many
+such lines the memo has is recorded in memo_pdf.BACKTICK_LINE_COUNT and
+asserted below, not stated here, because that count drifted twice during
+authoring while an unguarded docstring claimed otherwise.
 
 The module docstring of memo_pdf.py claimed "test_memo_pdf.py exercises both"
 before this file existed, which is a coverage claim with nothing behind it.
@@ -40,14 +42,38 @@ def test_paragraph_continuing_with_an_inline_code_span_terminates():
 
 
 def test_every_backtick_initial_line_in_the_real_memo_is_consumed():
+    """The count is asserted, not merely required to be non-zero.
+
+    An earlier version of this test asserted only that the offender list was
+    non-empty, while memo_pdf.py's docstring stated a count of nine. That count
+    was ten at the time and was not checked anywhere, so the prose and the file
+    could disagree silently. The count now lives in
+    memo_pdf.BACKTICK_LINE_COUNT and is compared against the memo here.
+    """
     lines = MEMO.read_text().split("\n")
     offenders = [k + 1 for k, l in enumerate(lines)
                  if l.strip() and l.startswith("`") and not l.startswith("```")]
     assert offenders, (
         "this guard is vacuous unless the memo still contains a paragraph "
         "continuing with an inline code span")
+    assert len(offenders) == MP.BACKTICK_LINE_COUNT, (
+        f"memo_pdf.BACKTICK_LINE_COUNT is {MP.BACKTICK_LINE_COUNT} but the "
+        f"memo has {len(offenders)} such lines, at {offenders}")
     flow = MP.build_flow(MEMO.read_text())
     assert len(flow) > 50, f"only {len(flow)} flowables from the full memo"
+
+
+def test_memo_pdf_docstring_states_no_memo_line_numbers():
+    """Line numbers in prose go stale the moment the memo gains a paragraph.
+
+    The module docstring once listed the nine offending lines by number. An
+    insertion elsewhere in the memo shifted all of them. Positions are derived
+    at runtime by the test above, so they must not be restated in prose.
+    """
+    doc = MP.__doc__ or ""
+    assert "at lines" not in doc, (
+        "memo_pdf's docstring lists memo line numbers, which go stale on any "
+        "edit to the memo; let the test report positions instead")
 
 
 def test_bare_backtick_is_not_a_paragraph_terminator():
@@ -106,6 +132,23 @@ def test_either_half_of_the_fix_alone_prevents_the_stall(at_i, backtick):
     parser = _broken_parser(paragraph_starts_at_i=at_i,
                             bare_backtick_terminates=backtick)
     assert parser(HANG_MD), "variant produced no flowables"
+
+
+def test_built_pdf_is_six_pages():
+    """The brief specifies a 6 page memo. This drifted three times.
+
+    Each time I added a paragraph to the memo the PDF grew past the limit and I
+    noticed only because I happened to re-read the build line. The build script
+    warns on a loose range; this asserts the exact requirement against the
+    shipped file, so growing the memo without re-tuning FIG_SCALE fails here.
+    """
+    pdf = ROOT / "docs" / "decision-memo.pdf"
+    assert pdf.exists(), "build the PDF first: python scripts/memo_pdf.py"
+    import pypdfium2 as pdfium
+    n = len(pdfium.PdfDocument(str(pdf)))
+    assert n == 6, (
+        f"the brief specifies a 6 page memo; the built PDF has {n}. Re-tune "
+        f"FIG_SCALE (currently {MP.FIG_SCALE}) or cut prose.")
 
 
 def test_column_floor_fits_the_widest_word_in_every_memo_table():

@@ -14,11 +14,21 @@ DEFECT FIXED HERE, recorded because it cost two interrupted runs. The first
 version of this loop had a paragraph branch that stopped collecting at any line
 beginning with a backtick, while the dispatch chain only recognised a TRIPLE
 backtick fence. A paragraph whose continuation line starts with an inline code
-span, of which this memo has nine (at lines 9, 36, 39, 84, 192, 280, 381, 382
-and 383), therefore fell into the paragraph branch, collected zero lines, set
-the cursor back to where it already was, and looped forever: the cursor never
-advanced past that line. The two 600 second runs were that infinite loop, not a
-slow renderer and not a kernel problem.
+span therefore fell into the paragraph branch, collected zero lines, set the
+cursor back to where it already was, and looped forever: the cursor never
+advanced past that line. The two interrupted runs were that infinite loop, not
+a slow renderer and not a kernel problem, and the tracebacks confirm it: both
+died inside Paragraph(" ".join(buf)) with buf empty, one of them reporting
+'paragraph text <para></para> caused exception' after 404 s of CPU.
+
+BACKTICK_LINE_COUNT below records how many such lines the memo currently has.
+It is a module constant rather than a sentence because the number drifted twice
+while the memo was edited (it has now been nine, then ten, then nine, then ten
+again) and the line numbers an earlier version of this docstring listed went
+stale the first time the memo gained a paragraph. tests/test_memo_pdf.py
+asserts the constant against the memo, so it cannot drift unnoticed: the last
+drift was caught by that test rather than by a reader, which is the point.
+Measured: 11 passed.
 
 Three changes prevent the class of bug rather than the instance. First, the
 paragraph branch no longer treats a bare backtick as a terminator; only a
@@ -34,9 +44,8 @@ defects, separately and together, and asserts that the combination raises
 "did not advance" (a control that would hang without the third change) while
 either part alone still parses. It also asserts the terminator tuple contains
 the triple fence and not the bare backtick, that build_flow terminates on the
-real memo including its nine backtick-initial continuation lines, and that
+real memo including every backtick-initial continuation line in it, and that
 every table column in the memo is wide enough for its widest unbreakable word.
-Measured: 10 passed.
 """
 from __future__ import annotations
 
@@ -70,7 +79,12 @@ MARGIN_TOP = 11 * mm
 MARGIN_BOT = 12 * mm
 FRAME_W = A4[0] - 2 * MARGIN_X
 #: Figure width as a fraction of the text frame. See the image branch.
-FIG_SCALE = 0.68
+FIG_SCALE = 0.60
+#: Lines in docs/decision-memo.md that begin with an inline code span and
+#: continue a paragraph. This is the shape that made the first parser loop
+#: forever. Asserted against the memo by tests/test_memo_pdf.py rather than
+#: stated in prose, because the count drifted twice during authoring.
+BACKTICK_LINE_COUNT = 10
 
 S = {
     "h1": ParagraphStyle("h1", fontName="Helvetica-Bold", fontSize=13.6,

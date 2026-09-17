@@ -385,8 +385,9 @@ with a tag and a basis note), `docs/memo_numbers.json`,
 `docs/memo_evpi_ceiling.json`, `docs/memo_falsification.json`, and
 `docs/figures/`.
 
-Measured test result: `35 passed`, being 9 in `tests/test_memo_numbers.py`, 16
-in `tests/test_memo_traceability.py`, and 10 in `tests/test_memo_pdf.py`.
+Measured test result: `37 passed`, being 9 test functions in
+`tests/test_memo_numbers.py`, 16 in `tests/test_memo_traceability.py`, and 11
+in `tests/test_memo_pdf.py`, one of which is parametrized over two cases.
 
 The count is quoted without a wall time deliberately. An earlier version of this
 line paired a count taken from a guard failure with a runtime that no run had
@@ -488,7 +489,17 @@ After each restoration the suite returned to passing.
     handled by tests: one counts test functions across the three files and
     fails if the quoted count drifts, the other fails if any pytest wall time
     appears in this memo at all.
-11. Table column widths mid-word-wrapped "SOURCED" as "SOURC ED", which reads as
+11. `scripts/memo_pdf.py` stated in prose how many lines of this memo begin
+    with an inline code span, the shape that hung its parser. The number was
+    nine when written, was ten by the time it was read, and the docstring also
+    listed those lines by number, which an insertion elsewhere in the memo
+    invalidated. A count in prose next to a test that only checked the list was
+    non-empty is an unguarded number. The count is now a module constant
+    asserted against this memo, the line numbers are reported by the test
+    rather than written down, and a further test fails if any line numbers
+    reappear in that docstring. The constant has since drifted once more, to
+    ten, and the test caught it rather than a reader, which is the point.
+12. Table column widths mid-word-wrapped "SOURCED" as "SOURC ED", which reads as
     a different provenance tag. The first fix estimated 4.0 pt per character,
     which understates 6.8 pt Helvetica by 20 percent ("SOURCED" measures
     34.00 pt, not 28.0), so the floor never bound. The second used measured
