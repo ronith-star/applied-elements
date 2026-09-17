@@ -287,3 +287,138 @@ def test_service_time_draw_matches_requested_cv():
         assert draws.std() / draws.mean() == pytest.approx(cv, rel=0.05)
     det = Station("d", service_hours=3.0, cv_service=0.0)
     assert det.draw_service(rng) == 3.0
+
+
+def test_littles_law_holds_when_lots_are_scrapped():
+    """Scrapped lots occupy WIP, so they belong in both sides of L = lambda W.
+
+    The defect as committed: ``cycle_times`` is appended only on the shipping
+    path, and ``throughput_per_hour`` is ``lots_shipped / horizon``. A lot
+    scrapped at QC has occupied the line, contributed to the WIP integral and
+    then departed, but it appears in neither the count nor the time average, so
+    both factors of lambda W are understated while L is not. The existing
+    Little's law tests run no scrap, so the identity was only ever checked on
+    the configuration where the omission cannot show.
+
+    Measured before the fix, single station, arrival 0.7/h, 30 percent scrap,
+    horizon 20000 h, warmup 2000 h, seed 3: L_measured 2.24732 against
+    lambda_W 1.58809, a relative error of 0.41511. 8824 lots shipped and 3693
+    were scrapped, so the true departure rate was 12517/18000 = 0.6954 per
+    hour against a reported throughput of 0.4902.
+    """
+    sched = PlantSchedule([Station("kiln", service_hours=1.0, cv_service=1.0,
+                                   qc_fail_probability=0.30,
+                                   qc_disposition="scrap")])
+    r = sched.run(arrival_rate=0.7, horizon_hours=20000.0, seed=3,
+                  warmup_hours=2000.0)
+    assert r.lots_scrapped > 0, "fixture must actually scrap lots"
+    # The pre-fix figures above are reproducible on this run, because the fix
+    # changed which departures are counted and not the simulation itself.
+    assert r.lots_shipped == 8824
+    assert r.lots_scrapped == 3693
+    assert 8824 + 3693 == 12517
+    assert (8824 + 3693) / 18000.0 == pytest.approx(0.6954, abs=5e-5)
+    assert r.departure_rate_per_hour == pytest.approx(0.6954, abs=5e-5)
+    assert r.mean_wip == pytest.approx(2.24732, abs=1e-5)
+    # The old lambda_W: shipped-only rate against shipped-only cycle time.
+    old_lambda_w = (r.lots_shipped / 18000.0) * r.mean_cycle_time
+    assert old_lambda_w == pytest.approx(1.58809, abs=1e-5)
+    assert abs(r.mean_wip - old_lambda_w) / old_lambda_w == pytest.approx(
+        0.41511, abs=1e-5)
+    # Saleable throughput stays shipped-only: that is the commercial number.
+    # The denominator is the MEASURED window, 20000 - 2000 = 18000 h, which is
+    # what run() stores in horizon_hours. A first draft of this assertion used
+    # the 20000 h wall clock and failed at 0.4902 against 0.4412; the stored
+    # horizon is already net of warmup.
+    assert 20000.0 - 2000.0 == pytest.approx(18000.0, abs=1e-9)
+    assert r.horizon_hours == pytest.approx(18000.0, rel=1e-12)
+    assert r.throughput_per_hour == pytest.approx(
+        r.lots_shipped / 18000.0, rel=1e-12)
+    # The identity is about DEPARTURES, of either disposition.
+    chk = r.littles_law_check()
+    assert chk["relative_error"] < 0.01, (
+        f"Little's law residual {chk['relative_error']:.5f} with scrap: "
+        f"L {chk['L_measured']:.5f} against lambda_W {chk['lambda_W']:.5f}. "
+        f"{r.lots_shipped} shipped and {r.lots_scrapped} scrapped"
+    )
+    # And the residence-time sample must cover every departure, not just sales.
+    assert r.residence_times.size == r.lots_shipped + r.lots_scrapped
+    assert r.cycle_times.size == r.lots_shipped
+
+
+def test_littles_law_with_scrap_recovers_the_analytic_mm1_wip():
+    """With exponential service and scrap only AFTER service, the station is an
+    ordinary M/M/1 in the queueing sense: scrap changes what leaves, not what
+    was served. lambda 0.7/h, mu 1.0/h gives rho 0.7 and L = rho/(1-rho) =
+    0.7/0.3 = 2.3333 lots in system.
+
+    This is the independent check that the repaired accounting is right rather
+    than merely self-consistent: a wrong departure basis can close L = lambda W
+    against itself while both sides are wrong.
+    """
+    assert 0.7 / (1.0 - 0.7) == pytest.approx(2.3333, abs=1e-4)
+    sched = PlantSchedule([Station("kiln", service_hours=1.0, cv_service=1.0,
+                                   qc_fail_probability=0.30,
+                                   qc_disposition="scrap")])
+    r = sched.run(arrival_rate=0.7, horizon_hours=60000.0, seed=5,
+                  warmup_hours=5000.0)
+    assert r.mean_wip == pytest.approx(2.3333, rel=0.10), (
+        f"mean WIP {r.mean_wip:.4f} against the analytic M/M/1 value 2.3333"
+    )
+    chk = r.littles_law_check()
+    assert chk["lambda_W"] == pytest.approx(2.3333, rel=0.10)
+
+
+def test_littles_law_uses_residence_time_not_shipped_cycle_time():
+    """Separates the two halves of the scrap defect, which the single station
+    fixture cannot.
+
+    Where scrap happens at the LAST operation, a scrapped lot has travelled the
+    same path as a shipped one, so its residence time is drawn from the same
+    distribution and substituting mean_cycle_time for mean_residence_time
+    changes nothing: measured 3.239539 h against 3.231749 h on the single
+    station run above. That made the time-basis half of the fix untestable, so
+    a control that reintroduced it alone reported no failure, which looks like
+    a passing control and is the failure mode CORRECTIONS.md C6 records.
+
+    Scrapping at the FIRST of three stations separates them: a lot scrapped
+    after the mill never queues for the leach or the dryer, so departures are a
+    mixture of short scrap residences and long shipped cycles. Measured here,
+    mean shipped cycle time 3.757685 h against mean residence 2.689615 h, and
+    the WIP integral 1.479607 lots. Using shipped cycle time against the
+    correct departure rate gives lambda W = 2.067273 and a 0.284271 residual;
+    using both shipped quantities gives 1.347233. Only residence time against
+    the departure rate closes the identity, at 1.479679.
+    """
+    sched = PlantSchedule([
+        Station("mill", service_hours=0.5, cv_service=1.0,
+                qc_fail_probability=0.35, qc_disposition="scrap"),
+        Station("leach", service_hours=1.0, cv_service=1.0),
+        Station("dry", service_hours=1.0, cv_service=1.0),
+    ])
+    r = sched.run(arrival_rate=0.55, horizon_hours=60000.0, seed=9,
+                  warmup_hours=5000.0)
+    assert r.lots_shipped == 19719
+    assert r.lots_scrapped == 10539
+    # The two time bases differ by more than a third of the shorter one, so a
+    # substitution between them cannot pass unnoticed.
+    assert r.mean_cycle_time == pytest.approx(3.757685, abs=1e-5)
+    assert r.mean_residence_time == pytest.approx(2.689615, abs=1e-5)
+    assert r.mean_wip == pytest.approx(1.479607, abs=1e-5)
+
+    lam = r.departure_rate_per_hour
+    correct = lam * r.mean_residence_time
+    wrong_time = lam * r.mean_cycle_time
+    wrong_both = r.throughput_per_hour * r.mean_cycle_time
+    assert correct == pytest.approx(1.479679, abs=1e-5)
+    assert wrong_time == pytest.approx(2.067273, abs=1e-5)
+    assert wrong_both == pytest.approx(1.347233, abs=1e-5)
+    assert abs(r.mean_wip - wrong_time) / wrong_time == pytest.approx(
+        0.284271, abs=1e-5)
+
+    chk = r.littles_law_check()
+    assert chk["lambda_W"] == pytest.approx(correct, rel=1e-12), (
+        "littles_law_check must use mean_residence_time; it reported "
+        f"{chk['lambda_W']:.6f} against the residence-basis {correct:.6f}"
+    )
+    assert chk["relative_error"] < 0.005

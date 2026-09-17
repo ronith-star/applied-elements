@@ -217,6 +217,14 @@ class ScheduleResult:
     lots_scrapped: int
     lots_reworked: int
     cycle_times: np.ndarray
+    #: Time in system for EVERY lot that departed inside the measurement
+    #: window, shipped or scrapped. ``cycle_times`` covers shipped lots only,
+    #: because that is the number a customer experiences, but Little's law is
+    #: an identity about departures of either disposition: a scrapped lot
+    #: occupied the line and contributed to the WIP integral exactly as a
+    #: shipped one did. Omitting scrap understated lambda W by 41.5 percent at
+    #: a 30 percent scrap rate.
+    residence_times: np.ndarray
     queue_times: dict[str, np.ndarray]
     station_busy_fraction: dict[str, float]
     station_failed_fraction: dict[str, float]
@@ -267,15 +275,48 @@ class ScheduleResult:
         total = float(np.sum(dt))
         return float(np.sum(n[:-1] * dt) / total) if total > 0 else float("nan")
 
+    @property
+    def departure_rate_per_hour(self) -> float:
+        """Departures per hour of EITHER disposition, over the measured window.
+
+        Distinct from :attr:`throughput_per_hour`, which counts shipped lots
+        only and is the commercial number. Little's law needs this one.
+
+        ``horizon_hours`` on this object is ALREADY the post-warmup window
+        (``run`` stores ``eff``, not the wall-clock horizon), so subtracting
+        ``warmup_hours`` again here overstated the rate: my first version did
+        exactly that and reported 0.77636 departures per hour on a line offered
+        0.7 per hour, which is impossible in steady state and is what caught
+        the error.
+        """
+        if self.horizon_hours <= 0:
+            return 0.0
+        return (self.lots_shipped + self.lots_scrapped) / self.horizon_hours
+
+    @property
+    def mean_residence_time(self) -> float:
+        """Mean time in system across all departures, shipped or scrapped."""
+        return (float(np.mean(self.residence_times))
+                if self.residence_times.size else float("nan"))
+
     def littles_law_check(self) -> dict[str, float]:
         """Verify L = lambda W against the simulation's own numbers.
 
         Little's law is an identity, not a model, so a discrepancy means the
         simulation's accounting is wrong. Returned rather than asserted so a
         caller can see the residual.
+
+        The identity is about DEPARTURES, not sales. An earlier version used
+        ``lots_shipped / horizon`` against the mean SHIPPED cycle time, so a
+        line that scraps lots understated both factors: measured at a 30
+        percent scrap rate (single station, arrival 0.7/h, horizon 20000 h,
+        warmup 2000 h, seed 3), L_measured was 2.24732 against lambda_W
+        1.58809, a residual of 0.41511, while the WIP integral itself was
+        correct (2.3333 analytic for rho = 0.7). With no scrap the two bases
+        coincide, which is why every existing check passed.
         """
-        lam = self.throughput_per_hour
-        w = self.mean_cycle_time
+        lam = self.departure_rate_per_hour
+        w = self.mean_residence_time
         return {"L_measured": self.mean_wip, "lambda_W": lam * w,
                 "relative_error": (abs(self.mean_wip - lam * w) / (lam * w))
                 if lam * w > 0 else float("nan")}
@@ -342,6 +383,7 @@ class PlantSchedule:
         broken = {s.name: False for s in self.stations}
 
         cycles: list[float] = []
+        residences: list[float] = []
         queues: dict[str, list[float]] = {s.name: [] for s in self.stations}
         busy_time = {s.name: 0.0 for s in self.stations}
         failed_time = {s.name: 0.0 for s in self.stations}
@@ -396,6 +438,7 @@ class PlantSchedule:
                     if s.qc_disposition == "scrap":
                         if env.now >= warmup_hours:
                             counters["scrapped"] += 1
+                            residences.append(env.now - t_start)
                         touch_wip(-1)
                         return
                     if not reworked_once:
@@ -410,12 +453,14 @@ class PlantSchedule:
                     else:
                         if env.now >= warmup_hours:
                             counters["scrapped"] += 1
+                            residences.append(env.now - t_start)
                         touch_wip(-1)
                         return
             touch_wip(-1)
             if env.now >= warmup_hours:
                 counters["shipped"] += 1
                 cycles.append(env.now - t_start)
+                residences.append(env.now - t_start)
 
         def source() -> object:
             i = 0
@@ -447,6 +492,7 @@ class PlantSchedule:
             lots_scrapped=counters["scrapped"],
             lots_reworked=counters["reworked"],
             cycle_times=np.asarray(cycles, dtype=float),
+            residence_times=np.asarray(residences, dtype=float),
             queue_times={k: np.asarray(v, dtype=float) for k, v in queues.items()},
             station_busy_fraction={
                 k: v / (eff * next(s.capacity for s in self.stations if s.name == k))
