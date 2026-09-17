@@ -1,0 +1,234 @@
+{
+ "group_definitions": {
+  "ore_all_four": [
+   "al_mean_ppm",
+   "al_sigma_ppm",
+   "mass_yield_flot",
+   "mass_yield_leach"
+  ],
+  "ore_chemistry_only": [
+   "al_mean_ppm",
+   "al_sigma_ppm"
+  ],
+  "ore_metallurgy_only": [
+   "mass_yield_flot",
+   "mass_yield_leach"
+  ],
+  "commercial_all_five": [
+   "price",
+   "capex_musd",
+   "discount_rate",
+   "power_price",
+   "reagent_price"
+  ],
+  "price_and_capex": [
+   "price",
+   "capex_musd"
+  ],
+  "dummy_null": [
+   "dummy"
+  ],
+  "all_nine": [
+   "al_mean_ppm",
+   "al_sigma_ppm",
+   "mass_yield_flot",
+   "mass_yield_leach",
+   "price",
+   "capex_musd",
+   "discount_rate",
+   "power_price",
+   "reagent_price"
+  ]
+ },
+ "group_costs_usd": {
+  "ore_all_four": 2478.0,
+  "ore_chemistry_only": 338.0,
+  "ore_metallurgy_only": 2140.0,
+  "commercial_all_five": 213000.0,
+  "price_and_capex": 165000.0,
+  "dummy_null": 0,
+  "all_nine": 215478.0
+ },
+ "baseline": {
+  "expected_values_musd": {
+   "walk_away": 0.0,
+   "build_base": 19.001838878721617,
+   "build_polish": 11.230161620323557
+  },
+  "best_action": "build_base",
+  "best_value": 19.001838878721617,
+  "n_draws": 131072
+ },
+ "full_information": {
+  "e_max_musd": 19.40234915460336,
+  "evpi_closed_form_musd": 0.4005102758817429,
+  "n_draws": 131072
+ },
+ "groups": [
+  {
+   "evpi": -0.10225636536237559,
+   "posterior_best_value": 18.899582513359242,
+   "outer_sd": 5.0792959782417615,
+   "standard_error": 0.22447528936676925,
+   "evpi_ci95_low": -0.5422279325212433,
+   "evpi_ci95_high": 0.3377152017964921,
+   "switch_fraction": 0.001953125,
+   "n_outer": 512,
+   "n_inner": 512,
+   "group": "ore_all_four",
+   "parameters": [
+    "al_mean_ppm",
+    "al_sigma_ppm",
+    "mass_yield_flot",
+    "mass_yield_leach"
+   ],
+   "cost_usd": 2478.0,
+   "evpi_per_usd": -4.126568416560758e-05,
+   "evpi_musd_per_kusd": -0.04126568416560758
+  },
+  {
+   "evpi": 0.03559120892524348,
+   "posterior_best_value": 19.03743008764686,
+   "outer_sd": 1.451747157710363,
+   "standard_error": 0.06415876623658086,
+   "evpi_ci95_low": -0.09015997289845501,
+   "evpi_ci95_high": 0.16134239074894197,
+   "switch_fraction": 0.00390625,
+   "n_outer": 512,
+   "n_inner": 512,
+   "group": "ore_chemistry_only",
+   "parameters": [
+    "al_mean_ppm",
+    "al_sigma_ppm"
+   ],
+   "cost_usd": 338.0,
+   "evpi_per_usd": 0.00010529943469006946,
+   "evpi_musd_per_kusd": 0.10529943469006946
+  },
+  {
+   "evpi": -0.39913976869947376,
+   "posterior_best_value": 18.602699110022144,
+   "outer_sd": 4.7050965677372965,
+   "standard_error": 0.207937855574037,
+   "evpi_ci95_low": -0.8066979656245863,
+   "evpi_ci95_high": 0.008418428225638708,
+   "switch_fraction": 0.0,
+   "n_outer": 512,
+   "n_inner": 512,
+   "group": "ore_metallurgy_only",
+   "parameters": [
+    "mass_yield_flot",
+    "mass_yield_leach"
+   ],
+   "cost_usd": 2140.0,
+   "evpi_per_usd": -0.00018651391060723073,
+   "evpi_musd_per_kusd": -0.18651391060723072
+  },
+  {
+   "evpi": 0.1362360567738854,
+   "posterior_best_value": 19.138074935495503,
+   "outer_sd": 12.480483442179995,
+   "standard_error": 0.5515646546532437,
+   "evpi_ci95_low": -0.9448306663464723,
+   "evpi_ci95_high": 1.217302779894243,
+   "switch_fraction": 0.068359375,
+   "n_outer": 512,
+   "n_inner": 512,
+   "group": "commercial_all_five",
+   "parameters": [
+    "price",
+    "capex_musd",
+    "discount_rate",
+    "power_price",
+    "reagent_price"
+   ],
+   "cost_usd": 213000.0,
+   "evpi_per_usd": 6.396059003468798e-07,
+   "evpi_musd_per_kusd": 0.0006396059003468797
+  },
+  {
+   "evpi": -0.11812054248536086,
+   "posterior_best_value": 18.883718336236257,
+   "outer_sd": 10.919314132333456,
+   "standard_error": 0.482570066804943,
+   "evpi_ci95_low": -1.0639578734230493,
+   "evpi_ci95_high": 0.8277167884523274,
+   "switch_fraction": 0.046875,
+   "n_outer": 512,
+   "n_inner": 512,
+   "group": "price_and_capex",
+   "parameters": [
+    "price",
+    "capex_musd"
+   ],
+   "cost_usd": 165000.0,
+   "evpi_per_usd": -7.158820756688537e-07,
+   "evpi_musd_per_kusd": -0.0007158820756688537
+  },
+  {
+   "evpi": 0.0015903168893736108,
+   "posterior_best_value": 19.00342919561099,
+   "outer_sd": 0.605072268334618,
+   "standard_error": 0.026740669002958416,
+   "evpi_ci95_low": -0.05082139435642488,
+   "evpi_ci95_high": 0.0540020281351721,
+   "switch_fraction": 0.0,
+   "n_outer": 512,
+   "n_inner": 512,
+   "group": "dummy_null",
+   "parameters": [
+    "dummy"
+   ],
+   "cost_usd": 0,
+   "evpi_per_usd": null,
+   "evpi_musd_per_kusd": null
+  },
+  {
+   "evpi": 0.17932231303937485,
+   "posterior_best_value": 19.181161191760992,
+   "outer_sd": 13.897711257588117,
+   "standard_error": 0.6141978670758237,
+   "evpi_ci95_low": -1.0245055064292397,
+   "evpi_ci95_high": 1.3831501325079893,
+   "switch_fraction": 0.09375,
+   "n_outer": 512,
+   "n_inner": 512,
+   "group": "all_nine",
+   "parameters": [
+    "al_mean_ppm",
+    "al_sigma_ppm",
+    "mass_yield_flot",
+    "mass_yield_leach",
+    "price",
+    "capex_musd",
+    "discount_rate",
+    "power_price",
+    "reagent_price"
+   ],
+   "cost_usd": 215478.0,
+   "evpi_per_usd": 8.322070607643233e-07,
+   "evpi_musd_per_kusd": 0.0008322070607643232
+  }
+ ],
+ "all_nine_vs_closed_form": {
+  "nested_musd": 0.17932231303937485,
+  "closed_form_musd": 0.4005102758817429,
+  "abs_gap_musd": 0.22118796284236808,
+  "nested_standard_error_musd": 0.6141978670758237,
+  "tolerance_3se_musd": 1.842593601227471,
+  "passes": true
+ },
+ "null_floor_musd": 0.0015903168893736108,
+ "exceeds_null": [
+  "commercial_all_five",
+  "ore_chemistry_only"
+ ],
+ "ranked_by_evpi_per_cost": [
+  "ore_chemistry_only",
+  "commercial_all_five",
+  "price_and_capex",
+  "ore_all_four",
+  "ore_metallurgy_only"
+ ],
+ "runtime_seconds": 851.25843300001
+}

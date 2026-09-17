@@ -1,0 +1,949 @@
+{
+ "value_function_control": {
+  "n_checked": 200,
+  "max_abs_diff_musd": 0.0
+ },
+ "inputs": [
+  {
+   "name": "mass_yield_leach",
+   "low": 0.8,
+   "high": 0.97,
+   "kind": "triangular",
+   "mode": 0.92
+  },
+  {
+   "name": "mass_yield_flot",
+   "low": 0.7,
+   "high": 0.93,
+   "kind": "triangular",
+   "mode": 0.85
+  },
+  {
+   "name": "al_mean_ppm",
+   "low": 8.0,
+   "high": 26.0,
+   "kind": "triangular",
+   "mode": 18.0
+  },
+  {
+   "name": "al_sigma_ppm",
+   "low": 1.5,
+   "high": 6.0,
+   "kind": "triangular",
+   "mode": 3.0
+  },
+  {
+   "name": "price",
+   "low": 2800.0,
+   "high": 5200.0,
+   "kind": "triangular",
+   "mode": 3500.0
+  },
+  {
+   "name": "power_price",
+   "low": 0.045,
+   "high": 0.095,
+   "kind": "uniform",
+   "mode": null
+  },
+  {
+   "name": "reagent_price",
+   "low": 1.2,
+   "high": 2.6,
+   "kind": "triangular",
+   "mode": 1.8
+  },
+  {
+   "name": "capex_musd",
+   "low": 25.0,
+   "high": 60.0,
+   "kind": "triangular",
+   "mode": 38.0
+  },
+  {
+   "name": "discount_rate",
+   "low": 0.1,
+   "high": 0.2,
+   "kind": "triangular",
+   "mode": 0.14
+  }
+ ],
+ "mc": {
+  "n_draws": 20000,
+  "n_failed": 0,
+  "summary": {
+   "npv_musd": {
+    "mean": 19.04539255493984,
+    "sd": 14.31120002775424,
+    "min": -22.818810484783874,
+    "max": 90.04892417250161,
+    "P10": 1.3073319832714119,
+    "P50": 18.105624510272328,
+    "P90": 38.08422450824005,
+    "P90_minus_P10": 36.77689252496864
+   },
+   "breakeven": {
+    "mean": 2859.5694763332463,
+    "sd": 485.8103540539247,
+    "min": 1695.4844269040436,
+    "max": 5277.170702194722,
+    "P10": 2278.866011251988,
+    "P50": 2807.1373959241105,
+    "P90": 3510.9684018649755,
+    "P90_minus_P10": 1232.1023906129876
+   },
+   "overall_yield": {
+    "mean": 0.73288577972173,
+    "sd": 0.05418673722767275,
+    "min": 0.521619713546055,
+    "max": 0.8810949587261866,
+    "P10": 0.6603666991115315,
+    "P50": 0.7346409067007819,
+    "P90": 0.8022318030978987,
+    "P90_minus_P10": 0.1418651039863672
+   },
+   "cash_cost": {
+    "mean": 234.7014716038445,
+    "sd": 8.007469806575447,
+    "min": 212.0403200979907,
+    "max": 272.5754431325744,
+    "P10": 224.61374391955076,
+    "P50": 234.30017295416272,
+    "P90": 245.25749545860893,
+    "P90_minus_P10": 20.643751539058172
+   }
+  },
+  "p_npv_below_zero": 0.081,
+  "percentile_se": {
+   "npv_P10": 0.1312980888763507,
+   "npv_P50": 0.11691416896001042,
+   "npv_P90": 0.2086995184828327
+  }
+ },
+ "sobol": {
+  "npv_musd": {
+   "n_base": 4096,
+   "n_evaluations": 45056,
+   "output_variance": 204.84926830218794,
+   "first_order": {
+    "mass_yield_leach": 0.035933194118157784,
+    "mass_yield_flot": 0.07487994828534449,
+    "al_mean_ppm": 0.004120571212181954,
+    "al_sigma_ppm": 0.002498213649128595,
+    "price": 0.42560849797550043,
+    "power_price": 5.511888163789361e-05,
+    "reagent_price": 3.4751103195432044e-05,
+    "capex_musd": 0.18977331967965833,
+    "discount_rate": 0.25075919370455063
+   },
+   "total_order": {
+    "mass_yield_leach": 0.03690801635386087,
+    "mass_yield_flot": 0.07732299441311712,
+    "al_mean_ppm": 0.007528770235736898,
+    "al_sigma_ppm": 0.004915024667741633,
+    "price": 0.4360746863075241,
+    "power_price": 4.141829934435337e-05,
+    "reagent_price": 3.7654068175661936e-05,
+    "capex_musd": 0.18973517864226916,
+    "discount_rate": 0.2607420149330144
+   },
+   "first_conf": {
+    "mass_yield_leach": 0.0077930766141432245,
+    "mass_yield_flot": 0.01191557140845735,
+    "al_mean_ppm": 0.003929351446122484,
+    "al_sigma_ppm": 0.0029260003724670977,
+    "price": 0.031004124977730568,
+    "power_price": 0.0002950365399198188,
+    "reagent_price": 0.0002869752269979917,
+    "capex_musd": 0.0190987787564665,
+    "discount_rate": 0.02126944045505293
+   },
+   "total_conf": {
+    "mass_yield_leach": 0.00216353046109326,
+    "mass_yield_flot": 0.004180563958974416,
+    "al_mean_ppm": 0.0009011075635384521,
+    "al_sigma_ppm": 0.0006114930723913531,
+    "price": 0.02037871222162597,
+    "power_price": 1.8854659733928684e-06,
+    "reagent_price": 1.9764575445782374e-06,
+    "capex_musd": 0.007773101259999499,
+    "discount_rate": 0.013658622129492455
+   },
+   "interaction_share": {
+    "mass_yield_leach": 0.0009748222357030892,
+    "mass_yield_flot": 0.00244304612777263,
+    "al_mean_ppm": 0.0034081990235549434,
+    "al_sigma_ppm": 0.0024168110186130382,
+    "price": 0.010466188332023674,
+    "power_price": -1.3700582293540237e-05,
+    "reagent_price": 2.902964980229892e-06,
+    "capex_musd": -3.814103738916663e-05,
+    "discount_rate": 0.009982821228463779
+   },
+   "additive_fraction": 0.9836628086093555,
+   "ranking": [
+    [
+     "price",
+     0.4360746863075241
+    ],
+    [
+     "discount_rate",
+     0.2607420149330144
+    ],
+    [
+     "capex_musd",
+     0.18973517864226916
+    ],
+    [
+     "mass_yield_flot",
+     0.07732299441311712
+    ],
+    [
+     "mass_yield_leach",
+     0.03690801635386087
+    ],
+    [
+     "al_mean_ppm",
+     0.007528770235736898
+    ],
+    [
+     "al_sigma_ppm",
+     0.004915024667741633
+    ],
+    [
+     "power_price",
+     4.141829934435337e-05
+    ],
+    [
+     "reagent_price",
+     3.7654068175661936e-05
+    ]
+   ],
+   "negligible": [
+    "al_mean_ppm",
+    "al_sigma_ppm",
+    "power_price",
+    "reagent_price"
+   ],
+   "diagnostics": {
+    "sum_first_order": 0.9836628086093555,
+    "sum_total_order": 1.0133057579207843,
+    "sum_first_le_one": true,
+    "sum_total_ge_one": true,
+    "materially_negative_first": {},
+    "materially_negative_total": {},
+    "first_exceeds_total": {},
+    "converged": true
+   }
+  },
+  "breakeven": {
+   "n_base": 2048,
+   "n_evaluations": 22528,
+   "output_variance": 230461.1152925304,
+   "first_order": {
+    "mass_yield_leach": 0.051145887683678996,
+    "mass_yield_flot": 0.10755570649724529,
+    "al_mean_ppm": 0.006071988370576707,
+    "al_sigma_ppm": 0.004216601989648773,
+    "price": 0.0,
+    "power_price": 8.450495532776833e-05,
+    "reagent_price": 7.424567627572534e-05,
+    "capex_musd": 0.5118099835981283,
+    "discount_rate": 0.29908185182640495
+   },
+   "total_order": {
+    "mass_yield_leach": 0.05251780387847734,
+    "mass_yield_flot": 0.11194786636247296,
+    "al_mean_ppm": 0.012661528716762769,
+    "al_sigma_ppm": 0.008155190626097632,
+    "price": 0.0,
+    "power_price": 0.0001070670663724742,
+    "reagent_price": 9.753295861576431e-05,
+    "capex_musd": 0.5264170627442384,
+    "discount_rate": 0.31037320608315055
+   },
+   "first_conf": {
+    "mass_yield_leach": 0.014074924897092174,
+    "mass_yield_flot": 0.021600121095202054,
+    "al_mean_ppm": 0.006130750587194231,
+    "al_sigma_ppm": 0.0053580672823981415,
+    "price": 0.0,
+    "power_price": 0.0006543511722066979,
+    "reagent_price": 0.0005899588917422775,
+    "capex_musd": 0.041079136747960994,
+    "discount_rate": 0.03357613334774276
+   },
+   "total_conf": {
+    "mass_yield_leach": 0.004209082632567262,
+    "mass_yield_flot": 0.008259079518463722,
+    "al_mean_ppm": 0.002260977268825334,
+    "al_sigma_ppm": 0.00129325474695586,
+    "price": 0.0,
+    "power_price": 6.259130538764864e-06,
+    "reagent_price": 6.5810450291873924e-06,
+    "capex_musd": 0.032948023906883145,
+    "discount_rate": 0.02192945723664791
+   },
+   "interaction_share": {
+    "mass_yield_leach": 0.001371916194798345,
+    "mass_yield_flot": 0.004392159865227674,
+    "al_mean_ppm": 0.006589540346186062,
+    "al_sigma_ppm": 0.003938588636448859,
+    "price": 0.0,
+    "power_price": 2.256211104470588e-05,
+    "reagent_price": 2.328728234003897e-05,
+    "capex_musd": 0.014607079146110036,
+    "discount_rate": 0.0112913542567456
+   },
+   "additive_fraction": 0.9800407705972866,
+   "ranking": [
+    [
+     "capex_musd",
+     0.5264170627442384
+    ],
+    [
+     "discount_rate",
+     0.31037320608315055
+    ],
+    [
+     "mass_yield_flot",
+     0.11194786636247296
+    ],
+    [
+     "mass_yield_leach",
+     0.05251780387847734
+    ],
+    [
+     "al_mean_ppm",
+     0.012661528716762769
+    ],
+    [
+     "al_sigma_ppm",
+     0.008155190626097632
+    ],
+    [
+     "power_price",
+     0.0001070670663724742
+    ],
+    [
+     "reagent_price",
+     9.753295861576431e-05
+    ],
+    [
+     "price",
+     0.0
+    ]
+   ],
+   "negligible": [
+    "al_sigma_ppm",
+    "price",
+    "power_price",
+    "reagent_price"
+   ],
+   "diagnostics": {
+    "sum_first_order": 0.9800407705972866,
+    "sum_total_order": 1.0222772584361879,
+    "sum_first_le_one": true,
+    "sum_total_ge_one": true,
+    "materially_negative_first": {},
+    "materially_negative_total": {},
+    "first_exceeds_total": {},
+    "converged": true
+   }
+  },
+  "overall_yield": {
+   "n_base": 2048,
+   "n_evaluations": 22528,
+   "output_variance": 0.0028768196091520093,
+   "first_order": {
+    "mass_yield_leach": 0.29605819254875776,
+    "mass_yield_flot": 0.6218877224633923,
+    "al_mean_ppm": 0.03773112015420299,
+    "al_sigma_ppm": 0.022004470665553694,
+    "price": 0.0,
+    "power_price": 0.0,
+    "reagent_price": 0.0,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "total_order": {
+    "mass_yield_leach": 0.29678772498509154,
+    "mass_yield_flot": 0.622590908966986,
+    "al_mean_ppm": 0.05973940139489113,
+    "al_sigma_ppm": 0.0399555652433894,
+    "price": 0.0,
+    "power_price": 0.0,
+    "reagent_price": 0.0,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "first_conf": {
+    "mass_yield_leach": 0.03057949139964416,
+    "mass_yield_flot": 0.04518398201163405,
+    "al_mean_ppm": 0.016277255656697798,
+    "al_sigma_ppm": 0.012081428445061188,
+    "price": 0.0,
+    "power_price": 0.0,
+    "reagent_price": 0.0,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "total_conf": {
+    "mass_yield_leach": 0.019522670967524657,
+    "mass_yield_flot": 0.034466319539572514,
+    "al_mean_ppm": 0.008777847754490656,
+    "al_sigma_ppm": 0.00539043838024465,
+    "price": 0.0,
+    "power_price": 0.0,
+    "reagent_price": 0.0,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "interaction_share": {
+    "mass_yield_leach": 0.0007295324363337796,
+    "mass_yield_flot": 0.0007031865035936891,
+    "al_mean_ppm": 0.02200828124068814,
+    "al_sigma_ppm": 0.017951094577835704,
+    "price": 0.0,
+    "power_price": 0.0,
+    "reagent_price": 0.0,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "additive_fraction": 0.9776815058319067,
+   "ranking": [
+    [
+     "mass_yield_flot",
+     0.622590908966986
+    ],
+    [
+     "mass_yield_leach",
+     0.29678772498509154
+    ],
+    [
+     "al_mean_ppm",
+     0.05973940139489113
+    ],
+    [
+     "al_sigma_ppm",
+     0.0399555652433894
+    ],
+    [
+     "price",
+     0.0
+    ],
+    [
+     "power_price",
+     0.0
+    ],
+    [
+     "reagent_price",
+     0.0
+    ],
+    [
+     "capex_musd",
+     0.0
+    ],
+    [
+     "discount_rate",
+     0.0
+    ]
+   ],
+   "negligible": [
+    "price",
+    "power_price",
+    "reagent_price",
+    "capex_musd",
+    "discount_rate"
+   ],
+   "diagnostics": {
+    "sum_first_order": 0.9776815058319067,
+    "sum_total_order": 1.019073600590358,
+    "sum_first_le_one": true,
+    "sum_total_ge_one": true,
+    "materially_negative_first": {},
+    "materially_negative_total": {},
+    "first_exceeds_total": {},
+    "converged": true
+   }
+  },
+  "cash_cost": {
+   "n_base": 2048,
+   "n_evaluations": 22528,
+   "output_variance": 63.98563505609508,
+   "first_order": {
+    "mass_yield_leach": 0.07715826763432701,
+    "mass_yield_flot": 0.1639395606049978,
+    "al_mean_ppm": 0.011599524527296472,
+    "al_sigma_ppm": 0.006657548909374756,
+    "price": 0.0,
+    "power_price": 0.3824575110227346,
+    "reagent_price": 0.3476614454254079,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "total_order": {
+    "mass_yield_leach": 0.07831280316539126,
+    "mass_yield_flot": 0.16590787466769955,
+    "al_mean_ppm": 0.01866427147268936,
+    "al_sigma_ppm": 0.01206671297566304,
+    "price": 0.0,
+    "power_price": 0.385406173083646,
+    "reagent_price": 0.3510865255087895,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "first_conf": {
+    "mass_yield_leach": 0.016468034836315436,
+    "mass_yield_flot": 0.026340681609225546,
+    "al_mean_ppm": 0.009382667405882318,
+    "al_sigma_ppm": 0.006825499010985282,
+    "price": 0.0,
+    "power_price": 0.03144501867547156,
+    "reagent_price": 0.03674073912903395,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "total_conf": {
+    "mass_yield_leach": 0.005463175594234315,
+    "mass_yield_flot": 0.010329804706450053,
+    "al_mean_ppm": 0.003064292975556178,
+    "al_sigma_ppm": 0.001979377656595938,
+    "price": 0.0,
+    "power_price": 0.023370527415313307,
+    "reagent_price": 0.019050797947157815,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "interaction_share": {
+    "mass_yield_leach": 0.0011545355310642463,
+    "mass_yield_flot": 0.0019683140627017315,
+    "al_mean_ppm": 0.0070647469453928875,
+    "al_sigma_ppm": 0.005409164066288284,
+    "price": 0.0,
+    "power_price": 0.002948662060911378,
+    "reagent_price": 0.003425080083381604,
+    "capex_musd": 0.0,
+    "discount_rate": 0.0
+   },
+   "additive_fraction": 0.9894738581241386,
+   "ranking": [
+    [
+     "power_price",
+     0.385406173083646
+    ],
+    [
+     "reagent_price",
+     0.3510865255087895
+    ],
+    [
+     "mass_yield_flot",
+     0.16590787466769955
+    ],
+    [
+     "mass_yield_leach",
+     0.07831280316539126
+    ],
+    [
+     "al_mean_ppm",
+     0.01866427147268936
+    ],
+    [
+     "al_sigma_ppm",
+     0.01206671297566304
+    ],
+    [
+     "price",
+     0.0
+    ],
+    [
+     "capex_musd",
+     0.0
+    ],
+    [
+     "discount_rate",
+     0.0
+    ]
+   ],
+   "negligible": [
+    "price",
+    "capex_musd",
+    "discount_rate"
+   ],
+   "diagnostics": {
+    "sum_first_order": 0.9894738581241386,
+    "sum_total_order": 1.0114443608738788,
+    "sum_first_le_one": true,
+    "sum_total_ge_one": true,
+    "materially_negative_first": {},
+    "materially_negative_total": {},
+    "first_exceeds_total": {},
+    "converged": true
+   }
+  }
+ },
+ "sobol_convergence": {
+  "levels": [
+   4096,
+   2048,
+   1024
+  ],
+  "top_input": {
+   "4096": "price",
+   "2048": "price",
+   "1024": "price"
+  },
+  "ranking_stable": true,
+  "max_total_drift": 0.00041842382255480315,
+  "diagnostics": {
+   "4096": true,
+   "2048": true,
+   "1024": true
+  },
+  "total_order_by_level": {
+   "4096": {
+    "mass_yield_leach": 0.03690801635386087,
+    "mass_yield_flot": 0.07732299441311712,
+    "al_mean_ppm": 0.007528770235736898,
+    "al_sigma_ppm": 0.004915024667741633,
+    "price": 0.4360746863075241,
+    "power_price": 4.141829934435337e-05,
+    "reagent_price": 3.7654068175661936e-05,
+    "capex_musd": 0.18973517864226916,
+    "discount_rate": 0.2607420149330144
+   },
+   "2048": {
+    "mass_yield_leach": 0.036879397207804934,
+    "mass_yield_flot": 0.07741149366771688,
+    "al_mean_ppm": 0.007386941704605037,
+    "al_sigma_ppm": 0.004942263577571243,
+    "price": 0.4362676399688629,
+    "power_price": 4.151145122287725e-05,
+    "reagent_price": 3.7740139194027826e-05,
+    "capex_musd": 0.19015360246482396,
+    "discount_rate": 0.2610976604956794
+   },
+   "1024": {
+    "mass_yield_leach": 0.03678025361062304,
+    "mass_yield_flot": 0.07779135164205311,
+    "al_mean_ppm": 0.007362173498565446,
+    "al_sigma_ppm": 0.004906858920585786,
+    "price": 0.43514782170261235,
+    "power_price": 4.1414544936077565e-05,
+    "reagent_price": 3.767009920641207e-05,
+    "capex_musd": 0.1896872222998019,
+    "discount_rate": 0.26065428451312467
+   }
+  }
+ },
+ "tornado": {
+  "price": {
+   "low": 6.823328799260909,
+   "high": 55.77481077607,
+   "base": 21.109465258012566,
+   "swing": 48.95148197680909,
+   "low_delta": -14.286136458751656,
+   "high_delta": 34.665345518057435
+  },
+  "discount_rate": {
+   "low": 38.477220678947376,
+   "high": 4.636686098863065,
+   "base": 21.109465258012566,
+   "swing": 33.84053458008431,
+   "low_delta": 17.36775542093481,
+   "high_delta": -16.4727791591495
+  },
+  "capex_musd": {
+   "low": 32.33062791300371,
+   "high": 2.1051231866357942,
+   "base": 21.109465258012566,
+   "swing": 30.225504726367916,
+   "low_delta": 11.221162654991144,
+   "high_delta": -19.004342071376772
+  },
+  "mass_yield_flot": {
+   "low": 9.154680440559382,
+   "high": 27.481171672957935,
+   "base": 21.109465258012566,
+   "swing": 18.326491232398553,
+   "low_delta": -11.954784817453184,
+   "high_delta": 6.371706414945368
+  },
+  "mass_yield_leach": {
+   "low": 12.27708236982869,
+   "high": 24.788779424251402,
+   "base": 21.109465258012566,
+   "swing": 12.511697054422712,
+   "low_delta": -8.832382888183876,
+   "high_delta": 3.679314166238836
+  },
+  "al_mean_ppm": {
+   "low": 21.15688714789756,
+   "high": 14.624078352867917,
+   "base": 21.109465258012566,
+   "swing": 6.532808795029643,
+   "low_delta": 0.04742188988499407,
+   "high_delta": -6.485386905144649
+  },
+  "al_sigma_ppm": {
+   "low": 21.161312931963092,
+   "high": 18.36464671502941,
+   "base": 21.109465258012566,
+   "swing": 2.7966662169336836,
+   "low_delta": 0.05184767395052603,
+   "high_delta": -2.7448185429831575
+  },
+  "reagent_price": {
+   "low": 21.297355762800272,
+   "high": 20.858944584962302,
+   "base": 21.109465258012566,
+   "swing": 0.43841117783797046,
+   "low_delta": 0.1878905047877062,
+   "high_delta": -0.25052067305026426
+  },
+  "power_price": {
+   "low": 21.272564654529663,
+   "high": 20.946365861495465,
+   "base": 21.109465258012566,
+   "swing": 0.3261987930341981,
+   "low_delta": 0.16309939651709726,
+   "high_delta": -0.16309939651710081
+  }
+ },
+ "tornado_nominal": {
+  "mass_yield_leach": 0.92,
+  "mass_yield_flot": 0.85,
+  "al_mean_ppm": 18.0,
+  "al_sigma_ppm": 3.0,
+  "price": 3500.0,
+  "power_price": 0.07,
+  "reagent_price": 1.8,
+  "capex_musd": 38.0,
+  "discount_rate": 0.14
+ },
+ "decision": {
+  "actions": [
+   "walk_away",
+   "build_base",
+   "build_polish"
+  ],
+  "expected_values_musd": {
+   "walk_away": 0.0,
+   "build_base": 18.797336568187802,
+   "build_polish": 11.042254197911236
+  },
+  "prior_best_action": "build_base",
+  "prior_best_value_musd": 18.797336568187802,
+  "assumed_polish": {
+   "capex_musd": 9.0,
+   "opex_usd_per_t": 35.0,
+   "al_factor": 0.6
+  }
+ },
+ "evpi": [
+  {
+   "parameter": "mass_yield_flot",
+   "evpi_musd": 0.873103461094555,
+   "baseline_value_musd": 18.636869216371164,
+   "resolved_value_musd": 19.50997267746572,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.04684818308042832,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "al_sigma_ppm",
+   "evpi_musd": 0.7640226783817994,
+   "baseline_value_musd": 18.11386714068163,
+   "resolved_value_musd": 18.87788981906343,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.04217888275584696,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "al_mean_ppm",
+   "evpi_musd": 0.6291803068191122,
+   "baseline_value_musd": 18.300780119313984,
+   "resolved_value_musd": 18.929960426133096,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.034379971931092594,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "discount_rate",
+   "evpi_musd": 0.556612617972398,
+   "baseline_value_musd": 18.58091416315024,
+   "resolved_value_musd": 19.137526781122638,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.02995614817898868,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "power_price",
+   "evpi_musd": 0.03287966181447999,
+   "baseline_value_musd": 18.959213599898384,
+   "resolved_value_musd": 18.992093261712863,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.0017342313087635773,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "capex_musd",
+   "evpi_musd": 0.0,
+   "baseline_value_musd": 18.82263511640638,
+   "resolved_value_musd": 18.645515933686156,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.0,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "mass_yield_leach",
+   "evpi_musd": 0.0,
+   "baseline_value_musd": 19.04178088407552,
+   "resolved_value_musd": 18.600109958719564,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.0,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "price",
+   "evpi_musd": 0.0,
+   "baseline_value_musd": 19.625146641726346,
+   "resolved_value_musd": 19.516685360896258,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.0,
+   "n_outer": 256,
+   "n_inner": 256
+  },
+  {
+   "parameter": "reagent_price",
+   "evpi_musd": 0.0,
+   "baseline_value_musd": 19.15697000880666,
+   "resolved_value_musd": 19.03410323914165,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base",
+   "evpi_fraction": 0.0,
+   "n_outer": 256,
+   "n_inner": 256
+  }
+ ],
+ "evpi_per_cost": [
+  {
+   "parameter": "al_mean_ppm",
+   "evpi": 0.6291803068191122,
+   "cost": 64.60000000000001,
+   "evpi_per_cost": 0.009739633232493996,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "al_sigma_ppm",
+   "evpi": 0.7640226783817994,
+   "cost": 273.4,
+   "evpi_per_cost": 0.0027945233298529606,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "mass_yield_flot",
+   "evpi": 0.873103461094555,
+   "cost": 1000.0,
+   "evpi_per_cost": 0.000873103461094555,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "discount_rate",
+   "evpi": 0.556612617972398,
+   "cost": 25000.0,
+   "evpi_per_cost": 2.226450471889592e-05,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "power_price",
+   "evpi": 0.03287966181447999,
+   "cost": 15000.0,
+   "evpi_per_cost": 2.191977454298666e-06,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "capex_musd",
+   "evpi": 0.0,
+   "cost": 120000.0,
+   "evpi_per_cost": 0.0,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "mass_yield_leach",
+   "evpi": 0.0,
+   "cost": 1140.0,
+   "evpi_per_cost": 0.0,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "price",
+   "evpi": 0.0,
+   "cost": 45000.0,
+   "evpi_per_cost": 0.0,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  },
+  {
+   "parameter": "reagent_price",
+   "evpi": 0.0,
+   "cost": 8000.0,
+   "evpi_per_cost": 0.0,
+   "switch_fraction": 0.0,
+   "prior_best_action": "build_base"
+  }
+ ],
+ "evpi_consistency_control_max_abs_diff_musd": 0.0,
+ "measurement_costs_usd": {
+  "al_mean_ppm": 64.60000000000001,
+  "al_sigma_ppm": 273.4,
+  "mass_yield_flot": 1000.0,
+  "mass_yield_leach": 1140.0,
+  "price": 45000.0,
+  "capex_musd": 120000.0,
+  "power_price": 15000.0,
+  "reagent_price": 8000.0,
+  "discount_rate": 25000.0
+ },
+ "evpi_convergence": {
+  "parameter": "mass_yield_flot",
+  "series": [
+   [
+    16,
+    0.0
+   ],
+   [
+    64,
+    0.0
+   ],
+   [
+    256,
+    0.0
+   ]
+  ]
+ },
+ "runtime_seconds": 529.7804485829547,
+ "n_mc_draws": 20000
+}

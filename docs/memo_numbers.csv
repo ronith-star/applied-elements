@@ -1,0 +1,431 @@
+section,quantity,parameter,output,value,unit,tag,note
+control,max_abs_diff_npv_musd,,npv_musd,0.0,MUSD,MEASURED,fast value function vs plant_npv over 200 draws
+input_band,low,mass_yield_leach,,0.8,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,mass_yield_leach,,0.97,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,mass_yield_leach,,0.92,native,ASSUMED,triangular mode from chain_inputs()
+input_band,low,mass_yield_flot,,0.7,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,mass_yield_flot,,0.93,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,mass_yield_flot,,0.85,native,ASSUMED,triangular mode from chain_inputs()
+input_band,low,al_mean_ppm,,8.0,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,al_mean_ppm,,26.0,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,al_mean_ppm,,18.0,native,ASSUMED,triangular mode from chain_inputs()
+input_band,low,al_sigma_ppm,,1.5,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,al_sigma_ppm,,6.0,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,al_sigma_ppm,,3.0,native,ASSUMED,triangular mode from chain_inputs()
+input_band,low,price,,2800.0,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,price,,5200.0,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,price,,3500.0,native,ASSUMED,triangular mode from chain_inputs()
+input_band,low,power_price,,0.045,native,ASSUMED,uniform scenario band from chain_inputs()
+input_band,high,power_price,,0.095,native,ASSUMED,uniform scenario band from chain_inputs()
+input_band,low,reagent_price,,1.2,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,reagent_price,,2.6,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,reagent_price,,1.8,native,ASSUMED,triangular mode from chain_inputs()
+input_band,low,capex_musd,,25.0,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,capex_musd,,60.0,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,capex_musd,,38.0,native,ASSUMED,triangular mode from chain_inputs()
+input_band,low,discount_rate,,0.1,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,high,discount_rate,,0.2,native,ASSUMED,triangular scenario band from chain_inputs()
+input_band,mode,discount_rate,,0.14,native,ASSUMED,triangular mode from chain_inputs()
+monte_carlo,mean,,npv_musd,19.04539255493984,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,sd,,npv_musd,14.31120002775424,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,min,,npv_musd,-22.818810484783874,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,max,,npv_musd,90.04892417250161,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P10,,npv_musd,1.3073319832714119,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P50,,npv_musd,18.105624510272328,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90,,npv_musd,38.08422450824005,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90_minus_P10,,npv_musd,36.77689252496864,MUSD,COMPUTED,"20000 draws, seed 42"
+monte_carlo,mean,,breakeven,2859.5694763332463,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,sd,,breakeven,485.8103540539247,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,min,,breakeven,1695.4844269040436,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,max,,breakeven,5277.170702194722,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P10,,breakeven,2278.866011251988,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P50,,breakeven,2807.1373959241105,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90,,breakeven,3510.9684018649755,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90_minus_P10,,breakeven,1232.1023906129876,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,mean,,overall_yield,0.73288577972173,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,sd,,overall_yield,0.05418673722767275,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,min,,overall_yield,0.521619713546055,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,max,,overall_yield,0.8810949587261866,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P10,,overall_yield,0.6603666991115315,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P50,,overall_yield,0.7346409067007819,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90,,overall_yield,0.8022318030978987,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90_minus_P10,,overall_yield,0.1418651039863672,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,mean,,cash_cost,234.7014716038445,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,sd,,cash_cost,8.007469806575447,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,min,,cash_cost,212.0403200979907,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,max,,cash_cost,272.5754431325744,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P10,,cash_cost,224.61374391955076,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P50,,cash_cost,234.30017295416272,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90,,cash_cost,245.25749545860893,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P90_minus_P10,,cash_cost,20.643751539058172,USD/t,COMPUTED,"20000 draws, seed 42"
+monte_carlo,P(NPV<0),,npv_musd,0.081,fraction,COMPUTED,"20000 draws, seed 42"
+monte_carlo,bootstrap_se_npv_P10,,npv_musd,0.1312980888763507,MUSD,COMPUTED,400 bootstrap resamples
+monte_carlo,bootstrap_se_npv_P50,,npv_musd,0.11691416896001042,MUSD,COMPUTED,400 bootstrap resamples
+monte_carlo,bootstrap_se_npv_P90,,npv_musd,0.2086995184828327,MUSD,COMPUTED,400 bootstrap resamples
+sobol,total_order_ST,mass_yield_leach,npv_musd,0.03690801635386087,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,mass_yield_leach,npv_musd,0.035933194118157784,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,mass_yield_leach,npv_musd,0.00216353046109326,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,mass_yield_flot,npv_musd,0.07732299441311712,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,mass_yield_flot,npv_musd,0.07487994828534449,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,mass_yield_flot,npv_musd,0.004180563958974416,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_mean_ppm,npv_musd,0.007528770235736898,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,al_mean_ppm,npv_musd,0.004120571212181954,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,al_mean_ppm,npv_musd,0.0009011075635384521,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_sigma_ppm,npv_musd,0.004915024667741633,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,al_sigma_ppm,npv_musd,0.002498213649128595,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,al_sigma_ppm,npv_musd,0.0006114930723913531,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,price,npv_musd,0.4360746863075241,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,price,npv_musd,0.42560849797550043,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,price,npv_musd,0.02037871222162597,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,power_price,npv_musd,4.141829934435337e-05,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,power_price,npv_musd,5.511888163789361e-05,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,power_price,npv_musd,1.8854659733928684e-06,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,reagent_price,npv_musd,3.7654068175661936e-05,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,reagent_price,npv_musd,3.4751103195432044e-05,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,reagent_price,npv_musd,1.9764575445782374e-06,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,capex_musd,npv_musd,0.18973517864226916,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,capex_musd,npv_musd,0.18977331967965833,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,capex_musd,npv_musd,0.007773101259999499,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,discount_rate,npv_musd,0.2607420149330144,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,first_order_S1,discount_rate,npv_musd,0.25075919370455063,variance share,COMPUTED,"Saltelli N=4096, 45056 evaluations"
+sobol,total_order_conf95,discount_rate,npv_musd,0.013658622129492455,variance share,COMPUTED,SALib bootstrap CI
+sobol,additive_fraction_sum_S1,,npv_musd,0.9836628086093555,variance share,COMPUTED,
+sobol,sum_total_order,,npv_musd,1.0133057579207843,variance share,COMPUTED,converged=True
+sobol,output_variance,,npv_musd,204.84926830218794,native squared,COMPUTED,
+sobol,total_order_ST,mass_yield_leach,breakeven,0.05251780387847734,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,mass_yield_leach,breakeven,0.051145887683678996,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,mass_yield_leach,breakeven,0.004209082632567262,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,mass_yield_flot,breakeven,0.11194786636247296,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,mass_yield_flot,breakeven,0.10755570649724529,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,mass_yield_flot,breakeven,0.008259079518463722,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_mean_ppm,breakeven,0.012661528716762769,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,al_mean_ppm,breakeven,0.006071988370576707,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,al_mean_ppm,breakeven,0.002260977268825334,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_sigma_ppm,breakeven,0.008155190626097632,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,al_sigma_ppm,breakeven,0.004216601989648773,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,al_sigma_ppm,breakeven,0.00129325474695586,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,price,breakeven,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,price,breakeven,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,price,breakeven,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,power_price,breakeven,0.0001070670663724742,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,power_price,breakeven,8.450495532776833e-05,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,power_price,breakeven,6.259130538764864e-06,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,reagent_price,breakeven,9.753295861576431e-05,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,reagent_price,breakeven,7.424567627572534e-05,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,reagent_price,breakeven,6.5810450291873924e-06,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,capex_musd,breakeven,0.5264170627442384,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,capex_musd,breakeven,0.5118099835981283,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,capex_musd,breakeven,0.032948023906883145,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,discount_rate,breakeven,0.31037320608315055,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,discount_rate,breakeven,0.29908185182640495,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,discount_rate,breakeven,0.02192945723664791,variance share,COMPUTED,SALib bootstrap CI
+sobol,additive_fraction_sum_S1,,breakeven,0.9800407705972866,variance share,COMPUTED,
+sobol,sum_total_order,,breakeven,1.0222772584361879,variance share,COMPUTED,converged=True
+sobol,output_variance,,breakeven,230461.1152925304,native squared,COMPUTED,
+sobol,total_order_ST,mass_yield_leach,overall_yield,0.29678772498509154,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,mass_yield_leach,overall_yield,0.29605819254875776,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,mass_yield_leach,overall_yield,0.019522670967524657,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,mass_yield_flot,overall_yield,0.622590908966986,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,mass_yield_flot,overall_yield,0.6218877224633923,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,mass_yield_flot,overall_yield,0.034466319539572514,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_mean_ppm,overall_yield,0.05973940139489113,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,al_mean_ppm,overall_yield,0.03773112015420299,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,al_mean_ppm,overall_yield,0.008777847754490656,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_sigma_ppm,overall_yield,0.0399555652433894,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,al_sigma_ppm,overall_yield,0.022004470665553694,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,al_sigma_ppm,overall_yield,0.00539043838024465,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,price,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,price,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,price,overall_yield,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,power_price,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,power_price,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,power_price,overall_yield,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,reagent_price,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,reagent_price,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,reagent_price,overall_yield,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,capex_musd,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,capex_musd,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,capex_musd,overall_yield,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,discount_rate,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,discount_rate,overall_yield,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,discount_rate,overall_yield,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,additive_fraction_sum_S1,,overall_yield,0.9776815058319067,variance share,COMPUTED,
+sobol,sum_total_order,,overall_yield,1.019073600590358,variance share,COMPUTED,converged=True
+sobol,output_variance,,overall_yield,0.0028768196091520093,native squared,COMPUTED,
+sobol,total_order_ST,mass_yield_leach,cash_cost,0.07831280316539126,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,mass_yield_leach,cash_cost,0.07715826763432701,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,mass_yield_leach,cash_cost,0.005463175594234315,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,mass_yield_flot,cash_cost,0.16590787466769955,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,mass_yield_flot,cash_cost,0.1639395606049978,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,mass_yield_flot,cash_cost,0.010329804706450053,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_mean_ppm,cash_cost,0.01866427147268936,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,al_mean_ppm,cash_cost,0.011599524527296472,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,al_mean_ppm,cash_cost,0.003064292975556178,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,al_sigma_ppm,cash_cost,0.01206671297566304,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,al_sigma_ppm,cash_cost,0.006657548909374756,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,al_sigma_ppm,cash_cost,0.001979377656595938,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,price,cash_cost,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,price,cash_cost,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,price,cash_cost,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,power_price,cash_cost,0.385406173083646,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,power_price,cash_cost,0.3824575110227346,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,power_price,cash_cost,0.023370527415313307,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,reagent_price,cash_cost,0.3510865255087895,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,reagent_price,cash_cost,0.3476614454254079,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,reagent_price,cash_cost,0.019050797947157815,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,capex_musd,cash_cost,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,capex_musd,cash_cost,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,capex_musd,cash_cost,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,total_order_ST,discount_rate,cash_cost,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,first_order_S1,discount_rate,cash_cost,0.0,variance share,COMPUTED,"Saltelli N=2048, 22528 evaluations"
+sobol,total_order_conf95,discount_rate,cash_cost,0.0,variance share,COMPUTED,SALib bootstrap CI
+sobol,additive_fraction_sum_S1,,cash_cost,0.9894738581241386,variance share,COMPUTED,
+sobol,sum_total_order,,cash_cost,1.0114443608738788,variance share,COMPUTED,converged=True
+sobol,output_variance,,cash_cost,63.98563505609508,native squared,COMPUTED,
+sobol_convergence,max_total_drift,,npv_musd,0.00041842382255480315,variance share,COMPUTED,"levels [4096, 2048, 1024], ranking_stable=True"
+sobol_convergence,total_order_ST_at_N4096,mass_yield_leach,npv_musd,0.03690801635386087,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,mass_yield_flot,npv_musd,0.07732299441311712,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,al_mean_ppm,npv_musd,0.007528770235736898,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,al_sigma_ppm,npv_musd,0.004915024667741633,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,price,npv_musd,0.4360746863075241,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,power_price,npv_musd,4.141829934435337e-05,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,reagent_price,npv_musd,3.7654068175661936e-05,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,capex_musd,npv_musd,0.18973517864226916,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N4096,discount_rate,npv_musd,0.2607420149330144,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,mass_yield_leach,npv_musd,0.036879397207804934,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,mass_yield_flot,npv_musd,0.07741149366771688,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,al_mean_ppm,npv_musd,0.007386941704605037,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,al_sigma_ppm,npv_musd,0.004942263577571243,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,price,npv_musd,0.4362676399688629,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,power_price,npv_musd,4.151145122287725e-05,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,reagent_price,npv_musd,3.7740139194027826e-05,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,capex_musd,npv_musd,0.19015360246482396,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N2048,discount_rate,npv_musd,0.2610976604956794,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,mass_yield_leach,npv_musd,0.03678025361062304,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,mass_yield_flot,npv_musd,0.07779135164205311,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,al_mean_ppm,npv_musd,0.007362173498565446,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,al_sigma_ppm,npv_musd,0.004906858920585786,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,price,npv_musd,0.43514782170261235,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,power_price,npv_musd,4.1414544936077565e-05,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,reagent_price,npv_musd,3.767009920641207e-05,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,capex_musd,npv_musd,0.1896872222998019,variance share,COMPUTED,
+sobol_convergence,total_order_ST_at_N1024,discount_rate,npv_musd,0.26065428451312467,variance share,COMPUTED,
+tornado,low,price,npv_musd,6.823328799260909,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,price,npv_musd,55.77481077607,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,price,npv_musd,48.95148197680909,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,price,npv_musd,-14.286136458751656,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,price,npv_musd,34.665345518057435,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,discount_rate,npv_musd,38.477220678947376,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,discount_rate,npv_musd,4.636686098863065,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,discount_rate,npv_musd,33.84053458008431,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,discount_rate,npv_musd,17.36775542093481,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,discount_rate,npv_musd,-16.4727791591495,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,capex_musd,npv_musd,32.33062791300371,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,capex_musd,npv_musd,2.1051231866357942,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,capex_musd,npv_musd,30.225504726367916,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,capex_musd,npv_musd,11.221162654991144,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,capex_musd,npv_musd,-19.004342071376772,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,mass_yield_flot,npv_musd,9.154680440559382,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,mass_yield_flot,npv_musd,27.481171672957935,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,mass_yield_flot,npv_musd,18.326491232398553,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,mass_yield_flot,npv_musd,-11.954784817453184,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,mass_yield_flot,npv_musd,6.371706414945368,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,mass_yield_leach,npv_musd,12.27708236982869,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,mass_yield_leach,npv_musd,24.788779424251402,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,mass_yield_leach,npv_musd,12.511697054422712,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,mass_yield_leach,npv_musd,-8.832382888183876,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,mass_yield_leach,npv_musd,3.679314166238836,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,al_mean_ppm,npv_musd,21.15688714789756,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,al_mean_ppm,npv_musd,14.624078352867917,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,al_mean_ppm,npv_musd,6.532808795029643,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,al_mean_ppm,npv_musd,0.04742188988499407,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,al_mean_ppm,npv_musd,-6.485386905144649,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,al_sigma_ppm,npv_musd,21.161312931963092,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,al_sigma_ppm,npv_musd,18.36464671502941,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,al_sigma_ppm,npv_musd,2.7966662169336836,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,al_sigma_ppm,npv_musd,0.05184767395052603,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,al_sigma_ppm,npv_musd,-2.7448185429831575,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,reagent_price,npv_musd,21.297355762800272,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,reagent_price,npv_musd,20.858944584962302,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,reagent_price,npv_musd,0.43841117783797046,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,reagent_price,npv_musd,0.1878905047877062,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,reagent_price,npv_musd,-0.25052067305026426,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low,power_price,npv_musd,21.272564654529663,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high,power_price,npv_musd,20.946365861495465,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,swing,power_price,npv_musd,0.3261987930341981,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,low_delta,power_price,npv_musd,0.16309939651709726,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,high_delta,power_price,npv_musd,-0.16309939651710081,MUSD,COMPUTED,one-at-a-time at nominal; blind to interaction
+tornado,base,,npv_musd,21.109465258012566,MUSD,COMPUTED,nominal point NPV
+decision,prior_expected_value,walk_away,npv_musd,0.0,MUSD,COMPUTED,"4096 joint prior draws, seed 11"
+decision,prior_expected_value,build_base,npv_musd,18.797336568187802,MUSD,COMPUTED,"4096 joint prior draws, seed 11"
+decision,prior_expected_value,build_polish,npv_musd,11.042254197911236,MUSD,COMPUTED,"4096 joint prior draws, seed 11"
+decision,polish_capex_musd,build_polish,,9.0,native,ASSUMED,structural assumption of the action set
+decision,polish_opex_usd_per_t,build_polish,,35.0,native,ASSUMED,structural assumption of the action set
+decision,polish_al_factor,build_polish,,0.6,native,ASSUMED,structural assumption of the action set
+evpi,evpi,mass_yield_flot,npv_musd,0.873103461094555,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,mass_yield_flot,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,al_sigma_ppm,npv_musd,0.7640226783817994,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,al_sigma_ppm,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,al_mean_ppm,npv_musd,0.6291803068191122,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,al_mean_ppm,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,discount_rate,npv_musd,0.556612617972398,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,discount_rate,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,power_price,npv_musd,0.03287966181447999,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,power_price,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,capex_musd,npv_musd,0.0,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,capex_musd,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,mass_yield_leach,npv_musd,0.0,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,mass_yield_leach,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,price,npv_musd,0.0,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,price,npv_musd,0.0,fraction,COMPUTED,
+evpi,evpi,reagent_price,npv_musd,0.0,MUSD,COMPUTED,nested MC outer=256 inner=256
+evpi,switch_fraction,reagent_price,npv_musd,0.0,fraction,COMPUTED,
+evpi_per_cost,measurement_cost,al_mean_ppm,,64.60000000000001,USD,SOURCED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,al_mean_ppm,npv_musd,0.009739633232493996,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,al_sigma_ppm,,273.4,USD,DERIVED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,al_sigma_ppm,npv_musd,0.0027945233298529606,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,mass_yield_flot,,1000.0,USD,ASSUMED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,mass_yield_flot,npv_musd,0.000873103461094555,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,discount_rate,,25000.0,USD,ASSUMED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,discount_rate,npv_musd,2.226450471889592e-05,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,power_price,,15000.0,USD,ASSUMED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,power_price,npv_musd,2.191977454298666e-06,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,capex_musd,,120000.0,USD,ASSUMED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,capex_musd,npv_musd,0.0,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,mass_yield_leach,,1140.0,USD,DERIVED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,mass_yield_leach,npv_musd,0.0,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,price,,45000.0,USD,ASSUMED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,price,npv_musd,0.0,MUSD per USD,COMPUTED,
+evpi_per_cost,measurement_cost,reagent_price,,8000.0,USD,ASSUMED,see measurement_costs_usd section for this cost's basis
+evpi_per_cost,evpi_per_usd,reagent_price,npv_musd,0.0,MUSD per USD,COMPUTED,
+measurement_costs_usd,unit_cost,al_mean_ppm,,64.60000000000001,USD,SOURCED,Actlabs 2026 fee schedule: RX1 prep 12.40 plus Code 4B2-Std fusion ICP-MS 52.20 at the 11+ sample price
+measurement_costs_usd,unit_cost,al_sigma_ppm,,273.4,USD,DERIVED,"Actlabs 2026 SOURCED unit prices, 12.40 plus 5 x 52.20; the replicate count of 5 lots is ASSUMED"
+measurement_costs_usd,unit_cost,mass_yield_flot,,1000.0,USD,ASSUMED,"proxy: Hazen July 2026 Bond ball mill grindability 1,000 USD is SOURCED, but standing in for a bench flotation test is judgement. Bench flotation is quoted By Quote at both laboratories"
+measurement_costs_usd,unit_cost,mass_yield_leach,,1140.0,USD,DERIVED,Hazen July 2026 SOURCED prices: 6 x (leach 10 plus ICP-OES solids scan 155 plus 4-acid digestion 20) plus prep 30; the 6 leach conditions are ASSUMED
+measurement_costs_usd,unit_cost,price,,45000.0,USD,ASSUMED,"commercial market study, not a laboratory service; no list price exists to cite"
+measurement_costs_usd,unit_cost,capex_musd,,120000.0,USD,ASSUMED,"EPC or engineering cost study, not a laboratory service; no list price exists to cite"
+measurement_costs_usd,unit_cost,power_price,,15000.0,USD,ASSUMED,"tariff negotiation or power market study, not a laboratory service; no list price exists to cite"
+measurement_costs_usd,unit_cost,reagent_price,,8000.0,USD,ASSUMED,"reagent supply quotation, not a laboratory service; no list price exists to cite"
+measurement_costs_usd,unit_cost,discount_rate,,25000.0,USD,ASSUMED,"cost of capital is set by financing terms, not measurable by assay; the figure is the cost of establishing terms"
+evpi_convergence,evpi_at_inner_16,mass_yield_flot,npv_musd,0.0,MUSD,COMPUTED,nested MC bias falls as inner sample grows
+evpi_convergence,evpi_at_inner_64,mass_yield_flot,npv_musd,0.0,MUSD,COMPUTED,nested MC bias falls as inner sample grows
+evpi_convergence,evpi_at_inner_256,mass_yield_flot,npv_musd,0.0,MUSD,COMPUTED,nested MC bias falls as inner sample grows
+evpi_null_calibration,baseline,,prior_best_value,18.947227661381596,MUSD,COMPUTED,"shared baseline, 65536 draws, best action build_base"
+evpi_seed_replication,evpi_mean,mass_yield_flot,npv_musd,0.02630786594517609,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_sd,mass_yield_flot,npv_musd,0.06444084778722371,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_max,mass_yield_flot,npv_musd,0.15784719567105654,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,baseline_sd,mass_yield_flot,npv_musd,0.6775914652801416,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,switch_fraction_max,mass_yield_flot,npv_musd,0.0,fraction,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_mean,al_sigma_ppm,npv_musd,0.103301787962731,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_sd,al_sigma_ppm,npv_musd,0.2530366700258724,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_max,al_sigma_ppm,npv_musd,0.619810727776386,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,baseline_sd,al_sigma_ppm,npv_musd,0.6775914652801416,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,switch_fraction_max,al_sigma_ppm,npv_musd,0.0,fraction,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_mean,al_mean_ppm,npv_musd,0.10486338446985204,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_sd,al_mean_ppm,npv_musd,0.2568617846524314,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_max,al_mean_ppm,npv_musd,0.6291803068191122,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,baseline_sd,al_mean_ppm,npv_musd,0.6775914652801416,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,switch_fraction_max,al_mean_ppm,npv_musd,0.0,fraction,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_mean,discount_rate,npv_musd,0.3652157013620953,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_sd,discount_rate,npv_musd,0.5390083312141978,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_max,discount_rate,npv_musd,1.3889594916288779,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,baseline_sd,discount_rate,npv_musd,0.6775914652801416,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,switch_fraction_max,discount_rate,npv_musd,0.0,fraction,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_mean,price,npv_musd,0.0,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_sd,price,npv_musd,0.0,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,evpi_max,price,npv_musd,0.0,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,baseline_sd,price,npv_musd,0.6775914652801416,MUSD,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_seed_replication,switch_fraction_max,price,npv_musd,0.0,fraction,COMPUTED,"ae.agent.decisions.evpi, n_outer=256, n_inner=256, seeds 11/23/37/53/71/97"
+evpi_null_calibration,evpi_shipped,dummy,npv_musd,0.7697619148700028,MUSD,COMPUTED,dummy input drawn from a prior and discarded by the value function; TRUE EVPI is exactly 0
+evpi_null_calibration,evpi_common_baseline,dummy,npv_musd,0.12331437280239044,MUSD,COMPUTED,"same dummy, re-formed against the shared baseline; this is the estimator NOISE FLOOR"
+evpi_null_calibration,evpi_common_baseline,discount_rate,npv_musd,0.8634690852118716,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,capex_musd,npv_musd,0.7588384712380964,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,power_price,npv_musd,0.14991894411500795,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,reagent_price,npv_musd,0.14944114377320972,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,al_mean_ppm,npv_musd,0.14880909824064403,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,al_sigma_ppm,npv_musd,0.1386989943878021,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,dummy,npv_musd,0.12331437280239044,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,mass_yield_leach,npv_musd,-0.21864566420362763,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,mass_yield_flot,npv_musd,-0.34981973062132354,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_null_calibration,evpi_common_baseline,price,npv_musd,-0.8762044457847793,MUSD,COMPUTED,"single-parameter EVPI against one shared high-precision baseline, no per-call baseline"
+evpi_group_control,evpi_closed_form,all_nine,npv_musd,0.4005102758817429,MUSD,COMPUTED,"E[max_a V] - max_a E[V], no nesting, 131072 draws"
+evpi_group_control,nested_estimate,all_nine,npv_musd,0.17932231303937485,MUSD,COMPUTED,definitional control: nested group EVPI over all parameters must reproduce the closed form to within 3 standard errors
+evpi_group_control,abs_gap,all_nine,npv_musd,0.22118796284236808,MUSD,COMPUTED,definitional control: nested group EVPI over all parameters must reproduce the closed form to within 3 standard errors
+evpi_group_control,nested_standard_error,all_nine,npv_musd,0.6141978670758237,MUSD,COMPUTED,definitional control: nested group EVPI over all parameters must reproduce the closed form to within 3 standard errors
+evpi_group_control,tolerance_3se,all_nine,npv_musd,1.842593601227471,MUSD,COMPUTED,definitional control: nested group EVPI over all parameters must reproduce the closed form to within 3 standard errors
+evpi_group,evpi,ore_all_four,npv_musd,-0.10225636536237559,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach"
+evpi_group,standard_error,ore_all_four,npv_musd,0.22447528936676925,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach"
+evpi_group,ci95_low,ore_all_four,npv_musd,-0.5422279325212433,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach"
+evpi_group,ci95_high,ore_all_four,npv_musd,0.3377152017964921,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach"
+evpi_group,switch_fraction,ore_all_four,npv_musd,0.001953125,fraction,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach"
+evpi_group,cost,ore_all_four,,2478.0,USD,DERIVED,"sum of the per-parameter measurement costs in memo_run.MEASUREMENT_COSTS; upper bound, shared sample preparation not netted out"
+evpi_group,evpi,ore_chemistry_only,npv_musd,0.03559120892524348,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm"
+evpi_group,standard_error,ore_chemistry_only,npv_musd,0.06415876623658086,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm"
+evpi_group,ci95_low,ore_chemistry_only,npv_musd,-0.09015997289845501,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm"
+evpi_group,ci95_high,ore_chemistry_only,npv_musd,0.16134239074894197,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm"
+evpi_group,switch_fraction,ore_chemistry_only,npv_musd,0.00390625,fraction,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm"
+evpi_group,cost,ore_chemistry_only,,338.0,USD,DERIVED,"sum of the per-parameter measurement costs in memo_run.MEASUREMENT_COSTS; upper bound, shared sample preparation not netted out"
+evpi_group,evpi,ore_metallurgy_only,npv_musd,-0.39913976869947376,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: mass_yield_flot, mass_yield_leach"
+evpi_group,standard_error,ore_metallurgy_only,npv_musd,0.207937855574037,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: mass_yield_flot, mass_yield_leach"
+evpi_group,ci95_low,ore_metallurgy_only,npv_musd,-0.8066979656245863,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: mass_yield_flot, mass_yield_leach"
+evpi_group,ci95_high,ore_metallurgy_only,npv_musd,0.008418428225638708,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: mass_yield_flot, mass_yield_leach"
+evpi_group,switch_fraction,ore_metallurgy_only,npv_musd,0.0,fraction,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: mass_yield_flot, mass_yield_leach"
+evpi_group,cost,ore_metallurgy_only,,2140.0,USD,DERIVED,"sum of the per-parameter measurement costs in memo_run.MEASUREMENT_COSTS; upper bound, shared sample preparation not netted out"
+evpi_group,evpi,commercial_all_five,npv_musd,0.1362360567738854,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,standard_error,commercial_all_five,npv_musd,0.5515646546532437,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,ci95_low,commercial_all_five,npv_musd,-0.9448306663464723,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,ci95_high,commercial_all_five,npv_musd,1.217302779894243,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,switch_fraction,commercial_all_five,npv_musd,0.068359375,fraction,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,cost,commercial_all_five,,213000.0,USD,DERIVED,"sum of the per-parameter measurement costs in memo_run.MEASUREMENT_COSTS; upper bound, shared sample preparation not netted out"
+evpi_group,evpi,price_and_capex,npv_musd,-0.11812054248536086,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd"
+evpi_group,standard_error,price_and_capex,npv_musd,0.482570066804943,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd"
+evpi_group,ci95_low,price_and_capex,npv_musd,-1.0639578734230493,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd"
+evpi_group,ci95_high,price_and_capex,npv_musd,0.8277167884523274,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd"
+evpi_group,switch_fraction,price_and_capex,npv_musd,0.046875,fraction,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: price, capex_musd"
+evpi_group,cost,price_and_capex,,165000.0,USD,DERIVED,"sum of the per-parameter measurement costs in memo_run.MEASUREMENT_COSTS; upper bound, shared sample preparation not netted out"
+evpi_group,evpi,dummy_null,npv_musd,0.0015903168893736108,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: dummy"
+evpi_group,standard_error,dummy_null,npv_musd,0.026740669002958416,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: dummy"
+evpi_group,ci95_low,dummy_null,npv_musd,-0.05082139435642488,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: dummy"
+evpi_group,ci95_high,dummy_null,npv_musd,0.0540020281351721,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: dummy"
+evpi_group,switch_fraction,dummy_null,npv_musd,0.0,fraction,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: dummy"
+evpi_group,cost,dummy_null,,0,USD,DERIVED,"sum of the per-parameter measurement costs in memo_run.MEASUREMENT_COSTS; upper bound, shared sample preparation not netted out"
+evpi_group,evpi,all_nine,npv_musd,0.17932231303937485,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach, price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,standard_error,all_nine,npv_musd,0.6141978670758237,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach, price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,ci95_low,all_nine,npv_musd,-1.0245055064292397,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach, price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,ci95_high,all_nine,npv_musd,1.3831501325079893,MUSD,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach, price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,switch_fraction,all_nine,npv_musd,0.09375,fraction,COMPUTED,"nested MC, n_outer=512, n_inner=512, seed 11, no clamping at zero; params: al_mean_ppm, al_sigma_ppm, mass_yield_flot, mass_yield_leach, price, capex_musd, discount_rate, power_price, reagent_price"
+evpi_group,cost,all_nine,,215478.0,USD,DERIVED,"sum of the per-parameter measurement costs in memo_run.MEASUREMENT_COSTS; upper bound, shared sample preparation not netted out"
+evpi_ceiling,evpi_all_mean,all_nine,npv_musd,0.40302650858599587,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,sd_across_seeds,all_nine,npv_musd,0.004226154501088002,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,within_run_standard_error,all_nine,npv_musd,0.003962028533423021,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,min,all_nine,npv_musd,0.3988831761810968,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,max,all_nine,npv_musd,0.40890706384086817,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,seed_sd_over_within_run_se,all_nine,npv_musd,1.0666643274870076,ratio,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,ceiling_pct_of_prior_value,all_nine,npv_musd,2.125525445050602,percent,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,prior_best_value,all_nine,npv_musd,18.961264826279276,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,evpi_all_by_seed,seed_1234,npv_musd,0.40890706384086817,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,fraction_of_draws_where_information_binds,seed_1234,npv_musd,0.08531,fraction,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,evpi_all_by_seed,seed_4321,npv_musd,0.3988831761810968,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,fraction_of_draws_where_information_binds,seed_4321,npv_musd,0.083965,fraction,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,evpi_all_by_seed,seed_999,npv_musd,0.40175537979314074,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,fraction_of_draws_where_information_binds,seed_999,npv_musd,0.084945,fraction,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,evpi_all_by_seed,seed_20260917,npv_musd,0.4025604145288776,MUSD,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,fraction_of_draws_where_information_binds,seed_20260917,npv_musd,0.084685,fraction,COMPUTED,"paired estimator d_k = max_a V(a,theta_k) - V(a*,theta_k), 200,000 draws x 4 seeds; cancels the shared NPV variance"
+evpi_ceiling,ceiling_usd,all_nine,npv_musd,403026.5085859959,USD,COMPUTED,"the same ceiling expressed in USD, for comparison against campaign cost"
+assay_campaign,per_sample_cost,ore_all_four,,2478.0,USD,DERIVED,"sum of the four ore parameter costs: 64.60 SOURCED, 273.40 and 1140.00 DERIVED, 1000.00 ASSUMED proxy"
+assay_campaign,n_samples_low,ore_all_four,,20,samples,ASSUMED,"20 to 30 samples labelled AE-Q-### comes from the Quartz Foundry project brief, NOT from a power calculation performed here"
+assay_campaign,n_samples_high,ore_all_four,,30,samples,ASSUMED,"20 to 30 samples labelled AE-Q-### comes from the Quartz Foundry project brief, NOT from a power calculation performed here"
+assay_campaign,campaign_cost_low,ore_all_four,,49560.0,USD,DERIVED,per-sample cost times the ASSUMED sample count
+assay_campaign,campaign_cost_high,ore_all_four,,74340.0,USD,DERIVED,per-sample cost times the ASSUMED sample count
+assay_campaign,ceiling_over_cost_ratio_low,ore_all_four,npv_musd,5.4213950576539665,ratio,COMPUTED,"information ceiling divided by campaign cost; cover ratio, not a return on investment"
+assay_campaign,ceiling_over_cost_ratio_high,ore_all_four,npv_musd,8.13209258648095,ratio,COMPUTED,"information ceiling divided by campaign cost; cover ratio, not a return on investment"
+assay_campaign,campaign_pct_of_ceiling_low,ore_all_four,npv_musd,12.296957878497743,percent,COMPUTED,campaign cost as a percentage of the information ceiling
+assay_campaign,campaign_pct_of_ceiling_high,ore_all_four,npv_musd,18.445436817746614,percent,COMPUTED,campaign cost as a percentage of the information ceiling
+falsification,overall_yield_at_zero_npv,overall_yield,npv_musd,0.5384505462304604,fraction,COMPUTED,"root of plant_npv in combined mass yield, all other parameters at their triangular mode; both mass yields scaled by a common factor"
+falsification,implied_mass_yield_leach_at_zero_npv,mass_yield_leach,npv_musd,0.763409151366825,fraction,COMPUTED,BELOW the ASSUMED band low end of 0.8
+falsification,implied_mass_yield_flot_at_zero_npv,mass_yield_flot,npv_musd,0.7053236724584796,fraction,COMPUTED,"INSIDE the ASSUMED band, low end 0.7; this yield alone does NOT require leaving its band"
+falsification,npv_at_mc_overall_yield_p10,overall_yield,npv_musd,10.57421968727094,MUSD,COMPUTED,"NPV when overall yield is set to its Monte Carlo P10 of 0.6604 and all else sits at its mode; this is NOT the NPV P10, which is a joint outcome"
+falsification,price_at_zero_npv,price,npv_musd,2466.0039552086605,USD/t,COMPUTED,"root of plant_npv in this parameter alone, all others at their triangular mode; BELOW the ASSUMED band (2800.0 to 5200.0): this parameter alone cannot drive NPV negative inside its own band"
+falsification,capex_musd_at_zero_npv,capex_musd,npv_musd,62.43510611543912,MUSD,COMPUTED,"root of plant_npv in this parameter alone, all others at their triangular mode; ABOVE the ASSUMED band (25.0 to 60.0): this parameter alone cannot drive NPV negative inside its own band"
+falsification,discount_rate_at_zero_npv,discount_rate,npv_musd,0.22453034361732266,fraction,COMPUTED,"root of plant_npv in this parameter alone, all others at their triangular mode; ABOVE the ASSUMED band (0.1 to 0.2): this parameter alone cannot drive NPV negative inside its own band"
+falsification,combined_mass_yield_total_order_sobol,mass_yield_flot+mass_yield_leach,npv_musd,0.11423101076697799,index,COMPUTED,why a yield percentile does not map to an NPV percentile: the two mass yields together carry only this share of NPV variance

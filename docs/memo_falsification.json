@@ -1,0 +1,28 @@
+{
+ "nominal": {
+  "mass_yield_leach": 0.92,
+  "mass_yield_flot": 0.85,
+  "al_mean_ppm": 18.0,
+  "al_sigma_ppm": 3.0,
+  "price": 3500.0,
+  "power_price": 0.07,
+  "reagent_price": 1.8,
+  "capex_musd": 38.0,
+  "discount_rate": 0.14
+ },
+ "nominal_npv_musd": 21.109465258012566,
+ "overall_yield_at_zero_npv": {
+  "overall_yield": 0.5384505462304604,
+  "npv_at_threshold": 1.8827133462182245e-05,
+  "implied_mass_yield_leach": 0.763409151366825,
+  "implied_mass_yield_flot": 0.7053236724584796
+ },
+ "mc_yield_p10_maps_to_npv": {
+  "overall_yield_p10": 0.6603666991115315,
+  "npv_musd": 10.57421968727094
+ },
+ "price_at_zero_npv": 2466.0039552086605,
+ "capex_musd_at_zero_npv": 62.43510611543912,
+ "discount_rate_at_zero_npv": 0.22453034361732266,
+ "combined_mass_yield_total_order_sobol": 0.11423101076697799
+}

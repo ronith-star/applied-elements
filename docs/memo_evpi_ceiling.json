@@ -1,0 +1,99 @@
+{
+ "runs": [
+  {
+   "seed": 1234,
+   "n_draws": 200000,
+   "prior_best_action": "build_base",
+   "prior_best_value_musd": 18.943074071923863,
+   "expected_values_musd": {
+    "walk_away": 0.0,
+    "build_base": 18.943074071923863,
+    "build_polish": 11.168204686813807
+   },
+   "evpi_all_musd": 0.40890706384086817,
+   "standard_error_musd": 0.0039928534347408885,
+   "ci95_low": 0.401081071108776,
+   "ci95_high": 0.41673305657296034,
+   "fraction_of_draws_where_information_binds": 0.08531,
+   "evpi_as_pct_of_prior_value": 2.1586098554453863
+  },
+  {
+   "seed": 4321,
+   "n_draws": 200000,
+   "prior_best_action": "build_base",
+   "prior_best_value_musd": 18.991749177084024,
+   "expected_values_musd": {
+    "walk_away": 0.0,
+    "build_base": 18.991749177084024,
+    "build_polish": 11.21510931414638
+   },
+   "evpi_all_musd": 0.3988831761810968,
+   "standard_error_musd": 0.003953162241175757,
+   "ci95_low": 0.3911349781883923,
+   "ci95_high": 0.4066313741738013,
+   "fraction_of_draws_where_information_binds": 0.083965,
+   "evpi_as_pct_of_prior_value": 2.100297199914584
+  },
+  {
+   "seed": 999,
+   "n_draws": 200000,
+   "prior_best_action": "build_base",
+   "prior_best_value_musd": 18.95863924518666,
+   "expected_values_musd": {
+    "walk_away": 0.0,
+    "build_base": 18.95863924518666,
+    "build_polish": 11.183722861834381
+   },
+   "evpi_all_musd": 0.40175537979314074,
+   "standard_error_musd": 0.003947931531880073,
+   "ci95_low": 0.3940174339906558,
+   "ci95_high": 0.4094933255956257,
+   "fraction_of_draws_where_information_binds": 0.084945,
+   "evpi_as_pct_of_prior_value": 2.1191150619902266
+  },
+  {
+   "seed": 20260917,
+   "n_draws": 200000,
+   "prior_best_action": "build_base",
+   "prior_best_value_musd": 18.95159681092255,
+   "expected_values_musd": {
+    "walk_away": 0.0,
+    "build_base": 18.95159681092255,
+    "build_polish": 11.176663805819427
+   },
+   "evpi_all_musd": 0.4025604145288776,
+   "standard_error_musd": 0.003954166925895367,
+   "ci95_low": 0.3948102473541227,
+   "ci95_high": 0.4103105817036325,
+   "fraction_of_draws_where_information_binds": 0.084685,
+   "evpi_as_pct_of_prior_value": 2.1241503739508967
+  }
+ ],
+ "across_seeds": {
+  "mean_musd": 0.40302650858599587,
+  "sd_across_seeds_musd": 0.004226154501088002,
+  "min_musd": 0.3988831761810968,
+  "max_musd": 0.40890706384086817,
+  "mean_standard_error_musd": 0.003962028533423021
+ },
+ "seed_sd_over_within_run_se": 1.0666643274870076,
+ "ceiling_musd": 0.40302650858599587,
+ "prior_best_value_musd": 18.961264826279276,
+ "ceiling_pct_of_prior_value": 2.125525445050602,
+ "ore_campaign": {
+  "parameters": [
+   "al_mean_ppm",
+   "al_sigma_ppm",
+   "mass_yield_flot",
+   "mass_yield_leach"
+  ],
+  "per_sample_cost_usd": 2478.0,
+  "n_samples_low": 20,
+  "n_samples_high": 30,
+  "campaign_cost_usd_low": 49560.0,
+  "campaign_cost_usd_high": 74340.0,
+  "ceiling_over_cost_ratio_low": 5.4213950576539665,
+  "ceiling_over_cost_ratio_high": 8.13209258648095
+ },
+ "runtime_seconds": 260.4184169169748
+}

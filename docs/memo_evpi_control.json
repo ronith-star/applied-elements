@@ -1,0 +1,375 @@
+{
+ "baseline_common": {
+  "n_draws": 65536,
+  "expected_values_musd": {
+   "walk_away": 0.0,
+   "build_base": 18.947227661381596,
+   "build_polish": 11.17890974967556
+  },
+  "prior_best_action": "build_base",
+  "prior_best_value_musd": 18.947227661381596
+ },
+ "control_a_seed_replication": {
+  "mass_yield_flot": [
+   {
+    "seed": 11,
+    "evpi": 0.15784719567105654,
+    "baseline": 18.300780119313984,
+    "resolved": 18.45862731498504,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 23,
+    "evpi": 0.0,
+    "baseline": 20.33308642427543,
+    "resolved": 19.224318000495632,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 37,
+    "evpi": 0.0,
+    "baseline": 19.190958090218622,
+    "resolved": 18.620804430820566,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 53,
+    "evpi": 0.0,
+    "baseline": 19.492909710719204,
+    "resolved": 18.77065637061815,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 71,
+    "evpi": 0.0,
+    "baseline": 19.11596985841628,
+    "resolved": 18.678229283567326,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 97,
+    "evpi": 0.0,
+    "baseline": 19.707954341901786,
+    "resolved": 18.95786273226428,
+    "switch_fraction": 0.0
+   }
+  ],
+  "al_sigma_ppm": [
+   {
+    "seed": 11,
+    "evpi": 0.619810727776386,
+    "baseline": 18.300780119313984,
+    "resolved": 18.92059084709037,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 23,
+    "evpi": 0.0,
+    "baseline": 20.33308642427543,
+    "resolved": 18.936880526478145,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 37,
+    "evpi": 0.0,
+    "baseline": 19.190958090218622,
+    "resolved": 19.056321225119525,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 53,
+    "evpi": 0.0,
+    "baseline": 19.492909710719204,
+    "resolved": 18.841829551444285,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 71,
+    "evpi": 0.0,
+    "baseline": 19.11596985841628,
+    "resolved": 19.009629366715785,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 97,
+    "evpi": 0.0,
+    "baseline": 19.707954341901786,
+    "resolved": 18.995202860970622,
+    "switch_fraction": 0.0
+   }
+  ],
+  "al_mean_ppm": [
+   {
+    "seed": 11,
+    "evpi": 0.6291803068191122,
+    "baseline": 18.300780119313984,
+    "resolved": 18.929960426133096,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 23,
+    "evpi": 0.0,
+    "baseline": 20.33308642427543,
+    "resolved": 18.924698756562282,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 37,
+    "evpi": 0.0,
+    "baseline": 19.190958090218622,
+    "resolved": 19.084055527529582,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 53,
+    "evpi": 0.0,
+    "baseline": 19.492909710719204,
+    "resolved": 18.842673535058427,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 71,
+    "evpi": 0.0,
+    "baseline": 19.11596985841628,
+    "resolved": 19.007642798002507,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 97,
+    "evpi": 0.0,
+    "baseline": 19.707954341901786,
+    "resolved": 18.992662046546382,
+    "switch_fraction": 0.0
+   }
+  ],
+  "discount_rate": [
+   {
+    "seed": 11,
+    "evpi": 1.3889594916288779,
+    "baseline": 18.300780119313984,
+    "resolved": 19.689739610942862,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 23,
+    "evpi": 0.0,
+    "baseline": 20.33308642427543,
+    "resolved": 18.56857587080527,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 37,
+    "evpi": 0.4317123140619543,
+    "baseline": 19.190958090218622,
+    "resolved": 19.622670404280576,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 53,
+    "evpi": 0.0,
+    "baseline": 19.492909710719204,
+    "resolved": 19.04664777030064,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 71,
+    "evpi": 0.3706224024817395,
+    "baseline": 19.11596985841628,
+    "resolved": 19.486592260898018,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 97,
+    "evpi": 0.0,
+    "baseline": 19.707954341901786,
+    "resolved": 18.98450692981477,
+    "switch_fraction": 0.0
+   }
+  ],
+  "price": [
+   {
+    "seed": 11,
+    "evpi": 0.0,
+    "baseline": 18.300780119313984,
+    "resolved": 17.95432713011377,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 23,
+    "evpi": 0.0,
+    "baseline": 20.33308642427543,
+    "resolved": 19.557447816115424,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 37,
+    "evpi": 0.0,
+    "baseline": 19.190958090218622,
+    "resolved": 18.10386020168433,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 53,
+    "evpi": 0.0,
+    "baseline": 19.492909710719204,
+    "resolved": 18.763496646310674,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 71,
+    "evpi": 0.0,
+    "baseline": 19.11596985841628,
+    "resolved": 18.28578354019527,
+    "switch_fraction": 0.0
+   },
+   {
+    "seed": 97,
+    "evpi": 0.0,
+    "baseline": 19.707954341901786,
+    "resolved": 18.86956210418952,
+    "switch_fraction": 0.0
+   }
+  ]
+ },
+ "control_a_summary": {
+  "mass_yield_flot": {
+   "evpi_mean": 0.02630786594517609,
+   "evpi_sd": 0.06444084778722371,
+   "evpi_min": 0.0,
+   "evpi_max": 0.15784719567105654,
+   "baseline_sd": 0.6775914652801416,
+   "switch_fraction_max": 0.0
+  },
+  "al_sigma_ppm": {
+   "evpi_mean": 0.103301787962731,
+   "evpi_sd": 0.2530366700258724,
+   "evpi_min": 0.0,
+   "evpi_max": 0.619810727776386,
+   "baseline_sd": 0.6775914652801416,
+   "switch_fraction_max": 0.0
+  },
+  "al_mean_ppm": {
+   "evpi_mean": 0.10486338446985204,
+   "evpi_sd": 0.2568617846524314,
+   "evpi_min": 0.0,
+   "evpi_max": 0.6291803068191122,
+   "baseline_sd": 0.6775914652801416,
+   "switch_fraction_max": 0.0
+  },
+  "discount_rate": {
+   "evpi_mean": 0.3652157013620953,
+   "evpi_sd": 0.5390083312141978,
+   "evpi_min": 0.0,
+   "evpi_max": 1.3889594916288779,
+   "baseline_sd": 0.6775914652801416,
+   "switch_fraction_max": 0.0
+  },
+  "price": {
+   "evpi_mean": 0.0,
+   "evpi_sd": 0.0,
+   "evpi_min": 0.0,
+   "evpi_max": 0.0,
+   "baseline_sd": 0.6775914652801416,
+   "switch_fraction_max": 0.0
+  }
+ },
+ "control_bc_common_baseline": [
+  {
+   "parameter": "discount_rate",
+   "evpi_shipped": 1.509916627279484,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 19.810696746593468,
+   "evpi_common_baseline": 0.8634690852118716,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "capex_musd",
+   "evpi_shipped": 1.4052860133057088,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 19.706066132619693,
+   "evpi_common_baseline": 0.7588384712380964,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "power_price",
+   "evpi_shipped": 0.7963664861826203,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 19.097146605496604,
+   "evpi_common_baseline": 0.14991894411500795,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "reagent_price",
+   "evpi_shipped": 0.7958886858408221,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 19.096668805154806,
+   "evpi_common_baseline": 0.14944114377320972,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "al_mean_ppm",
+   "evpi_shipped": 0.7952566403082564,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 19.09603675962224,
+   "evpi_common_baseline": 0.14880909824064403,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "al_sigma_ppm",
+   "evpi_shipped": 0.7851465364554144,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 19.0859266557694,
+   "evpi_common_baseline": 0.1386989943878021,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "dummy",
+   "evpi_shipped": 0.7697619148700028,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 19.070542034183987,
+   "evpi_common_baseline": 0.12331437280239044,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "mass_yield_leach",
+   "evpi_shipped": 0.4278018778639847,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 18.72858199717797,
+   "evpi_common_baseline": -0.21864566420362763,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "mass_yield_flot",
+   "evpi_shipped": 0.2966278114462888,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 18.597407930760273,
+   "evpi_common_baseline": -0.34981973062132354,
+   "switch_fraction": 0.0
+  },
+  {
+   "parameter": "price",
+   "evpi_shipped": 0.0,
+   "baseline_shipped": 18.300780119313984,
+   "resolved": 18.071023215596817,
+   "evpi_common_baseline": -0.8762044457847793,
+   "switch_fraction": 0.0
+  }
+ ],
+ "null_calibration": {
+  "parameter": "dummy",
+  "evpi_shipped": 0.7697619148700028,
+  "baseline_shipped": 18.300780119313984,
+  "resolved": 19.070542034183987,
+  "evpi_common_baseline": 0.12331437280239044,
+  "switch_fraction": 0.0
+ },
+ "exceeds_null": [
+  "discount_rate",
+  "capex_musd",
+  "power_price",
+  "reagent_price",
+  "al_mean_ppm",
+  "al_sigma_ppm"
+ ],
+ "runtime_seconds": 438.5239242919488
+}
