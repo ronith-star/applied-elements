@@ -493,6 +493,24 @@ def furnas_max_packing(size_classes: tuple[SizeClass, ...],
         warning = msg
     phi_max = 1.0 - (1.0 - phi1) ** n
     assert 0.0 < phi_max <= 1.0, "packing fraction must lie in (0, 1]"
+    # Equation (1) saturates: the void fraction (1 - phi1)^n underflows and
+    # phi_max becomes exactly 1.0. At the default phi1 = 0.625 the residual void
+    # is 5.499e-05 at n = 10, 3.024e-09 at n = 20, 1.663e-13 at n = 30 and
+    # exactly 0.0 at n = 40. A packing with no void is not a packing, and the
+    # assertion above admits that endpoint. The downstream consequence is in
+    # krieger_dougherty_relative_viscosity, whose only divergence guard is
+    # phi >= phi_max: at phi_max = 1.0 it never fires, and it reports a finite
+    # relative viscosity of 3.162278e+07 for a 99.9 volume percent solids paste
+    # as though it flowed. Refused here rather than there, because the
+    # unphysical input is the class count.
+    if 1.0 - phi_max <= 0.0:
+        raise ValueError(
+            f"{n} size classes at phi_monomodal = {phi1} drive equation (1) to a void "
+            f"fraction of zero (phi_max = {phi_max!r}), which is not a packing. Note "
+            f"what such a feed would require: at the sevenfold separation McGeary 1961 "
+            f"found necessary, {n} classes span 7**{n - 1} in diameter, so this is a "
+            f"numerical limit of the geometric series and not a preparable feed."
+        )
     comp = furnas_optimal_composition(n, phi_monomodal)
     return FurnasResult(
         n_classes=n,

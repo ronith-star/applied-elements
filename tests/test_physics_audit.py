@@ -63,6 +63,12 @@ from ae.physics.diffusion import (
     FO_SHORT_TIME_SWITCH,
     fractional_extraction_sphere,
 )
+from ae.physics.liberation import exposure, leachable_fraction, liberation_size
+from ae.physics.packing import (
+    SizeClass,
+    furnas_max_packing,
+    krieger_dougherty_relative_viscosity,
+)
 from ae.physics.reagents import Acid, reagent_balance
 from ae.physics.separation import (
     PropertyBasis,
@@ -491,3 +497,129 @@ def test_reagent_balance_reports_its_mass_residual_as_definitional() -> None:
     doc = reagent_balance.__doc__.lower()
     assert "identity" in doc, "the residual must be documented as an identity"
     assert "element" in doc, "the docstring must point at the per-element closures"
+
+
+# --- 7. packing: a maximum packing fraction of exactly 1 --------------------
+
+
+def test_furnas_refuses_a_class_count_that_packs_to_zero_void() -> None:
+    """phi_max must stay strictly below 1: a packing with no void is not a packing.
+
+    Equation (1) is phi_max = 1 - (1 - phi1)^n with no bound on n, and the
+    existing assertion is 0 < phi_max <= 1, which admits the endpoint. Measured
+    at the default phi1 = 0.625: 1 - phi_max is 5.499e-05 at n = 10, 3.024e-09
+    at n = 20, 1.663e-13 at n = 30 and exactly 0.0 at n = 40, where phi_max
+    becomes 1.0 in double precision. Every subsequent class then fills a void
+    that the model says is already gone.
+
+    The consequence is downstream, in krieger_dougherty_relative_viscosity:
+    with phi_max = 1.0 its divergence guard (phi >= phi_max) never fires at any
+    physical solids loading, so it reports a finite relative viscosity of
+    3.162278e+07 for a suspension at 99.9 volume percent solids, a paste with
+    essentially no liquid, as though it flowed.
+
+    Why n = 40 is not a real feed, stated so the guard is not mistaken for a
+    physical claim: at McGeary's sevenfold separation 40 classes span 7^39 =
+    9.095e+32 in diameter, and even at the 5.43-fold step of McGeary's own
+    measured quaternary optimum they span 4.541e+28. A 1 nm to 1 m range, itself
+    absurd for a mineral feed, admits about 12 classes at sevenfold steps. The
+    guard exists because nothing in the signature stops a caller passing 40
+    classes, not because 40 classes could be prepared.
+    """
+    classes_40 = tuple(
+        SizeClass(diameter=Q_(7.0**i, "um")) for i in range(40)
+    )
+    with pytest.raises(ValueError, match="void"):
+        furnas_max_packing(classes_40)
+    # The published four-class result must be untouched.
+    mcgeary = tuple(
+        SizeClass(diameter=Q_(d, "um")) for d in (316.0, 38.0, 7.0, 1.0)
+    )
+    r = furnas_max_packing(mcgeary)
+    assert r.phi_max == pytest.approx(0.98022, abs=5e-6)
+    assert r.phi_max < 1.0
+    # And the saturation this guard blocks is real: the formula itself reaches
+    # exactly 1.0 at n = 40, which is what makes the endpoint reachable.
+    assert 1.0 - (1.0 - 0.625) ** 40 == 1.0
+    assert 1.0 - (1.0 - 0.625) ** 30 < 1.0
+
+
+def test_pin_krieger_dougherty_still_diverges_at_a_reachable_phi_max() -> None:
+    """With a physical phi_max the divergence guard must still fire.
+
+    Pinned alongside the Furnas guard because the two interact: the viscosity
+    model's only protection against reporting a flowable paste is
+    phi >= phi_max, and that protection is worth nothing if phi_max can be 1.
+    """
+    with pytest.raises(ValueError, match="cannot flow"):
+        krieger_dougherty_relative_viscosity(0.70, 0.70)
+    assert krieger_dougherty_relative_viscosity(0.50, 0.70) == pytest.approx(
+        8.9561, abs=5e-5
+    )
+    assert krieger_dougherty_relative_viscosity(0.65, 0.70) == pytest.approx(
+        101.3267, abs=5e-5
+    )
+
+
+# --- 8. liberation: an inclusion larger than its host particle --------------
+
+
+def test_pin_exposure_is_one_when_the_particle_is_no_larger_than_the_inclusion() -> None:
+    """A particle no larger than an inclusion is a fragment of it, so E = 1.
+
+    WITHDRAWN FINDING, pinned so it is not re-raised. This audit first read
+    enclosed_fraction's early return (0.0 whenever d_inc >= d_p, hence E = 1.0)
+    as a silent clamp hiding an out-of-domain call, on the grounds that
+    exposure(10 um, 1e9 um) = 1.0 reports a 1 m inclusion as fully exposed
+    inside a 10 um particle. A guard rejecting d_inc > d_p was written and it
+    broke four existing tests in tests/test_liberation.py. Those tests were
+    right and the finding was wrong: exposure is the fraction of inclusions
+    intersecting a particle surface, and grinding finer than the inclusion
+    population shatters every inclusion, which IS full exposure. The 1 m case is
+    not a false positive, it is the same statement at an absurd scale.
+
+    Retained as a pin because the behaviour is load-bearing for
+    leachable_fraction's "even at infinite fineness the lattice bounds the
+    leachable fraction" property, and an over-eager future guard would break it.
+    """
+    assert exposure(Q_(10.0, "um"), Q_(10.0, "um")) == 1.0
+    assert exposure(Q_(5.0, "um"), Q_(10.0, "um")) == 1.0
+    assert exposure(Q_(10.0, "um"), Q_(1.0e9, "um")) == 1.0
+    # Continuous into that limit from inside the strict-inequality region.
+    assert exposure(Q_(10.0, "um"), Q_(9.999, "um")) > 0.999
+    assert exposure(Q_(10.0, "um"), Q_(9.999, "um")) < 1.0
+    # The property it is load-bearing for: the lattice still bounds the
+    # leachable fraction when the grind is far finer than both inclusion
+    # populations.
+    part = {"surface": 0.1, "fluid": 0.2, "mineral": 0.3, "lattice": 0.4}
+    assert leachable_fraction(
+        part, Q_(1.0, "um"), Q_(5.0, "um"), Q_(20.0, "um")
+    ) == pytest.approx(1.0 - part["lattice"], rel=1e-12)
+
+
+def test_liberation_size_refuses_a_target_exposure_it_cannot_bound() -> None:
+    """As E* goes to zero the required particle size diverges, so it must raise.
+
+    The existing guard rejects only E* <= 0 exactly. Measured on the committed
+    code for a 20 um inclusion population: E* = 1e-9 returns 6.000000e+10 um
+    (6.0e4 m) and E* = 1e-12 returns 6.000799e+13 um (6.0e7 m). Those are
+    returned as grind targets, with no indication that the model has left its
+    domain.
+
+    The bound chosen is E* >= 1e-6, at which the required particle size is
+    2999999.000380277 times the inclusion size (5.999998e+07 um for a 20 um
+    population, i.e. 60 m). It is a numerical domain limit, not a process
+    threshold, and no source is claimed for it: any target exposure this small
+    is a calculation error rather than a grind specification.
+    """
+    with pytest.raises(ValueError, match="target_exposure"):
+        liberation_size(Q_(20.0, "um"), 1.0e-9)
+    with pytest.raises(ValueError, match="target_exposure"):
+        liberation_size(Q_(20.0, "um"), 1.0e-12)
+    # The published worked value and the E* = 1 asymptote are unmoved.
+    assert liberation_size(Q_(20.0, "um"), 0.5).to("um").magnitude == pytest.approx(
+        96.95, abs=5e-3
+    )
+    assert liberation_size(Q_(20.0, "um"), 1.0).to("um").magnitude == pytest.approx(
+        20.0, rel=1e-12
+    )

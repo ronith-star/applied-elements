@@ -238,6 +238,15 @@ def _q(value: Value) -> Qty:
 
 _ACCESSED: Final[_dt.date] = _dt.date(2026, 9, 16)
 
+#: Smallest target exposure :func:`liberation_size` will invert. ASSUMED, a
+#: numerical domain limit rather than a process specification, and no source is
+#: claimed for it. Rationale: the inverse of Eq. E1 behaves as 3/E* near zero,
+#: so the required particle size is 2999999.000380277 times the inclusion size
+#: at this floor and grows without bound below it. Before this floor existed,
+#: E* = 1e-12 returned a grind target of 6.0e7 m for a 20 um inclusion
+#: population.
+LIBERATION_TARGET_FLOOR: Final[float] = 1e-6
+
 SRC_LIN_2020: Final[Source] = Source(
     citation=(
         "Lin M., Liu Z., Wei Y. et al. 2020, A Critical Review on the Mineralogy and "
@@ -354,6 +363,20 @@ def exposure(particle_size: Qty, inclusion_size: Qty) -> float:
 
     >>> round(exposure(Q_(30.0, "um"), Q_(10.0, "um")), 4)
     0.7037
+
+    LIMIT AT AND BELOW THE INCLUSION SIZE. When :math:`d_p \\le d_{inc}` this
+    returns exactly 1.0, via :func:`enclosed_fraction`'s early return. That is
+    the correct reading of the model and not a clamp concealing a domain error:
+    exposure is the fraction of inclusions intersecting a particle surface, and
+    a particle no larger than an inclusion is a fragment OF that inclusion, so
+    every such inclusion has been opened. It is asserted deliberately in
+    ``tests/test_liberation.py::test_exposure_bounds`` (5 um particle, 10 um
+    inclusion) and relied on by
+    ``test_leachable_fraction_never_exceeds_the_non_lattice_inventory``, which
+    checks that the lattice term still bounds the leachable fraction at
+    infinite fineness. Recorded here because this audit first misread it as a
+    silent failure and added a guard rejecting the case; the guard broke those
+    tests and the tests were right.
     """
     e = 1.0 - enclosed_fraction(particle_size, inclusion_size)
     return require_fraction(e, "exposure")
@@ -385,6 +408,20 @@ def liberation_size(inclusion_size: Qty, target_exposure: float) -> Qty:
         raise ValueError(
             "target_exposure must be positive; zero exposure is achieved at any "
             "particle size and the inverse is unbounded"
+        )
+    # The inverse diverges as 3/E* near zero, and rejecting only E* == 0 left
+    # the divergence reportable: for a 20 um inclusion population the committed
+    # code returned 6.000000e+10 um at E* = 1e-9 and 6.000799e+13 um at
+    # E* = 1e-12, i.e. grind targets of 6.0e4 m and 6.0e7 m. The floor below is
+    # a NUMERICAL DOMAIN LIMIT with no source claimed: at E* = 1e-6 the required
+    # particle size is already 2999999.000380277 times the inclusion size.
+    if e < LIBERATION_TARGET_FLOOR:
+        raise ValueError(
+            f"target_exposure {e} is below the domain floor "
+            f"{LIBERATION_TARGET_FLOOR}: the required particle size scales as 3/E* "
+            f"and reaches {1.0 / (1.0 - (1.0 - LIBERATION_TARGET_FLOOR) ** (1.0 / 3.0)):.0f} "
+            f"times the inclusion size at the floor itself. A target exposure this "
+            f"small is a calculation error, not a grind specification."
         )
     denom = 1.0 - (1.0 - e) ** (1.0 / 3.0)
     di = float(inclusion_size.to("um").magnitude)
