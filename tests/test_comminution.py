@@ -142,6 +142,16 @@ def test_bond_worked_example_metric():
     w = bond_specific_energy(Q_(12.3, "kWh/metric_ton"), Q_(2000.0, "um"),
                              Q_(150.0, "um"), TonConvention.METRIC)
     assert w.magnitude == pytest.approx(7.29254, abs=1e-5)
+    inv_sqrt_p80 = 1.0 / math.sqrt(150.0)
+    assert inv_sqrt_p80 == pytest.approx(0.08164966, abs=1e-8)
+    inv_sqrt_f80 = 1.0 / math.sqrt(2000.0)
+    assert inv_sqrt_f80 == pytest.approx(0.02236068, abs=1e-8)
+    diff = inv_sqrt_p80 - inv_sqrt_f80
+    assert diff == pytest.approx(0.05928898, abs=1e-8)
+    ten_times_wi = 10.0 * 12.3
+    assert ten_times_wi == pytest.approx(123.0, abs=1e-9)
+    product = ten_times_wi * diff
+    assert product == pytest.approx(7.29254, abs=1e-5)
 
 
 @pytest.mark.golden
@@ -156,12 +166,23 @@ def test_bond_definitional_identity():
                              Q_(BOND_REFERENCE_P80_UM, "um"), TonConvention.SHORT)
     assert w.magnitude == pytest.approx(13.5999, abs=1e-4)
     assert w.magnitude == pytest.approx(13.6, rel=1e-4)
+    p80_um = float(BOND_REFERENCE_P80_UM)
+    assert p80_um == pytest.approx(100.0, abs=1e-9)
+    inv_sqrt_p80 = 1.0 / math.sqrt(p80_um)
+    assert inv_sqrt_p80 == pytest.approx(0.1, abs=1e-9)
+    f80_um = 1e12
+    inv_sqrt_f80 = 1.0 / math.sqrt(f80_um)
+    assert inv_sqrt_f80 == pytest.approx(1e-6, abs=1e-12)
+    w_hand = 10.0 * 13.6 * (inv_sqrt_p80 - inv_sqrt_f80)
+    assert w_hand == pytest.approx(13.5999, abs=1e-4)
+    assert w_hand == pytest.approx(w.magnitude, rel=1e-6)
 
 
 @pytest.mark.golden
 def test_coefficient_ten_is_sqrt_of_reference_size():
     """The 10 in Bond's equation is sqrt(100 um), not a unit conversion."""
     assert math.sqrt(BOND_REFERENCE_P80_UM) == pytest.approx(10.0, abs=0.0)
+    assert BOND_REFERENCE_P80_UM == pytest.approx(100.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -173,6 +194,10 @@ def test_ton_conversion_worked_example():
     q = convert_ton_convention(Q_(7.29254, "kWh/short_ton"), TonConvention.METRIC)
     assert q.magnitude == pytest.approx(8.038649, abs=1e-6)
     assert q.magnitude > 7.29254
+    ratio = METRIC_TON_KG / SHORT_TON_KG
+    assert SHORT_TON_KG == pytest.approx(907.18474, abs=1e-5)
+    assert METRIC_TON_KG == pytest.approx(1000, abs=1e-6)
+    assert ratio == pytest.approx(1.1023113, rel=1e-7)
 
 
 @pytest.mark.golden
@@ -202,6 +227,13 @@ def test_convention_confusion_is_10_23_percent():
     understatement = (as_short.magnitude - 13.6) / as_short.magnitude
     assert understatement == pytest.approx(0.0928153, abs=1e-7)
     assert (as_short.magnitude - 13.6) / 13.6 == pytest.approx(0.1023113, abs=1e-7)
+    percent_understatement = understatement * 100.0
+    assert percent_understatement == pytest.approx(9.2815, abs=1e-4)
+    assert percent_understatement == pytest.approx(9.28, abs=5e-3)
+    multiplier = as_short.magnitude / 13.6
+    assert multiplier == pytest.approx(1.1023113, abs=1e-7)
+    percent_increase = (multiplier - 1.0) * 100.0
+    assert percent_increase == pytest.approx(10.2311, abs=1e-4)
 
 
 @pytest.mark.golden
@@ -229,6 +261,25 @@ def test_grindability_equation_worked_example():
                                    Q_(150.0, "um"))
     assert wi.magnitude == pytest.approx(17.02779, abs=1e-5)
     assert str(wi.units) == str(Q_(1.0, "kWh/short_ton").units)
+    # Each step of the Eq. E2 hand-check, derived forward from the inputs.
+    ln_pi = math.log(149.0)
+    assert ln_pi == pytest.approx(5.0039463, abs=5e-7)
+    pi_exponent = ln_pi * 0.23
+    assert pi_exponent == pytest.approx(1.1509077, abs=5e-7)
+    pi_term = math.exp(pi_exponent)
+    assert pi_term == pytest.approx(3.1610607, abs=5e-7)
+    ln_g = math.log(1.5)
+    assert ln_g == pytest.approx(0.4054651, abs=5e-7)
+    g_exponent = ln_g * 0.82
+    assert g_exponent == pytest.approx(0.3324814, abs=5e-7)
+    g_term = math.exp(g_exponent)
+    assert g_term == pytest.approx(1.3944239, abs=5e-7)
+    size_term = 10.0 * (1.0 / math.sqrt(150.0) - 1.0 / math.sqrt(2000.0))
+    assert size_term == pytest.approx(0.5928898, abs=5e-7)
+    denominator = pi_term * g_term * size_term
+    assert denominator == pytest.approx(2.6133744, abs=5e-7)
+    # Closing the hand-check against the model output rather than the literal.
+    assert 44.5 / denominator == pytest.approx(wi.magnitude, rel=1e-6)
 
 
 @pytest.mark.golden
@@ -255,6 +306,7 @@ def test_walker_reduces_to_the_three_named_laws():
     assert walker_ritt.to("kWh/metric_ton").magnitude == pytest.approx(
         ritt.to("kWh/metric_ton").magnitude, rel=1e-12
     )
+    assert (2.0 * 61.5) == pytest.approx(10.0 * 12.3, rel=1e-12)
 
 
 @pytest.mark.golden
@@ -266,6 +318,10 @@ def test_kick_worked_example():
     w = kick_specific_energy(Q_(2.0, "kWh/metric_ton"), Q_(2000.0, "um"),
                              Q_(150.0, "um"))
     assert w.magnitude == pytest.approx(5.1805343, abs=1e-7)
+    ratio = 2000.0 / 150.0
+    assert ratio == pytest.approx(13.3333, abs=1e-4)
+    ln_ratio = math.log(ratio)
+    assert ln_ratio == pytest.approx(2.5902672, abs=1e-7)
 
 
 @pytest.mark.golden
@@ -277,12 +333,22 @@ def test_rittinger_worked_example():
     w = rittinger_specific_energy(Q_(1.0, "kWh*um/metric_ton"), Q_(2000.0, "um"),
                                   Q_(150.0, "um"))
     assert w.to("kWh/metric_ton").magnitude == pytest.approx(0.00616667, abs=1e-8)
+    term_fine = 1.0 / 150.0
+    assert term_fine == pytest.approx(0.00666667, abs=1e-8)
+    term_coarse = 1.0 / 2000.0
+    assert term_coarse == pytest.approx(0.0005, abs=1e-8)
+    diff = term_fine - term_coarse
+    assert diff == pytest.approx(0.00616667, abs=1e-8)
 
 
 @pytest.mark.golden
 def test_percent_error_worked_example():
     """Eq. 13 of Arellano-Pina et al. 2023: |(12.3 - 11.8)/12.3| x 100 = 4.065."""
     assert percent_error(12.3, 11.8) == pytest.approx(4.065, abs=1e-3)
+    ratio = abs((12.3 - 11.8) / 12.3)
+    assert ratio == pytest.approx(0.04065, abs=1e-5)
+    scaled = ratio * 100
+    assert scaled == pytest.approx(4.065, abs=1e-3)
 
 
 # --- (e) benchmarks against literature, WITH ERROR REPORTED -----------------
@@ -405,6 +471,15 @@ def test_benchmark_prior_against_sourced_measurement(capsys):
               f"measurement: {11.0 <= measured_short <= 17.0}")
     assert 15.0 < err < 30.0, "prior error against the one measurement, for the record"
     assert 11.0 <= measured_short <= 17.0
+    assert SHORT_TONS_PER_METRIC_TON == pytest.approx(1.1023113, abs=1e-7)
+    measured_metric_magnitude = measured_metric.to('kWh/metric_ton').magnitude
+    assert measured_metric_magnitude == pytest.approx(12.3, abs=1e-6)
+    computed_short = measured_metric_magnitude / SHORT_TONS_PER_METRIC_TON
+    assert computed_short == pytest.approx(11.158, abs=1e-3)
+    assert measured_short == pytest.approx(computed_short, rel=1e-6)
+    prior_short_magnitude = prior.quantity.to('kWh/short_ton').magnitude
+    assert prior_short_magnitude == pytest.approx(13.6, abs=1e-6)
+    assert err == pytest.approx(22.0, abs=0.5)
 
 
 # --- physical sanity --------------------------------------------------------

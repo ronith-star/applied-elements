@@ -84,6 +84,12 @@ def test_exposure_worked_example_ten_percent_ratio():
         0.729, abs=1e-12
     )
     assert exposure(Q_(100.0, "um"), Q_(10.0, "um")) == pytest.approx(0.271, abs=1e-12)
+    r = (Q_(10.0, "um") / Q_(100.0, "um")).magnitude
+    assert r == pytest.approx(0.1, abs=1e-12)
+    one_minus_r = 1.0 - r
+    assert one_minus_r == pytest.approx(0.9, abs=1e-12)
+    cubed = one_minus_r ** 3
+    assert cubed == pytest.approx(0.729, abs=1e-12)
 
 
 @pytest.mark.golden
@@ -96,6 +102,9 @@ def test_exposure_worked_example_one_third_ratio():
     e = exposure(Q_(30.0, "um"), Q_(10.0, "um"))
     assert e == pytest.approx(19.0 / 27.0, abs=1e-12)
     assert e == pytest.approx(0.7037037, abs=1e-7)
+    enc = enclosed_fraction(Q_(30.0, "um"), Q_(10.0, "um"))
+    assert enc == pytest.approx(8.0 / 27.0, abs=1e-12)
+    assert (1.0 - enc) == pytest.approx(e, rel=1e-9)
 
 
 @pytest.mark.golden
@@ -109,6 +118,11 @@ def test_small_ratio_expansion_gives_factor_three():
     e = exposure(Q_(1000.0, "um"), Q_(1.0, "um"))
     assert e == pytest.approx(0.002997001, abs=1e-9)
     assert e / (3.0 * r) == pytest.approx(0.999000333, abs=1e-9)
+    assert (0.999) ** 3 == pytest.approx(0.997002999, abs=1e-9)
+    three_r = 3.0 * r
+    assert three_r == pytest.approx(0.003, abs=1e-12)
+    ratio = e / three_r
+    assert abs(ratio - 1.0) < 0.1 / 100.0
 
 
 @pytest.mark.golden
@@ -120,6 +134,10 @@ def test_liberation_size_half_exposure():
     d = liberation_size(Q_(20.0, "um"), 0.5)
     assert d.magnitude == pytest.approx(96.94644, abs=1e-5)
     assert d.magnitude / 20.0 == pytest.approx(4.847322, abs=1e-6)
+    cube_root = 0.5 ** (1.0 / 3.0)
+    assert cube_root == pytest.approx(0.7937005, abs=1e-6)
+    remainder = 1.0 - cube_root
+    assert remainder == pytest.approx(0.2062995, abs=1e-6)
 
 
 @pytest.mark.golden
@@ -137,6 +155,15 @@ def test_liberation_size_ninety_percent_exposure():
     ratio = d50.magnitude / d90.magnitude
     assert ratio == pytest.approx(2.597394, abs=1e-6)
     assert math.sqrt(ratio) == pytest.approx(1.611643, abs=1e-6)
+    denom90 = 20.0 / d90.magnitude
+    assert denom90 == pytest.approx(0.5358411, abs=1e-6)
+    cube_root90 = 1.0 - denom90
+    assert cube_root90 == pytest.approx(0.4641589, abs=1e-6)
+    enclosed90 = cube_root90 ** 3
+    assert enclosed90 == pytest.approx(0.1, abs=1e-6)
+    ratio_to_inclusion = d90.magnitude / 20.0
+    assert ratio_to_inclusion == pytest.approx(1.866225, abs=1e-6)
+    assert d50.magnitude == pytest.approx(96.94644, abs=1e-4)
 
 
 @pytest.mark.golden
@@ -171,6 +198,30 @@ def test_polydisperse_worked_example():
         InclusionWeighting.VOLUME,
     )
     assert e == pytest.approx(0.267504, abs=1e-9)
+    ratio2 = 1.0 - (2.0 / 100.0)
+    assert ratio2 == pytest.approx(0.98, rel=1e-9)
+    cube2 = ratio2 ** 3
+    assert cube2 == pytest.approx(0.941192, rel=1e-9)
+    e2_manual = 1.0 - cube2
+    assert e2_manual == pytest.approx(0.058808, abs=1e-9)
+    ratio10 = 1.0 - (10.0 / 100.0)
+    assert ratio10 == pytest.approx(0.9, rel=1e-9)
+    e10_manual = 1.0 - ratio10 ** 3
+    assert e10_manual == pytest.approx(0.271, abs=1e-9)
+    ratio40 = 1.0 - (40.0 / 100.0)
+    assert ratio40 == pytest.approx(0.6, rel=1e-9)
+    cube40 = ratio40 ** 3
+    assert cube40 == pytest.approx(0.216, rel=1e-9)
+    e40_manual = 1.0 - cube40
+    assert e40_manual == pytest.approx(0.784, abs=1e-9)
+    term1 = 0.5 * e2_manual
+    assert term1 == pytest.approx(0.029404, abs=1e-9)
+    term2 = 0.3 * e10_manual
+    assert term2 == pytest.approx(0.0813, abs=1e-9)
+    term3 = 0.2 * e40_manual
+    assert term3 == pytest.approx(0.1568, abs=1e-9)
+    mean_manual = term1 + term2 + term3
+    assert mean_manual == pytest.approx(0.267504, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -192,6 +243,26 @@ def test_leachable_fraction_worked_example():
     )
     assert f == pytest.approx(0.224925, abs=1e-9)
     assert f < 1.0 - 0.45
+    d_fluid_ratio = 0.95
+    pow3_fluid = d_fluid_ratio ** 3
+    assert pow3_fluid == pytest.approx(0.857375, abs=1e-9)
+    e_fluid = 1.0 - pow3_fluid
+    assert e_fluid == pytest.approx(0.142625, abs=1e-9)
+    d_mineral_ratio = 0.8
+    pow3_mineral = d_mineral_ratio ** 3
+    assert pow3_mineral == pytest.approx(0.512, abs=1e-9)
+    e_mineral = 1.0 - pow3_mineral
+    assert e_mineral == pytest.approx(0.488, abs=1e-9)
+    term_fluid = 0.20 * e_fluid
+    assert term_fluid == pytest.approx(0.028525, abs=1e-9)
+    term_mineral = 0.30 * e_mineral
+    assert term_mineral == pytest.approx(0.1464, abs=1e-9)
+    ceiling = 1.0 - 0.45
+    assert ceiling == pytest.approx(0.55, abs=1e-9)
+    percent_non_lattice = ceiling * 100.0
+    assert percent_non_lattice == pytest.approx(55.0, abs=1e-9)
+    percent_reachable = f * 100.0
+    assert percent_reachable == pytest.approx(22.5, abs=0.01)
 
 
 @pytest.mark.golden
@@ -210,6 +281,15 @@ def test_energy_to_exposure_worked_example():
     assert gain == pytest.approx(0.345375, abs=1e-9)
     assert ratio == pytest.approx(2.0, abs=1e-12)
     assert per_energy == pytest.approx(0.1726875, abs=1e-9)
+    frac_200 = 1.0 - (10.0 / 200.0)
+    assert frac_200 == pytest.approx(0.95, abs=1e-12)
+    e200 = 1.0 - frac_200 ** 3
+    assert e200 == pytest.approx(0.142625, abs=1e-9)
+    frac_50 = 1.0 - (10.0 / 50.0)
+    assert frac_50 == pytest.approx(0.8, abs=1e-12)
+    e50 = 1.0 - frac_50 ** 3
+    assert e50 == pytest.approx(0.488, abs=1e-9)
+    assert (e50 - e200) == pytest.approx(gain, abs=1e-9)
 
 
 # --- (e) benchmarks, with error reported ------------------------------------
@@ -256,6 +336,31 @@ def test_benchmark_grind_implied_by_xia_removal(capsys):
     assert err < 1e-9
     assert removal == pytest.approx(0.8120, abs=5e-5)
     assert 2.0 < ratio < 3.0
+    # The inversion the docstring tabulates, step by step, from the unrounded
+    # removal fraction the test actually computes.
+    assert removal == pytest.approx(0.81196648, abs=5e-8)
+    assert removal * 100.0 == pytest.approx(81.20, abs=5e-3)
+    # The docstring's 1 - 0.188^(1/3) = 1 - 0.5728654 = 0.4271346 chain is the
+    # inversion on the ROUNDED removal fraction 0.8120, which is the branch it
+    # names; those digits are asserted on that branch.
+    one_minus_rounded = 1.0 - 0.8120
+    assert one_minus_rounded == pytest.approx(0.188, abs=5e-5)
+    cube_root_rounded = one_minus_rounded ** (1.0 / 3.0)
+    assert cube_root_rounded == pytest.approx(0.5728654, abs=5e-7)
+    exposure_term_rounded = 1.0 - cube_root_rounded
+    assert exposure_term_rounded == pytest.approx(0.4271346, abs=5e-7)
+    # The unrounded chain the test itself runs differs in the fifth decimal,
+    # which is the rounding sensitivity the prose flags.
+    one_minus = 1.0 - removal
+    cube_root = one_minus ** (1.0 / 3.0)
+    assert abs(cube_root - cube_root_rounded) < 5e-5
+    # The ratio from the unrounded fraction is what the test prints, 2.3414; the
+    # 2.3412 in the prose is the same inversion on the rounded 0.8120, so both
+    # are computed here and the rounding difference is measured, not asserted.
+    assert ratio == pytest.approx(2.3414, abs=5e-4)
+    ratio_rounded = liberation_size(d_inc, 0.8120).magnitude / 10.0
+    assert ratio_rounded == pytest.approx(2.3412, abs=5e-4)
+    assert abs(ratio - ratio_rounded) < 0.001
 
 
 @pytest.mark.benchmark
@@ -291,6 +396,10 @@ def test_benchmark_qu_2025_removal_requires_finer_grind(capsys):
     assert ratios == sorted(ratios, reverse=True), (
         "higher removal must require a finer (smaller ratio) grind"
     )
+    ht_removal = next(r[1] for r in rows if r[0] == "HT")
+    px_removal = next(r[1] for r in rows if r[0] == "PX")
+    assert ht_removal * 100.0 == pytest.approx(94.20, abs=0.01)
+    assert px_removal * 100.0 == pytest.approx(97.68, abs=0.01)
 
 
 # --- physical sanity and limits ---------------------------------------------
@@ -432,6 +541,8 @@ def test_exposure_per_energy_has_an_interior_optimum():
     peak = max(range(len(per_energy)), key=lambda i: per_energy[i])
     assert 0 < peak < len(per_energy) - 1, "the optimum must be interior"
     assert per_energy[peak] > per_energy[-1]
+    assert per_energy[1] == pytest.approx(0.172687, abs=1e-6)
+    assert per_energy[3] == pytest.approx(0.212344, abs=1e-6)
 
 
 def test_marginal_exposure_per_halving_eventually_falls():
@@ -451,6 +562,9 @@ def test_marginal_exposure_per_halving_eventually_falls():
     assert gains[3] == pytest.approx(0.296000, abs=1e-6)
     assert gains[-1] == pytest.approx(0.208000, abs=1e-6)
     assert gains[-1] < gains[-2], "exposure gain per halving must eventually fall"
+    assert gains[1] == pytest.approx(0.128375, abs=1e-6)
+    assert gains[2] == pytest.approx(0.217000, abs=1e-6)
+    assert math.sqrt(2) == pytest.approx(1.414214, abs=1e-6)
 
 
 # --- FEEDSTOCK plumbing -----------------------------------------------------

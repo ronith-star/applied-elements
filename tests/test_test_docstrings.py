@@ -41,6 +41,36 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_capex.py", "18"), ("test_capex.py", "97"),
     ("test_capex.py", "4"), ("test_capex.py", "5"), ("test_capex.py", "3"),
     ("test_capex.py", "1"), ("test_capex.py", "2"),
+    # NIST Special Publication document number, a standard identifier reference, not a computed quantity
+    ("test_comminution.py", "811"),
+    # Equation number reference in the source citation, not a computed value.
+    ("test_comminution.py", "13"),
+    # Publication year of the cited reference, not a computed value.
+    ("test_comminution.py", "2023"),
+    # publication year of the cited source, not a computed quantity
+    ("test_comminution.py", "2023"),
+    # compositional descriptor (wt% Si) of Ore A from the source table, stated in prose, not used in the round trip calculation
+    ("test_comminution.py", "28.75"),
+    # mill diameter (cm) of the standard Bond ball mill apparatus cited from the source, not a computed quantity
+    ("test_comminution.py", "30.5"),
+    # refers to the equation (1) label in the docstring, a section/equation reference, not a computed value
+    ("test_packing.py", "1"),
+    # refers to the cubic exponent in kg/m^3 when describing equation (6) units, not a computed quantity
+    ("test_packing.py", "3"),
+    # Refers to equation (3) in the docstring, a section/equation reference, not a computed value.
+    ("test_packing.py", "3"),
+    # part of the DOI identifier for the McGeary 1961 citation, not a computed quantity
+    ("test_packing.py", "10.1111"),
+    # prefix of the DOI citation for Scott and Kilgour 1969, an identifier not a computed value
+    ("test_packing.py", "10.1088"),
+    # part of the DOI suffix 0022-3727 for the cited paper, an identifier not a computed value
+    ("test_packing.py", "0022"),
+    # part of the DOI suffix 0022-3727 for the cited paper, an identifier not a computed value
+    ("test_packing.py", "3727"),
+    # final DOI segment for the cited paper, an identifier not a computed value
+    ("test_packing.py", "311"),
+    # Refers to equation (3), the Andreasen equation being approached in the limit, not a computed value.
+    ("test_packing.py", "3"),
     # Publication year of the Wills and Finch classification reference, a citation detail not a computed quantity.
     ("test_separation.py", "2016"),
     # Year in citation to Wills and Napier-Munn 2005 textbook, a publication date reference not a computed value

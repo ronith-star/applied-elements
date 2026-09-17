@@ -171,6 +171,9 @@ def test_golden_furnas_packing_fractions() -> None:
         r = furnas_max_packing(classes)
         assert r.phi_max == pytest.approx(phi, abs=1e-5), n
         assert r.n_classes == n
+    recovered_fraction = 1.0 - 0.375
+    recovered_percent = recovered_fraction * 100.0
+    assert recovered_percent == pytest.approx(62.5, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -227,6 +230,17 @@ def test_golden_krieger_dougherty_viscosity_penalty() -> None:
     assert e60 == pytest.approx(30.1246, abs=1e-4)
     assert e65 == pytest.approx(101.3267, abs=1e-4)
     assert e65 / e50 == pytest.approx(11.3, abs=0.05)
+    # EINSTEIN_INTRINSIC_VISCOSITY is a Value wrapping a dimensionless
+    # quantity, so [eta] is read out of it rather than retyped, and the
+    # exponent -[eta] phi_max the docstring names is derived from it.
+    intrinsic = float(
+        EINSTEIN_INTRINSIC_VISCOSITY.quantity.to("dimensionless").magnitude)
+    assert intrinsic == pytest.approx(2.5, abs=1e-9)
+    exponent = intrinsic * 0.70
+    assert exponent == pytest.approx(1.75, abs=1e-9)
+    # The exponent is what the model actually applies: reproducing eta_r at
+    # phi = 0.50 from it closes the docstring's first line.
+    assert (1.0 - 0.50 / 0.70) ** (-exponent) == pytest.approx(e50, rel=1e-9)
 
 
 @pytest.mark.golden
@@ -258,6 +272,12 @@ def test_golden_volume_to_mass_fraction() -> None:
         0.80397, abs=1e-5)
     assert volume_to_mass_fraction(0.65, FUSED_SILICA, EPOXY) == pytest.approx(
         0.77297, abs=1e-5)
+    assert 1430.0 / 0.65 == pytest.approx(2200.0, rel=1e-9)
+    assert 1850.0 - 1430.0 == pytest.approx(420.0, rel=1e-9)
+    crystalline_w = volume_to_mass_fraction(0.65, CRYSTALLINE_SILICA, EPOXY)
+    assert crystalline_w * 100.0 == pytest.approx(80.40, abs=0.01)
+    fused_w = volume_to_mass_fraction(0.65, FUSED_SILICA, EPOXY)
+    assert fused_w * 100.0 == pytest.approx(77.30, abs=0.01)
 
 
 @pytest.mark.golden
@@ -282,6 +302,10 @@ def test_golden_andreasen_grading() -> None:
     assert andreasen_modified_cumulative(
         Q_(10.0, "um"), Q_(0.01, "um"), Q_(100.0, "um"), 0.5) == pytest.approx(
         0.3093210, abs=1e-7)
+    numerator = 3.1622777 - 0.1
+    assert numerator == pytest.approx(3.0622777, abs=1e-7)
+    denominator = 10.0 - 0.1
+    assert denominator == pytest.approx(9.9, abs=1e-7)
 
 
 # --------------------------------------------------------------------------------------
@@ -331,6 +355,10 @@ def test_benchmark_furnas_against_mcgeary_quaternary(mcgeary_classes) -> None:
     assert err_phi == pytest.approx(3.073, abs=0.01)
     assert 0.0 < err_phi < 5.0, "the geometric idealisation must overestimate, modestly"
     assert err_fine < 0.0, "the model must be short of fines, not over"
+    assert r.phi_max == pytest.approx(0.98022, abs=1e-5)
+    assert model_comp[3] == pytest.approx(3.36, abs=0.01)
+    assert err_fine == pytest.approx(-44.9, abs=0.1)
+    assert lit_phi * 100.0 == pytest.approx(95.1, abs=0.01)
 
 
 @pytest.mark.benchmark
@@ -367,6 +395,9 @@ def test_benchmark_monomodal_against_random_close_packing() -> None:
     assert abs(err) < 3.0
     assert mcgeary < scott, "a vibrated packing should not exceed the random-close limit"
     assert abs(sens) < 1.0, "the four-class result is insensitive to this choice"
+    assert mcgeary == pytest.approx(0.625, abs=1e-4)
+    assert scott == pytest.approx(0.6366, abs=1e-4)
+    assert err == pytest.approx(-1.82, abs=0.01)
 
 
 # --------------------------------------------------------------------------------------
@@ -420,6 +451,15 @@ def test_close_size_ratio_warns_by_default_and_can_be_made_fatal() -> None:
     assert "sevenfold" in r.ratio_warning or "7-fold" in r.ratio_warning
     with pytest.raises(ValueError, match="below the"):
         furnas_max_packing(close, enforce_size_ratio=True)
+    # The 5.43 step is not a free-standing figure: it is 38/7 in McGeary's own
+    # measured quaternary optimum ladder 1:7:38:316, which is why a sub-sevenfold
+    # ratio warns instead of raising. Derived from that ladder rather than quoted.
+    mcgeary_ladder = (1.0, 7.0, 38.0, 316.0)
+    steps = [b / a for a, b in zip(mcgeary_ladder, mcgeary_ladder[1:])]
+    assert min(steps) == pytest.approx(5.43, abs=0.005)
+    # And the ladder under test is closer still, which is why it warns.
+    tested_step = 30.0 / 10.0
+    assert tested_step < min(steps)
 
 
 def test_mcgeary_own_ladder_would_fail_a_strict_gate(mcgeary_classes) -> None:
@@ -429,6 +469,8 @@ def test_mcgeary_own_ladder_would_fail_a_strict_gate(mcgeary_classes) -> None:
     assert min(r.size_ratios) < 7.0
     with pytest.raises(ValueError):
         furnas_max_packing(mcgeary_classes, enforce_size_ratio=True)
+    ratio = min(r.size_ratios)
+    assert ratio == pytest.approx(5.43, abs=5e-3)
 
 
 def test_empty_size_classes_rejected() -> None:
