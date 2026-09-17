@@ -182,8 +182,14 @@ def test_golden_critical_activation_energy_arithmetic() -> None:
       Ea_crit = -8.314462618 * 1473.15 * (-19.190789) J/mol
               = 12248.4506 * 19.190789 = 235057.4 J/mol = 235.0574 kJ/mol
       (this line carried the superseded -19.19082 until this revision, which
-      left the docstring quoting two different values for the same logarithm;
-      the product is 235057.4 J/mol either way, so no downstream figure moves)
+      left the docstring quoting two different values for the same logarithm.
+      The products are NOT equal: 12248.4506 x 19.19082 = 235057.81 J/mol
+      against 235057.43 for the correct logarithm, a gap of 0.38 J/mol, which
+      is larger than the rel=1e-6 tolerance of 0.235 J/mol the assertion on
+      235057.4 below carries. An earlier version of this note claimed the
+      product was 235057.4 "either way" and that was wrong: the superseded
+      digit fails that assertion. The downstream 235.0574 kJ/mol figures are
+      unaffected only because the code uses math.log, never the quoted digit.)
 
     With D0 = 1.0e-10 m2/s:
       ln(4.629630e-13 / 1.0e-10) = ln(4.629630e-3) = -5.375278
@@ -229,8 +235,18 @@ def test_golden_critical_activation_energy_arithmetic() -> None:
     ln_ratio_high = math.log(ratio_high)
     assert ln_ratio_high == pytest.approx(-19.19079, abs=5e-6)
     # The superseded digit, measured as wrong rather than merely annotated:
-    # -19.19082 is not this logarithm to the seven digits it was written with.
+    # -19.19082 is not this logarithm to the seven digits it was written with,
+    # and the Ea it would give misses the asserted 235057.4 J/mol by more than
+    # that assertion's own tolerance, so the two digits are not interchangeable.
     assert abs(ln_ratio_high - (-19.19082)) > 1e-5
+    ea_from_superseded = 12248.4506 * 19.19082
+    assert ea_from_superseded == pytest.approx(235057.81, abs=0.01)
+    assert abs(ea_from_superseded - 235057.4) > 235057.4 * 1e-6
+    gap_j = ea_from_superseded - 12248.4506 * 19.190789
+    assert gap_j == pytest.approx(0.38, abs=0.005)
+    assertion_tolerance_j = 235057.4 * 1e-6
+    assert assertion_tolerance_j == pytest.approx(0.235, abs=5e-4)
+    assert gap_j > assertion_tolerance_j
     ratio_low = d_req / 1.0e-10
     assert ratio_low == pytest.approx(4.629630e-3, rel=1e-6)
     ln_ratio_low = math.log(ratio_low)

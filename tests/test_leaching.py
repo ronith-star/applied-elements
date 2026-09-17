@@ -410,7 +410,11 @@ def test_benchmark_yang_2020_iron_removal(capsys: pytest.CaptureFixture[str]) ->
                  599.4122, which rounds to 599.41, the same class of drift as
                  the factor digit above)
       product = 0.0223 percent Fe2O3 -> 223 ppm Fe2O3  -> 155.97 ppm Fe
-      removal = 1 - 155.97/599.42 = 0.739790 -> 73.98 percent
+      removal = 1 - 155.97/599.41 = 0.739794 -> 73.98 percent
+                (this line also carried the superseded 599.42 until this
+                 revision; the test computes the removal from the unrounded
+                 products, giving 0.739790, and all three agree to 73.98
+                 percent at the two decimals the comparison uses)
     The error against the paper's stated 74 percent is reported below. This
     validates the assay-to-removal conversion, NOT the kinetic model.
     """
@@ -441,6 +445,13 @@ def test_benchmark_yang_2020_iron_removal(capsys: pytest.CaptureFixture[str]) ->
     # looser tolerance: 599.42 is not this product to two decimals.
     assert abs(feed_fe - 599.42) > 0.005
     assert feed_fe == pytest.approx(599.4122, abs=5e-5)
+    # The docstring's removal line, on its own rounded ppm figures, against the
+    # unrounded one the test uses: they agree to the two decimals compared.
+    removal_fraction_from_rounded = 1.0 - 155.97 / 599.41
+    assert removal_fraction_from_rounded == pytest.approx(0.739794, abs=5e-7)
+    removal_from_rounded = removal_fraction_from_rounded * 100.0
+    assert removal_from_rounded == pytest.approx(73.9794, abs=5e-5)
+    assert removal_from_rounded == pytest.approx(model, abs=0.001)
     assert model / 100.0 == pytest.approx(0.739790, rel=1e-5)
     assert model == pytest.approx(73.98, abs=0.01)
 
