@@ -106,9 +106,17 @@ def test_no_parameter_is_a_bare_point_estimate() -> None:
 def test_definitional_roles_are_reported_honestly() -> None:
     """Bibliography and prose must not be counted as constants.
 
-    Of 92 rows in the definitional file, 50 are Source objects or access dates
-    and 2 are prose strings documenting a basis. Reporting 92 "definitional
-    constants" overstated what the platform hardcodes by more than double.
+    Of 93 rows in the definitional file, 50 are Source objects or access dates
+    and 2 are prose strings documenting a basis, leaving 24 numeric constants
+    and 17 numeric tables. Reporting 93 "definitional constants" would overstate
+    what the platform hardcodes by more than double.
+
+    The total was 92 until the physics audit added LIBERATION_TARGET_FLOOR to
+    ae.physics.liberation, which the exporter classifies as numeric_constant.
+    That constant is tagged ASSUMED with no source claimed: it is the domain
+    floor below which liberation_size's inverse diverges. The count is pinned
+    deliberately, so adding a hardcoded constant anywhere in the package fails
+    this test until the addition is acknowledged here.
     """
     defs = er.collect_definitional()
     roles = {r["role"] for r in defs}
@@ -123,8 +131,11 @@ def test_definitional_roles_are_reported_honestly() -> None:
         "means the classifier is not discriminating"
     )
     total_defs = len(defs)
-    assert total_defs == 92
+    assert total_defs == 93
     n_biblio = sum(1 for r in defs if r["role"] == "bibliography")
     assert n_biblio == 50
     n_prose = sum(1 for r in defs if r["role"] == "prose")
     assert n_prose == 2
+    assert sum(1 for r in defs if r["role"] == "numeric_constant") == 24
+    assert sum(1 for r in defs if r["role"] == "numeric_table") == 17
+    assert n_biblio + n_prose + 24 + 17 == total_defs
