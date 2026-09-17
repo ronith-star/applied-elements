@@ -218,6 +218,26 @@ def test_memo_quotes_no_pytest_wall_time():
     assert not hits, f"memo quotes unguardable pytest wall times: {hits}"
 
 
+def test_memo_states_no_second_test_count_anywhere():
+    """One guarded count is enough; a second one drifts unnoticed.
+
+    The memo's error list stated a test count for a file that had since grown,
+    and a backtick-line count that the constant and the file both contradicted.
+    Both sat outside the single-count guard below, which
+    only inspects the first `N passed`. Any further count of tests, or of
+    backtick-initial lines, must be expressed by reference rather than restated,
+    so there is exactly one number to keep true.
+    """
+    text = MEMO.read_text()
+    banned = re.findall(
+        r"(?:with|has|defines?|contains?)\s+"
+        r"(?:\w+\s+){0,2}?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)"
+        r"\s+(?:tests?|such lines)", text, flags=re.I)
+    assert not banned, (
+        f"memo states test or line counts outside the guarded sentence: "
+        f"{banned}. Refer to the guarded total instead of restating a number.")
+
+
 def test_memo_quoted_test_count_matches_the_files_it_names():
     """The memo quotes a pytest total. It went stale twice; this catches that."""
     text = MEMO.read_text()

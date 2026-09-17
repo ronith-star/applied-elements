@@ -27,8 +27,9 @@ while the memo was edited (it has now been nine, then ten, then nine, then ten
 again) and the line numbers an earlier version of this docstring listed went
 stale the first time the memo gained a paragraph. tests/test_memo_pdf.py
 asserts the constant against the memo, so it cannot drift unnoticed: the last
-drift was caught by that test rather than by a reader, which is the point.
-Measured: 11 passed.
+drift was caught by that test rather than by a reader, which is the point. No
+test count is stated here, because a count in this docstring is exactly the
+unguarded number this paragraph exists to describe. Run the file to see it.
 
 Three changes prevent the class of bug rather than the instance. First, the
 paragraph branch no longer treats a bare backtick as a terminator; only a
@@ -79,12 +80,12 @@ MARGIN_TOP = 11 * mm
 MARGIN_BOT = 12 * mm
 FRAME_W = A4[0] - 2 * MARGIN_X
 #: Figure width as a fraction of the text frame. See the image branch.
-FIG_SCALE = 0.60
+FIG_SCALE = 0.68
 #: Lines in docs/decision-memo.md that begin with an inline code span and
 #: continue a paragraph. This is the shape that made the first parser loop
 #: forever. Asserted against the memo by tests/test_memo_pdf.py rather than
 #: stated in prose, because the count drifted twice during authoring.
-BACKTICK_LINE_COUNT = 10
+BACKTICK_LINE_COUNT = 13
 
 S = {
     "h1": ParagraphStyle("h1", fontName="Helvetica-Bold", fontSize=13.6,
