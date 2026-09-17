@@ -479,3 +479,87 @@ def test_irr_refuses_a_bracket_rather_than_ignoring_it():
     passes bracket=(0.0, 0.5) believes the search was constrained."""
     with pytest.raises(ValueError, match="no longer scans a bracket"):
         irr([-100.0, 60.0, 60.0], bracket=(0.0, 0.5))
+
+
+def test_levelized_cost_states_what_it_excludes_and_agrees_where_it_should():
+    """LCOP omits working capital and salvage, and nothing said so.
+
+    levelized_cost builds its cost numerator as capex + (revenue - ebitda),
+    which is capex plus variable plus fixed operating cost. Working capital,
+    tax and salvage are all absent, and the docstring claimed only that LCOP
+    "reduces to cash cost plus levelized capital" with no ramp and no tax,
+    without stating the other two exclusions. The value is therefore invariant
+    to both, while the breakeven price is not, and a reader comparing the two
+    numbers has no way to know why they differ.
+
+    Measured at a 10 percent discount rate on a 1000 t/yr project (100000
+    capex, 1 construction period, 10 period life, price 500, cash cost 200,
+    fixed 20000):
+
+      plain:                   LCOP 236.2745, breakeven 236.2745, identical
+      salvage 20000:           LCOP 236.2745, breakeven 235.0196 (-0.53 pct)
+      working capital 0.25:    LCOP 236.2745, breakeven 241.4170 (+2.18 pct)
+
+    The divergence is not always small. With a working capital fraction of 0.8
+    on a 5 period life at a 15 percent discount rate, LCOP is 249.8316 against
+    a breakeven of 274.2001, which is 9.75 percent low. Working capital tied up
+    for the life of a short project at a high discount rate is a real cost that
+    LCOP does not see.
+
+    The fix is documentation, not arithmetic: LCOP is a cost-of-production
+    measure and excluding financing items from it is a defensible convention.
+    What was wrong is that the convention was not stated, so the two functions
+    looked interchangeable. This test pins the agreement where the convention
+    says they must agree, and the invariance where it says they will not.
+    """
+    def project(**kw):
+        base = dict(capex_schedule=[100000.0], construction_periods=1,
+                    ramp_fractions=[1.0], nameplate_tonnes=1000.0, price=500.0,
+                    cash_cost_per_tonne=200.0, life_periods=10,
+                    fixed_cost_per_period=20000.0, depreciation_periods=10)
+        base.update(kw)
+        return Project(**base)
+
+    rate = 0.10
+    plain = project()
+    lcop_plain = levelized_cost(plain, rate)
+    # With no tax, no salvage and no working capital the two measures are the
+    # same quantity and must agree to solver tolerance.
+    assert lcop_plain == pytest.approx(236.2745, abs=1e-3)
+    assert breakeven_price(plain, rate) == pytest.approx(lcop_plain, rel=1e-6)
+
+    # Salvage lowers the breakeven and leaves LCOP untouched.
+    with_salvage = project(salvage=20000.0)
+    assert levelized_cost(with_salvage, rate) == pytest.approx(lcop_plain,
+                                                               rel=1e-12)
+    be_salvage = breakeven_price(with_salvage, rate)
+    assert be_salvage == pytest.approx(235.0196, abs=1e-3)
+    assert be_salvage < lcop_plain
+    assert 100.0 * (lcop_plain - be_salvage) / lcop_plain == pytest.approx(
+        0.53, abs=0.01)
+
+    # Working capital raises the breakeven and leaves LCOP untouched.
+    with_wc = project(working_capital_fraction=0.25)
+    assert levelized_cost(with_wc, rate) == pytest.approx(lcop_plain,
+                                                          rel=1e-12)
+    be_wc = breakeven_price(with_wc, rate)
+    assert be_wc == pytest.approx(241.4170, abs=1e-3)
+    assert be_wc > lcop_plain
+    assert 100.0 * (be_wc - lcop_plain) / lcop_plain == pytest.approx(
+        2.18, abs=0.01)
+
+    # The case where the omission matters: working capital tied up over a short
+    # life at a high discount rate.
+    heavy = project(working_capital_fraction=0.8, life_periods=5)
+    lcop_heavy = levelized_cost(heavy, 0.15)
+    be_heavy = breakeven_price(heavy, 0.15)
+    assert lcop_heavy == pytest.approx(249.8316, abs=1e-3)
+    assert be_heavy == pytest.approx(274.2001, abs=1e-3)
+    assert 100.0 * (be_heavy - lcop_heavy) / lcop_heavy == pytest.approx(
+        9.75, abs=0.01)
+
+    # The working capital flows themselves sum to zero over the project, which
+    # is why a naive reading expects no effect: the cost is the TIMING, the
+    # outflow early and the release at the end, not the level.
+    assert with_wc.cash_flows().working_capital.sum() == pytest.approx(
+        0.0, abs=1e-9)

@@ -133,8 +133,12 @@ def irr(flows: np.ndarray | list[float], bracket: tuple[float, float] | None = N
     grid scan can only ever lower-bound the root count, so no bracket-based
     multiplicity test can be correct. The exact solve has no bracket.
 
-    ``bracket`` is retained for call compatibility and ignored; a value passed
-    for it is refused rather than silently disregarded.
+    ``bracket`` remains in the signature only so that a caller written against
+    the scanning version fails loudly: passing anything but ``None`` raises
+    ValueError. It is NOT call compatible and the value is never used. An
+    earlier draft of this docstring said the argument was "retained for call
+    compatibility and ignored", which contradicted the code three lines below
+    it, and is recorded here rather than quietly deleted.
 
     Examples
     --------
@@ -493,6 +497,35 @@ def levelized_cost(project: Project, rate: float) -> float:
     Discounting the numerator but not the denominator understates LCOP whenever
     output is back-loaded, which it always is under a ramp. That error is
     checked against in the test suite rather than merely avoided here.
+
+    WHAT THIS EXCLUDES, which was not stated before. The numerator is
+    ``capex + (revenue - ebitda)``, that is capital plus variable plus fixed
+    operating cost. TAX, WORKING CAPITAL and SALVAGE are all absent. Excluding
+    them is a defensible convention for a cost-of-production measure, but it
+    means LCOP is INVARIANT to three things that move
+    :func:`breakeven_price`, and the two were easy to read as
+    interchangeable. Measured at a 10 percent discount rate on a 1000 t/yr
+    project (100000 capex, 1 construction period, 10 period life, price 500,
+    cash cost 200, fixed 20000 per period):
+
+    ==========================  =========  ==========
+    case                        LCOP       breakeven
+    ==========================  =========  ==========
+    no tax, no wc, no salvage   236.2745   236.2745
+    salvage 20000               236.2745   235.0196
+    working capital 0.25        236.2745   241.4170
+    ==========================  =========  ==========
+
+    The gap is not always small. At a working capital fraction of 0.8 over a
+    5 period life at a 15 percent discount rate, LCOP is 249.8316 against a
+    breakeven of 274.2001, which is 9.75 percent low: working capital tied up
+    over a short life at a high discount rate is a real cost this measure does
+    not see. Use :func:`breakeven_price` for the price a project needs, and
+    this function for comparing production costs across routes.
+
+    The working capital flows sum to exactly zero over the project life, which
+    is why a naive reading expects no effect. The cost is the TIMING, the
+    outflow at ramp and the release at closure, not the level.
 
     Examples
     --------
