@@ -138,6 +138,44 @@ def main() -> int:
     ))
     T._VECTORS = saved
 
+    # D14 and D15: the document states a property of the reason texts that the
+    # files contradict. These exist because a count written into
+    # docs/golden-vectors.md was wrong twice (thirty-seven, then 35, against a
+    # measured 42), so a figure in the document is now itself under assertion.
+    # The document is edited on disk and restored, so these two injections are
+    # checked for byte-identical restoration rather than dict mutation.
+    doc = REPO / "docs" / "golden-vectors.md"
+    original = doc.read_text()
+    for tag, before, after in (
+        ("D14 document states a wrong shortest-reason length",
+         "is now 41 characters", "is now 55 characters"),
+        ("D15 document states a wrong checked-output count",
+         "224 checked outputs", "300 checked outputs"),
+    ):
+        assert before in original, f"{tag}: anchor text not present in the document"
+        doc.write_text(original.replace(before, after))
+        try:
+            results.append((
+                tag,
+                *ran(T.test_the_document_states_the_measured_residual_reason_properties),
+            ))
+        finally:
+            doc.write_text(original)
+
+    # D16: the document's stated extent of the original defect (42 reasons
+    # across 17 files) contradicts what the committed diff actually shows. This
+    # is the count that was wrong twice, so it is injected as well as asserted.
+    assert "42 reasons across 17 of" in original, "D16: anchor text not present"
+    doc.write_text(original.replace("42 reasons across 17 of", "50 reasons across 17 of"))
+    try:
+        results.append((
+            "D16 document extent contradicts the committed diff",
+            *ran(T.test_the_document_s_stated_defect_extent_matches_the_committed_diff),
+        ))
+    finally:
+        doc.write_text(original)
+    assert doc.read_text() == original, "the document was not restored byte-identically"
+
     # D11: suite shape claim contradicted
     v = load(GV27)
     saved = T._VECTORS
@@ -168,6 +206,8 @@ def main() -> int:
             clean.append((p.name, fn.__name__, failed, msg))
     for fn in (T.test_every_provenance_tag_is_one_of_the_five,
                T.test_the_suite_has_the_declared_shape,
+               T.test_the_document_states_the_measured_residual_reason_properties,
+               T.test_the_document_s_stated_defect_extent_matches_the_committed_diff,
                T.test_no_two_outputs_in_a_file_share_a_verbatim_reason_unless_identical):
         failed, msg = ran(fn)
         clean.append(("suite", fn.__name__, failed, msg))

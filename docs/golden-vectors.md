@@ -54,7 +54,8 @@ produced the number, and is never tighter than that criterion.
 `tests/golden/test_golden_vectors.py` loads every file and checks seven structural
 properties, each with its own test and each verified by control (the defect was
 injected, the guard confirmed to fire, the defect removed, the guard confirmed to
-pass):
+pass). Three further tests put this document itself under assertion, so a count
+written here that the files or the commit history contradict fails the suite:
 
 1. Every expected output key must be present in the dispatch result, so a vector
    naming an output the code does not produce fails on the missing key rather
@@ -117,11 +118,12 @@ twice.
 
 ## Control results
 
-Thirteen defects were injected into the loader one at a time, each confirmed to
+Sixteen defects were injected into the loader one at a time, each confirmed to
 be reported, then removed and confirmed to pass. The script is
 `tests/golden/control.py`, runnable from the repository root. Measured output:
-thirteen defects injected, thirteen reported, then nineteen clean checks with
-zero failures.
+sixteen defects injected, sixteen reported, then twenty-one clean checks with
+zero failures. Three of the sixteen edit this document on disk and restore it,
+and the script asserts byte-identical restoration rather than assuming it.
 
 | defect injected | guard that reported it |
 | --- | --- |
@@ -138,10 +140,13 @@ zero failures.
 | suite shape assertion against a one-vector suite | `test_the_suite_has_the_declared_shape` |
 | tolerance reason of the form "As \<other key\>" | `test_no_tolerance_reason_defers_to_another_output` |
 | two differing outputs sharing a verbatim reason | `test_no_two_outputs_in_a_file_share_a_verbatim_reason_unless_identical` |
+| this document stating a shortest-reason length the files contradict | `test_the_document_states_the_measured_residual_reason_properties` |
+| this document stating a checked-output count the files contradict | `test_the_document_states_the_measured_residual_reason_properties` |
+| this document stating a defect extent the committed diff contradicts | `test_the_document_s_stated_defect_extent_matches_the_committed_diff` |
 
 The count is reported rather than a pass or fail verdict because a control whose
-partial failure looks like success is worse than no control: had eleven of
-thirteen been caught, printing only the first result would have read as success.
+partial failure looks like success is worse than no control: had fourteen of
+sixteen been caught, printing only the first result would have read as success.
 
 The last two rows were added after a reviewer found the defect they guard
 against in the committed files. Both were then run against the committed
@@ -155,25 +160,36 @@ nothing until it is shown to catch the original.
 
 Recorded because being right is not the same as having checked.
 
-1. Sixty-one tolerance reasons were first written as bare cross-references of
-   the form "As <other key>", and a script then expanded them mechanically by
-   prepending the referenced output's text. The expansion produced reasons that
-   describe the WRONG output. In RV-01, `p50` and `p90` acquired the sentence
-   about the sample mean, and `bootstrap_se_p50` acquired the p10 standard
-   error 0.1342 while its own `analytic_reference` gives 0.2236, so the file
-   contradicted itself. In RV-02, `baseline_ridge_rmse_B` said "the value is
-   2.3e-3" against its own expected 0.0017341949999050144. Thirty-seven
-   reasons were affected. A reviewer found this in the committed files; it was
-   not found by the suite, because no test read the reasons for meaning. Every
-   affected reason was rewritten by hand against its own expected value and
-   magnitude, and two guards were added: one rejecting the cross-reference form
-   outright, one rejecting a verbatim reason shared across outputs with
-   different expected values. Both were then run against the committed file
-   retrieved from git and confirmed to fire on it. The tolerance BOUNDS were
-   never affected, so no conclusion in this suite changed, but an annotation
-   that misdescribes its own output is exactly the defect this document exists
-   to prevent, and an automatic expansion of a cross-reference is worse than
-   the cross-reference it replaced.
+1. Tolerance reasons were first written as bare cross-references of the form
+   "As <other key>", and a script then expanded them mechanically by prepending
+   the referenced output's text. The expansion produced reasons that describe
+   the WRONG output. In RV-01, `p50` and `p90` acquired the sentence about the
+   sample mean, and `bootstrap_se_p50` acquired the p10 standard error 0.1342
+   while its own `analytic_reference` gives 0.2236, so the file contradicted
+   itself. In RV-02, `baseline_ridge_rmse_B` said "the value is 2.3e-3" against
+   its own expected 0.0017341949999050144. MEASURED extent, by parsing the
+   committed files before and after the repair commit: 42 reasons across 17 of
+   the 30 files carried the borrowed text, and the repair changed exactly those
+   42. A reviewer found the defect in the committed files; it was not found by
+   the suite, because no test read the reasons for meaning. Every affected
+   reason was rewritten by hand against its own expected value and magnitude,
+   and two guards were added: one rejecting the cross-reference form outright,
+   one rejecting a verbatim reason shared across outputs with different
+   expected values. Both were then run against the committed file retrieved
+   from git and confirmed to fire on it. The tolerance BOUNDS were never
+   affected, so no conclusion in this suite changed, but an annotation that
+   misdescribes its own output is exactly the defect this document exists to
+   prevent, and an automatic expansion of a cross-reference is worse than the
+   cross-reference it replaced.
+
+   A second, smaller error sits inside this entry's own history. The count
+   first written here was thirty-seven, and it was not measured: an audit in
+   the repair session had printed 35, having omitted the seven reasons whose
+   text begins "As " rather than containing "Same basis as", and neither figure
+   was the answer. The 61 originally quoted here belongs to entry 7 below, the
+   reasons falling under the forty-character floor, which is a different and
+   larger set than the cross-references. Both figures are now derived by
+   parsing the two committed revisions rather than recalled.
 2. Every tolerance bound was written with `repr()`, which emits an exponent form
    with no decimal point in the mantissa, and PyYAML's float resolver requires
    one. All 174 exponent-form bounds therefore parsed as strings rather than
@@ -208,8 +224,10 @@ Recorded because being right is not the same as having checked.
    chosen on analysis collides with a literal written for readability, and the
    right fix is the literal, not the tolerance.
 7. Sixty-one tolerance reasons fell below the loader's own substance floor of
-   forty characters. They were expanded, which is what introduced defect 1
-   above.
+   forty characters. They were expanded, and that expansion is what introduced
+   defect 1 above. The two sets overlap but are not the same: 61 reasons were
+   too short, 42 ended up carrying another output's text. The shortest reason
+   in the suite is now 41 characters.
 8. `_leach_system` built its fixture `Feedstock` with `characterized=True`, which
    the model rejects because a one-element profile sits at tier `screened` while
    the flag requires tier `located`. The flag is now False, which is also the

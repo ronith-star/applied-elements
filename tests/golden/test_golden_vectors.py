@@ -29,7 +29,9 @@ loader that silently skipped a malformed vector would be worse than no loader:
 from __future__ import annotations
 
 import math
+import os
 import pathlib
+import subprocess
 from typing import Any
 
 import checks
@@ -258,6 +260,116 @@ def test_no_tolerance_reason_defers_to_another_output(
     assert not offenders, (
         f"{name}: tolerance reasons deferring to another output: {offenders}. "
         f"State the basis for THIS output, including its own magnitude."
+    )
+
+
+@pytest.mark.golden
+def test_the_document_states_the_measured_residual_reason_properties() -> None:
+    """docs/golden-vectors.md's claims about the reason texts are re-derived.
+
+    The document's defect record states two properties of the committed reason
+    texts: that none defers to another output, and that the shortest is 41
+    characters. Both are recomputed here from the files rather than trusted,
+    because this entry exists precisely because a count in that record was
+    written from memory and was wrong twice, once as a figure that was never
+    measured at all and once as an audit that omitted the reasons beginning
+    with the deferral prefix rather than containing it. The extent of the
+    original defect is a fact about a diff between two committed revisions, so
+    it is checked by the companion test below, which reads those revisions.
+    What this test checks is the end state, which is what a reader of the
+    document verifies.
+    """
+    doc = (
+        pathlib.Path(__file__).resolve().parent.parent.parent
+        / "docs"
+        / "golden-vectors.md"
+    )
+    text = doc.read_text()
+    shortest = min(
+        len(" ".join(str(spec["reason"]).split()))
+        for _, vec in _VECTORS
+        for spec in vec["tolerances"].values()
+    )
+    assert shortest == 41, f"shortest reason is {shortest} characters"
+    assert f"is now {shortest} characters" in text, (
+        "the document states a shortest-reason length that the files contradict"
+    )
+    deferring = [
+        f"{name}:{key}"
+        for name, vec in _VECTORS
+        for key, spec in vec["tolerances"].items()
+        if " ".join(str(spec["reason"]).split()).startswith("As ")
+    ]
+    assert not deferring, deferring
+    total_outputs = sum(len(vec["expected"]) for _, vec in _VECTORS)
+    assert total_outputs == 224
+    assert f"{total_outputs} checked outputs" in text, (
+        "the document states an output count the files contradict"
+    )
+
+
+@pytest.mark.golden
+def test_the_document_s_stated_defect_extent_matches_the_committed_diff() -> None:
+    """The document says 42 reasons across 17 files carried borrowed text.
+
+    Both figures are re-derived from the two committed revisions of
+    data/golden/ rather than recalled, because this is the entry where a
+    recalled count was wrong twice. The repair commit is located by its subject
+    line, its parent supplies the before state, and the reasons are compared
+    text by text. Skipped, not failed, when the git history is unavailable (a
+    shallow clone or an export), because the end-state properties are checked
+    by the companion test above and do not depend on history.
+    """
+    repo = pathlib.Path(__file__).resolve().parent.parent.parent
+    subject = "Rewrite 37 tolerance reasons that described the wrong output"
+    try:
+        sha = subprocess.run(
+            ["git", "log", "--format=%H", "-1", "--grep", subject],
+            cwd=repo, capture_output=True, text=True, check=True,
+            env={"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
+                 "GIT_TERMINAL_PROMPT": "0", "PATH": os.environ.get("PATH", "")},
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover
+        pytest.skip("git history unavailable")
+    if not sha:  # pragma: no cover
+        pytest.skip("the repair commit is not in this history")
+
+    def read(rev: str, name: str) -> dict[str, Any]:
+        blob = subprocess.run(
+            ["git", "show", f"{rev}:data/golden/{name}"],
+            cwd=repo, capture_output=True, text=True, check=True,
+            env={"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
+                 "GIT_TERMINAL_PROMPT": "0", "PATH": os.environ.get("PATH", "")},
+        ).stdout
+        loaded: dict[str, Any] = yaml.safe_load(blob)
+        return loaded
+
+    def flat(text: object) -> str:
+        return " ".join(str(text).split())
+
+    borrowed = 0
+    files = set()
+    for name, _ in _VECTORS:
+        before = read(f"{sha}^", name)
+        after = read(sha, name)
+        for key, spec in before["tolerances"].items():
+            rb = flat(spec["reason"])
+            deferred = (
+                rb.startswith("As ")
+                or "Same basis as" in rb
+                or "Additionally for this output" in rb
+            )
+            if deferred:
+                borrowed += 1
+                files.add(name)
+                assert flat(after["tolerances"][key]["reason"]) != rb, (
+                    f"{name}:{key} carried borrowed text and was not rewritten"
+                )
+    assert borrowed == 42, f"measured {borrowed} borrowed reasons, document says 42"
+    assert len(files) == 17, f"measured {len(files)} files, document says 17"
+    doc = (repo / "docs" / "golden-vectors.md").read_text()
+    assert f"{borrowed} reasons across {len(files)} of" in doc, (
+        "the document's stated defect extent does not match the committed diff"
     )
 
 
