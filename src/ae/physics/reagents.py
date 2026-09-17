@@ -652,10 +652,36 @@ def reagent_balance(
 ) -> dict[str, object]:
     """Full reagent, neutralization and mass balance for one leach charge.
 
-    Closes the overall mass balance to a relative tolerance of 1e-9 and raises
-    if it does not. ``excess_factor`` multiplies the stoichiometric acid demand
-    and defaults to 1.0, the stoichiometric floor, which is explicitly not a
-    plant number (LIMITATIONS item 1).
+    ``excess_factor`` multiplies the stoichiometric acid demand and defaults to
+    1.0, the stoichiometric floor, which is explicitly not a plant number
+    (LIMITATIONS item 1).
+
+    WHAT ``mass_balance_relative_residual`` IS, AND IS NOT. It is an IDENTITY,
+    not a check, and this docstring previously claimed the opposite ("closes the
+    overall mass balance to a relative tolerance of 1e-9 and raises if it does
+    not"). The liquor mass is defined by difference,
+    ``m_liquor = m_in - m_product - m_sludge``, and the residual then compares
+    ``m_product + m_sludge + m_liquor`` against ``m_in``, which reduces to
+    ``m_in == m_in``. Verified symbolically: the by-difference liquor and the
+    sum of its actual constituents (water, acid, base, dissolved silica,
+    dissolved impurities, less the CaF2 leaving as sludge) both simplify to
+    ``acid + base - caf2 + imp + si + water``, difference exactly zero. The
+    residual is therefore zero to float rounding on every input, the
+    AssertionError below can never fire, and a flowsheet that created or
+    destroyed an element would still report a perfect closure. It is retained
+    only as a guard against a future edit that stops defining the liquor this
+    way.
+
+    The closures that CAN fail are per element, and they are asserted in
+    ``tests/test_physics_audit.py``: on the HF plus lime route
+    (Ca(OH)2 + 2 HF -> CaF2 + 2 H2O) the fluoride precipitated as CaF2 cannot
+    exceed the fluoride charged as HF, and the calcium precipitated cannot
+    exceed the calcium charged as lime. Measured at 1000 kg ore, 0.1 percent
+    silica dissolved and ``excess_factor`` 1.2, both are tight: 122.51325857527
+    mol F charged and precipitated, 61.256629287636 mol Ca charged and
+    precipitated. A stoichiometry error of the obvious kind (one CaF2 per mole
+    of F rather than per two) breaks the fluoride closure while leaving the
+    total-mass residual at zero.
     """
     require_dimensionality(ore_mass, "mass", "ore_mass")
     if excess_factor < 1.0:
@@ -709,10 +735,41 @@ def reagent_balance(
     m_out = (m_product + m_sludge + m_liquor).to("kg")
 
     rel = abs(float((m_out - m_in).magnitude)) / max(float(m_in.magnitude), 1e-30)
-    if rel > 1e-9:
+    if rel > 1e-9:  # pragma: no cover - identity, see the docstring
         raise AssertionError(
             f"mass balance does not close: in {m_in}, out {m_out}, relative residual "
             f"{rel:.3e}. An unbalanced flowsheet must not be reported."
+        )
+    # The closures that are NOT identities. On the fluoride route the sludge is
+    # CaF2, so its fluoride and calcium must both be accounted for by what was
+    # charged. These compare independently computed streams and can fail.
+    if acid is Acid.HF:
+        f_precipitated = 2.0 * float(neut["CaF2_moles_mol"])
+        f_charged = float(charged.magnitude) * ACID_PROTONS[Acid.HF]
+        if f_precipitated > f_charged * (1.0 + 1e-9):
+            raise AssertionError(
+                f"fluoride does not close: {f_precipitated} mol F precipitated as CaF2 "
+                f"against {f_charged} mol charged as HF"
+            )
+        ca_precipitated = float(neut["CaF2_moles_mol"])
+        ca_charged = float(neut["base_moles_mol"]) if base is Base.LIME else 0.0
+        if ca_precipitated > ca_charged * (1.0 + 1e-9):
+            raise AssertionError(
+                f"calcium does not close: {ca_precipitated} mol Ca precipitated as CaF2 "
+                f"against {ca_charged} mol charged as {base.value}"
+            )
+    # UNREACHABLE on the routes this module tabulates, and labelled as such
+    # rather than presented as a fix: each mole of HF adds 18.015 g to the
+    # liquor (the water of neutralization, acid 20.006 g plus lime 37.046 g
+    # less CaF2 39.037 g), so the sum is positive for every excess factor. Kept
+    # because the liquor is defined by difference and nothing else bounds it.
+    if float(m_liquor.magnitude) < 0.0:  # pragma: no cover
+        raise ValueError(
+            f"liquor mass is negative ({m_liquor}): the solid product and the sludge "
+            f"account for more mass than entered, so this flowsheet is not physical. "
+            f"On the HF plus lime route this cannot arise (each mole of HF adds "
+            f"18.015 g to the liquor, the water of neutralization), so reaching this "
+            f"means a stoichiometry or unit error upstream."
         )
     if float(m_product.magnitude) < 0.0:
         raise ValueError(

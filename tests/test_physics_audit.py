@@ -34,12 +34,23 @@ here rather than silently.
 
 from __future__ import annotations
 
+import datetime as dt
 import math
 import re
 
 import numpy as np
 import pytest
 
+from ae.core.feedstock import Feedstock, ImpurityProfile, OreType
+from ae.core.provenance import Source, Tag, Tier, Value
+from ae.core.site import (
+    Currency,
+    LabourRates,
+    PermittingRegime,
+    PowerSupply,
+    ReagentPrices,
+    Site,
+)
 from ae.core.units import Q_
 from ae.physics.comminution import (
     TonConvention,
@@ -52,10 +63,19 @@ from ae.physics.diffusion import (
     FO_SHORT_TIME_SWITCH,
     fractional_extraction_sphere,
 )
+from ae.physics.reagents import Acid, reagent_balance
 from ae.physics.separation import (
     PropertyBasis,
     imperfection,
     rectangular_distribution_recovery,
+)
+
+
+_AUDIT_SRC = Source(
+    citation="Audit test fixture source, not a real reference",
+    tier=Tier.T2, url="https://example.invalid/audit-fixture",
+    accessed=dt.date(2026, 9, 16),
+    note="Synthetic fixture for the physics audit. Carries no real price or limit.",
 )
 
 
@@ -336,3 +356,138 @@ def test_imperfection_refuses_a_density_cut_point_at_the_medium() -> None:
         0.08333333333333333, rel=1e-12
     )
     assert imperfection(20.0, 100.0, PropertyBasis.SIZE) == pytest.approx(0.20, rel=1e-12)
+
+
+# --- 6. reagents: a mass balance that could not fail ------------------------
+
+
+def _fixture_quartz():
+    """The reference HPQ-limit fixture, lattice split measured.
+
+    Duplicated from tests/test_reagents.py rather than imported because that
+    module exposes it as a pytest fixture, not a callable. The impurity values
+    are the Muller et al. HPQ reference limits already used there.
+    """
+    imp = ImpurityProfile(
+        total={
+            e: Value(quantity=Q_(v, "ppm_mass"), tag=Tag.SOURCED, source=_AUDIT_SRC)
+            for e, v in [
+                ("Al", 30.0), ("Ti", 10.0), ("Li", 5.0), ("Fe", 3.0),
+                ("Na", 8.0), ("K", 8.0), ("B", 1.0),
+            ]
+        },
+        lattice_fraction={
+            e: Value(quantity=Q_(f, "dimensionless"), tag=Tag.SOURCED, source=_AUDIT_SRC)
+            for e, f in [
+                ("Al", 0.6), ("Ti", 0.9), ("Li", 0.8), ("Fe", 0.1),
+                ("Na", 0.3), ("K", 0.3), ("B", 0.5),
+            ]
+        },
+        method="LA_ICP_MS",
+    )
+    return Feedstock(
+        sample_id="AE-Q-IN-VKB-001", ore_type=OreType.VEIN_QUARTZ,
+        deposit_name="Synthetic audit vein", country="IN", impurities=imp,
+        characterized=True,
+    )
+
+
+def _fixture_site():
+    """Synthetic site. Every price and limit here is a FIXTURE, not market data."""
+    return Site(
+        site_id="IN-TG-VKB", name="Synthetic audit site", country="IN",
+        region="Telangana", currency=Currency.INR,
+        power=PowerSupply(
+            energy_price=Value(
+                quantity=Q_(7.0, "INR/kWh"), tag=Tag.SOURCED, source=_AUDIT_SRC),
+            rate_basis="published_tariff"),
+        labour=LabourRates(
+            fully_loaded_operator=Value(
+                quantity=Q_(300.0, "INR/hour"), tag=Tag.SOURCED, source=_AUDIT_SRC)),
+        reagents=ReagentPrices(
+            prices={
+                k: Value(quantity=Q_(v, "INR/kg"), tag=Tag.SOURCED, source=_AUDIT_SRC)
+                for k, v in [("HF", 180.0), ("HCl", 12.0),
+                             ("Ca(OH)2", 6.0), ("NaOH", 45.0)]},
+            locally_available={"HF": False, "HCl": True,
+                               "Ca(OH)2": True, "NaOH": True}),
+        permitting=PermittingRegime(
+            jurisdiction="Synthetic audit fixture jurisdiction",
+            effluent_limits={
+                "F": Value(quantity=Q_(2.0, "mg/L"), tag=Tag.SOURCED,
+                           source=_AUDIT_SRC)}),
+    )
+
+
+def test_reagent_balance_closes_fluoride_and_calcium_element_by_element() -> None:
+    """Fluoride and calcium must close as ELEMENTS, not only as total mass.
+
+    The total-mass residual reagent_balance reports cannot fail. It defines
+    m_liquor = m_in - m_product - m_sludge and then checks
+    m_product + m_sludge + m_liquor against m_in, which reduces to m_in == m_in.
+    Verified symbolically in this session: both the by-difference liquor and the
+    sum of its actual constituents simplify to
+    (acid + base - caf2 + imp + si + water), difference exactly 0. So the
+    AssertionError its docstring advertised was unreachable and a flowsheet that
+    creates or destroys an element would still report a residual of zero.
+
+    These are the closures that can fail. On the HF plus lime route the
+    tabulated chemistry is Ca(OH)2 + 2 HF -> CaF2 + 2 H2O, so:
+      fluoride precipitated cannot exceed fluoride charged (2 mol F per mol CaF2)
+      calcium precipitated cannot exceed calcium charged (1 mol Ca per mol CaF2)
+    A stoichiometry error of the obvious kind, one CaF2 per mole of F rather
+    than per two, breaks the first of these while leaving the total-mass
+    residual at zero. That is the defect class the tautology could not see.
+    """
+    fs, st = _fixture_quartz(), _fixture_site()
+    b = reagent_balance(
+        fs, st, Q_(1000.0, "kg"), Acid.HF,
+        silica_dissolved_fraction=0.001, excess_factor=1.2,
+        water_mass=Q_(3000.0, "kg"),
+    )
+    neut = b["neutralization"]
+    f_charged = b["acid_charged_mol"]           # 1 F per HF
+    f_precipitated = 2.0 * neut["CaF2_moles_mol"]
+    ca_charged = neut["base_moles_mol"]         # 1 Ca per Ca(OH)2
+    ca_precipitated = neut["CaF2_moles_mol"]
+    assert f_precipitated <= f_charged * (1.0 + 1e-12), (
+        f"precipitated {f_precipitated} mol F from {f_charged} mol charged"
+    )
+    assert ca_precipitated <= ca_charged * (1.0 + 1e-12), (
+        f"precipitated {ca_precipitated} mol Ca from {ca_charged} mol charged"
+    )
+    # Both closures are TIGHT on this route, which is the stronger statement and
+    # not what I first assumed: HF carries one proton and lime carries two
+    # equivalents, so the lime charged is n_HF/2 moles of Ca, exactly the CaF2
+    # formed. Measured at 1000 kg ore, 0.1 percent silica dissolved and
+    # excess_factor 1.2: 122.51325857527281 mol F charged and precipitated,
+    # 61.25662928763641 mol Ca charged and precipitated. No lime survives the
+    # neutralization and no fluoride stays in solution, which is why
+    # fluoride_effluent has to be computed from a solubility argument elsewhere
+    # rather than read off this balance.
+    assert f_precipitated == pytest.approx(f_charged, rel=1e-12)
+    assert ca_charged == pytest.approx(ca_precipitated, rel=1e-12)
+    assert f_charged == pytest.approx(122.51325857527281, rel=1e-9)
+    assert ca_charged == pytest.approx(61.25662928763641, rel=1e-9)
+    assert f_charged == pytest.approx(2.0 * ca_charged, rel=1e-12)
+
+
+def test_reagent_balance_reports_its_mass_residual_as_definitional() -> None:
+    """The reported total-mass residual must be documented as an identity.
+
+    Pinned so the figure is not later read as evidence of closure. It is zero
+    to float rounding on every input because of how m_liquor is defined, which
+    is why the element closures above exist. The docstring of reagent_balance
+    now says this in those terms, and this test fails if that sentence is
+    removed.
+    """
+    fs, st = _fixture_quartz(), _fixture_site()
+    for excess, water in ((1.0, None), (1.2, Q_(3000.0, "kg")), (3.0, Q_(50.0, "kg"))):
+        b = reagent_balance(
+            fs, st, Q_(1000.0, "kg"), Acid.HF, silica_dissolved_fraction=0.001,
+            excess_factor=excess, water_mass=water,
+        )
+        assert b["mass_balance_relative_residual"] == pytest.approx(0.0, abs=1e-15)
+    doc = reagent_balance.__doc__.lower()
+    assert "identity" in doc, "the residual must be documented as an identity"
+    assert "element" in doc, "the docstring must point at the per-element closures"
