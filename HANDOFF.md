@@ -1,6 +1,6 @@
 # HANDOFF: what is validated, what is scaffolding, what needs data
 
-Measured at commit `fbefb47`. Every number below was produced by a command run in
+Measured at commit `e926ac6`. Every number below was produced by a command run in
 this repository during the session that wrote this file. Where a quantity could
 not be measured or sourced, it says so.
 
@@ -287,7 +287,7 @@ its status:
    important the parameter is, because a confident prior says there is little left
    to learn; with `ASSUMED` priors the confidence itself is invented.
 2. **There is no test file.** `tests/test_decisions.py` does not exist, the module
-   contributes 0 of the 1,733 collected tests, and it has no doctest. I verified
+   contributes 0 of the 1,738 collected tests, and it has no doctest. I verified
    this session that its public API imports and that `evpi`, `rank_measurements`
    and `measurement_priority` have the signatures given in `PLAN.md`. Nothing
    beyond importability is verified.
@@ -512,7 +512,7 @@ test files, the tree has 36"; restoring it passes.
 
 ## The committed validation record, and what changes it
 
-Measured at `fbefb47`. Every count in the VALIDATED section above is read from
+Measured at `e926ac6`. Every count in the VALIDATED section above is read from
 the **committed** `data/registry/validation_record.csv`: 162 marked tests, 115
 golden, 47 benchmark.
 
@@ -531,3 +531,12 @@ I have not committed a regenerated CSV. Regenerate it before quoting the
 marked-test totals, and expect the golden count to rise by the number of guards
 in that file, which is the expected behaviour of a marker-driven exporter rather
 than drift.
+
+A third cause, which I originally mistook for the other two: the exporter globs
+`tests/test_*.py` only (`scripts/export_validation.py:190`), so it never scans
+`tests/golden/test_golden_vectors.py`. Running `pytest -m golden` at `e926ac6`
+collects 262, decomposing as 134 from `tests/golden/`, 115 from the flat files
+the exporter does scan (exactly the committed 115), 11 from my guards, and 2
+skipped. So the registry's golden count is not a count of golden-marked tests in
+the repository; it is a count of those the exporter can see. Quoting it as the
+former overstates nothing but understates by 134.

@@ -295,6 +295,38 @@ def test_test_file_count_in_readme_is_current() -> None:
 
 
 @pytest.mark.golden
+def test_the_exporter_scan_scope_claim_is_still_true() -> None:
+    """README.md and HANDOFF.md both explain that the registry's golden count is
+    lower than a ``pytest -m golden`` collection because
+    ``scripts/export_validation.py`` globs ``tests/test_*.py`` only and so never
+    scans ``tests/golden/test_golden_vectors.py``.
+
+    That explanation replaced a wrong one of mine, which blamed the difference on
+    marker-carrying guard files added after the CSV was written. The wrong
+    explanation was arithmetically impossible and nothing caught it, so the
+    replacement is guarded: this asserts the glob is still the narrow one and
+    that the subdirectory it misses still holds golden-marked tests. If either
+    changes, the documents are wrong and must be re-measured rather than
+    patched.
+    """
+    exporter = (ROOT / "scripts/export_validation.py").read_text()
+    assert 'TESTS.glob("test_*.py")' in exporter, (
+        "the exporter no longer globs tests/test_*.py, so the scan-scope "
+        "explanation in README.md and HANDOFF.md needs re-measuring"
+    )
+    assert 'rglob("test_*.py")' not in exporter, (
+        "the exporter now recurses into subdirectories, so it can see "
+        "tests/golden/ and the documented explanation is stale"
+    )
+    subdir = ROOT / "tests/golden/test_golden_vectors.py"
+    assert subdir.is_file(), f"{subdir} is gone, so the explanation is stale"
+    assert "pytest.mark.golden" in subdir.read_text(), (
+        "tests/golden/test_golden_vectors.py carries no golden marker, so it "
+        "cannot explain the gap between the marker run and the registry"
+    )
+
+
+@pytest.mark.golden
 def test_every_doi_in_the_documents_appears_in_the_repository() -> None:
     """No document may cite a DOI that does not appear in src/ or tests/.
 

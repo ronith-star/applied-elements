@@ -66,16 +66,16 @@ scripts it resolves to `src/ae/`.
 python -m pytest tests/
 ```
 
-Measured in the working tree at `fbefb47`, counts parsed from `--junitxml`:
+Measured in the working tree at `e926ac6`, counts parsed from `--junitxml`:
 
 | | count |
 | --- | --- |
-| collected | 1,733 |
-| passed | 1,704 |
+| collected | 1,738 |
+| passed | 1,709 |
 | failed | 11 |
 | errors | 0 |
 | skipped | 18 |
-| wall time | 170 s |
+| wall time | 220 s |
 
 Exit code 1. These counts include the 11 guards in `tests/test_handoff_claims.py`,
 which this track adds and which all pass.
@@ -110,7 +110,7 @@ python -m pytest tests/ \
   --ignore=tests/test_docstring_arithmetic.py
 ```
 
-Measured: 1,139 collected, 1,137 passed, 0 failed, 0 errors, 2 skipped, 264 s,
+Measured: 1,141 collected, 1,139 passed, 0 failed, 0 errors, 2 skipped, 110 s,
 exit code 0. The 11 failures above are all in the audit files, so excluding them is
 what separates a documentation defect from a model defect.
 
@@ -134,11 +134,16 @@ python -m pytest tests/ -m golden         # 262 collected, 0 failed, 2 skipped
 Add `-s` to see the benchmark output. Each benchmark prints its reference value,
 the model value and the error, which is the fastest way to see what the platform
 is actually checked against. Both counts above were measured from a
-`--junitxml` run; both exceed the 47 benchmark and 115 golden rows in the
-committed `data/registry/validation_record.csv`, because the validation-record
-guards in `tests/test_validation_record.py` and the 11 guards in
-`tests/test_handoff_claims.py` are themselves marker-carrying tests and were not
-present when that CSV was last written.
+`--junitxml` run, and both exceed the 47 benchmark and 115 golden rows in the
+committed `data/registry/validation_record.csv`. The reason is the exporter's
+scan scope, not drift: `scripts/export_validation.py:190` globs
+`tests/test_*.py` only, so it never sees `tests/golden/test_golden_vectors.py`.
+Measured decomposition of the 262 golden collections at `e926ac6`: 134 from
+`tests/golden/`, 115 from the flat `tests/test_*.py` files the exporter does
+scan (exactly the committed 115), 11 from the guards in
+`tests/test_handoff_claims.py`, and 2 skipped. The benchmark side decomposes as
+48 collected plus 2 skipped, with `tests/golden/` contributing 0, against 47
+committed rows.
 
 ### One file
 
@@ -176,8 +181,8 @@ instead, with the rule that new undocumented numbers could not enter while the
 backlog was worked down, and that at zero the step would be deleted and the three
 files folded into the fatal suite. That is what happened. Measured at
 `c920e1d`, the three files alone gave 532 collected, 516 passed, 0 failed, 16
-skipped, and `56e61ff` removed the pinned step. Re-measured at `fbefb47` they
-give 594 collected, 567 passed, 11 failed, 16 skipped. The 11 failures recorded in the
+skipped, and `56e61ff` removed the pinned step. Re-measured at `e926ac6` they
+give 597 collected, 570 passed, 11 failed, 16 skipped. The 11 failures recorded in the
 full-suite table above arrived after that, from test files another track is
 still writing, and they are exactly what the now-fatal audit is meant to catch.
 
@@ -256,7 +261,7 @@ the test's own docstring. Several of those are analytic checks.
 
 `export_registry.py` is idempotent: running it in a clean clone left
 `git status --porcelain data/` empty. `export_validation.py` is deterministic,
-and measured at `fbefb47` the committed `data/registry/validation_record.csv`
+and measured at `e926ac6` the committed `data/registry/validation_record.csv`
 (162 marked tests, 115 golden, 47 benchmark) is now behind it by two benchmark
 rows: regenerating with `tests/test_handoff_claims.py` moved out of the tree
 gives 164 marked tests, 115 golden, 49 benchmark, the two additions coming from
