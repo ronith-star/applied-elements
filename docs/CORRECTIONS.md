@@ -280,3 +280,31 @@ the one that recovered.
 The withdrawal itself stands: grinding finer than the inclusion population
 shatters every inclusion, which is full exposure, so the existing tests
 asserting E = 1 there were right and the finding was wrong.
+
+---
+
+## C12. An assertion dropped while resolving a rebase conflict
+
+**Where:** `tests/test_diffusion.py::test_golden_sphere_extraction_short_time_arithmetic`.
+
+**What happened:** rebasing this audit branch onto `c920e1d` conflicted in that
+test. Another agent's side asserted `val / 3.0e-3 == approx(1.128, rel=1e-3)`,
+`sqrt_pi == approx(1.7724539)` and `val == approx(3.385e-3, rel=1e-3)`; my side
+asserted the one-term relative error 8.870e-04 and the 11.30 percent
+understatement. The first resolution kept only my two lines and silently
+dropped all three of theirs.
+
+**What was actually true:** two of the three were still correct and one was
+made stale by my own fix. `sqrt_pi` and the 1.128 ratio hold. But
+`val == approx(3.385e-3, rel=1e-3)` was written against the ONE-TERM value:
+the two-term value is 0.003382137501286538, which differs from 3.385e-3 by
+8.456e-04 relative and passes a 1e-3 tolerance only by accident. Asserting the
+two-term return against the one-term literal is the same coincidence that let
+the missing `-3 Fo` term survive in the first place.
+
+**Replaced by:** `sqrt_pi` and the ratio kept, the ratio tightened from 1.128
+at rel 1e-3 to the measured 1.1273791670955127 at rel 1e-9, the stale
+`3.385e-3` assertion dropped (the exact two-term value 3.382137e-3 is already
+asserted four lines above at rel 1e-6), and both of my error assertions kept.
+Recorded because a conflict resolution that quietly deletes another agent's
+checks is indistinguishable from a regression in the log.
