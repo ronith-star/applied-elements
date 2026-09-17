@@ -483,3 +483,72 @@ def test_sobol_g_function_indices_match_the_closed_form():
     d = r.diagnostics()
     assert d["converged"]
     assert d["first_exceeds_total"] == {}
+
+
+def test_a_model_returning_inconsistent_output_keys_is_refused():
+    """Per-draw output keys must be identical, or the arrays misalign silently.
+
+    monte_carlo appends into a per-key list as each draw returns, so a model
+    that returns {"y"} on some draws and {"y", "z"} on others produces arrays
+    of DIFFERENT LENGTHS, and every one of them is indexed against the same
+    samples array. Measured before the guard, with a model returning z only
+    when a > 0.5 over 200 draws: samples["a"] had 200 entries, outputs["y"]
+    200 and outputs["z"] 112, with no error raised.
+
+    The 112 z values are not even a contiguous subsample: they are the draws
+    where a > 0.5, so outputs["z"][i] belongs to a different draw than
+    samples["a"][i] for almost every i. Any sensitivity result computed from
+    that pairing is meaningless. Downstream, spearman_screening(mc, "z")
+    raised a numpy shape error from deep inside a column_stack, which is a
+    poor way to learn that the model was inconsistent.
+
+    A model whose output set varies with its inputs must return the full key
+    set every draw, with a sentinel where a quantity is undefined, so that the
+    caller decides what an undefined value means rather than the array
+    lengths deciding silently.
+    """
+    def sometimes_z(a):
+        return {"y": a, "z": 2.0 * a} if a > 0.5 else {"y": a}
+
+    inputs = [Uncertain("a", 0.0, 1.0)]
+    with pytest.raises(ValueError, match="output keys"):
+        monte_carlo(sometimes_z, inputs, n_draws=200, seed=0)
+
+    # A consistent key set over the same draws is accepted, and every array
+    # has the same length as the samples.
+    def always_z(a):
+        return {"y": a, "z": 2.0 * a if a > 0.5 else float("nan")}
+
+    mc = monte_carlo(always_z, inputs, n_draws=200, seed=0)
+    assert mc.samples["a"].size == 200
+    assert mc.outputs["y"].size == 200
+    assert mc.outputs["z"].size == 200
+    # 112 of the 200 draws had a > 0.5 at this seed, which is where the
+    # misaligned length came from.
+    assert int(np.sum(mc.samples["a"] > 0.5)) == 112
+    assert int(np.sum(np.isfinite(mc.outputs["z"]))) == 112
+
+
+def test_recorded_failures_keep_samples_and_outputs_aligned():
+    """The on_error='record' path does NOT have the misalignment above.
+
+    A draw that raises is skipped entirely, so no output key gets an entry for
+    it and the kept-index array trims the samples to match. Measured with a
+    model failing on a > 0.5 over 500 draws: 223 kept, 277 failed, and the
+    samples and every output array agree at 223. (My first draft of this test
+    asserted 277 kept and 223 failed, transposing them, and failed at
+    "assert 223 == 277".)
+    """
+    def fails_high(a):
+        if a > 0.5:
+            raise ValueError("undefined above 0.5")
+        return {"y": a, "z": 2.0 * a}
+
+    mc = monte_carlo(fails_high, [Uncertain("a", 0.0, 1.0)], n_draws=500,
+                     seed=0, on_error="record")
+    assert mc.n_draws == 223
+    assert mc.n_failed == 277
+    assert 223 + 277 == 500
+    assert mc.samples["a"].size == 223
+    assert mc.outputs["y"].size == 223
+    assert mc.outputs["z"].size == 223

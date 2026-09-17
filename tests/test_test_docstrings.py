@@ -157,6 +157,16 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_decisions.py", "49.8785"), ("test_decisions.py", "27.5788"),
     ("test_decisions.py", "27.7527"), ("test_decisions.py", "0.017578"),
     ("test_decisions.py", "0.007080"), ("test_decisions.py", "0.009094"),
+    # Cash cost figures measured BEFORE the sign guards, which the guarded
+    # code now refuses to produce, so they cannot appear in an assertion about
+    # its behaviour. The gross costs they were measured against (18.0 and 1.8)
+    # ARE asserted, from the module rather than from arithmetic.
+    ("test_unit_economics.py", "68.0"),
+    ("test_unit_economics.py", "2.7777777777777777"),
+    ("test_unit_economics.py", "498.2"),
+    ("test_unit_economics.py", "277.77777777777777"),
+    ("test_unit_economics.py", "22.0"),
+    ("test_unit_economics.py", "1000000"),
 }
 
 #: Numbers in prose, INCLUDING scientific notation. A first version matched

@@ -376,6 +376,28 @@ def monte_carlo(
             continue
         vals = ({"y": float(out)} if np.isscalar(out) or isinstance(out, (int, float))
                 else {k: float(v) for k, v in dict(out).items()})
+        # EVERY draw must return the SAME output keys. Appending per key means
+        # a model that returns an extra key only on some draws yields arrays of
+        # different lengths, each indexed against one samples array: measured
+        # on a model returning z only when a > 0.5, samples["a"] had 200
+        # entries, outputs["y"] 200 and outputs["z"] 112, with no error. The
+        # 112 are not a contiguous subsample either, so outputs["z"][i] belongs
+        # to a different draw than samples["a"][i]. Downstream the only symptom
+        # was a numpy shape error from inside spearman_screening's
+        # column_stack, which does not name the cause.
+        if collected and set(vals) != set(collected):
+            missing = sorted(set(collected) - set(vals))
+            extra = sorted(set(vals) - set(collected))
+            raise ValueError(
+                f"draw {r} returned output keys {sorted(vals)} but earlier "
+                f"draws returned {sorted(collected)}"
+                + (f"; missing {missing}" if missing else "")
+                + (f"; unexpected {extra}" if extra else "")
+                + ". Every draw must return the same key set, with a sentinel "
+                "(nan) where a quantity is undefined, so that the caller "
+                "decides what undefined means instead of the array lengths "
+                "silently deciding."
+            )
         for k, v in vals.items():
             collected.setdefault(k, []).append(v)
         keep.append(r)

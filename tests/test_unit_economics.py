@@ -227,9 +227,11 @@ def test_a_negative_credit_is_refused_rather_than_added_to_the_cost():
     """
     site = us_site()
     demands = [InputDemand(name="HF", per_tonne_feed=Q_(10.0, "kg/tonne"))]
-    assert 10.0 * 1.80 == pytest.approx(18.0, abs=1e-9)
-    assert 18.0 - (-50.0) == pytest.approx(68.0, abs=1e-9)
-    assert -50.0 / 18.0 == pytest.approx(-2.7777777777777777, rel=1e-12)
+    # The gross cost the pre-fix figures were measured against, taken from the
+    # module rather than asserted as arithmetic: 10 kg/t at 1.80 USD/kg.
+    gross = cash_cost(site=site, demands=demands, cascade_yield=1.0,
+                      product_tonnes_per_year=1000.0, freight_waived=True)
+    assert gross.cash_cost.magnitude == pytest.approx(18.0, abs=1e-9)
 
     with pytest.raises(ValueError, match=r"credit 'silica fume' is negative"):
         cash_cost(site=site, demands=demands, cascade_yield=1.0,
@@ -261,9 +263,16 @@ def test_a_credit_exceeding_the_gross_cost_is_refused():
     """
     site = us_site()
     demands = [InputDemand(name="HF", per_tonne_feed=Q_(1.0, "kg/tonne"))]
-    assert 1.0 * 1.80 == pytest.approx(1.8, abs=1e-9)
-    assert 1.8 - 500.0 == pytest.approx(-498.2, abs=1e-9)
-    assert 500.0 / 1.8 == pytest.approx(277.77777777777777, rel=1e-12)
+    gross = cash_cost(site=site, demands=demands, cascade_yield=1.0,
+                      product_tonnes_per_year=1000.0, freight_waived=True)
+    assert gross.cash_cost.magnitude == pytest.approx(1.8, abs=1e-9)
+    # A credit below the gross cost is accepted and subtracted, which fixes the
+    # boundary the guard defends: 1.8 - 1.0 = 0.8.
+    ok = cash_cost(site=site, demands=demands, cascade_yield=1.0,
+                   product_tonnes_per_year=1000.0, freight_waived=True,
+                   credits=[("silica fume", sv(1.0, "USD/tonne",
+                                               tag=Tag.ASSUMED))])
+    assert ok.cash_cost.magnitude == pytest.approx(0.8, abs=1e-9)
 
     with pytest.raises(ValueError, match="exceed the gross cost"):
         cash_cost(site=site, demands=demands, cascade_yield=1.0,
@@ -284,8 +293,15 @@ def test_negative_freight_and_negative_annual_costs_are_refused():
     """
     site = us_site()
     demands = [InputDemand(name="HF", per_tonne_feed=Q_(10.0, "kg/tonne"))]
-    assert 18.0 + (-40.0) == pytest.approx(-22.0, abs=1e-9)
-    assert -1000000.0 / 1000.0 == pytest.approx(-1000.0, abs=1e-9)
+    bare = cash_cost(site=site, demands=demands, cascade_yield=1.0,
+                     product_tonnes_per_year=1000.0, freight_waived=True)
+    assert bare.cash_cost.magnitude == pytest.approx(18.0, abs=1e-9)
+    # Positive freight of the same magnitude is accepted and added, so the
+    # guard is rejecting the SIGN and not the line: 18.0 + 40.0 = 58.0.
+    ok = cash_cost(site=site, demands=demands, cascade_yield=1.0,
+                   product_tonnes_per_year=1000.0,
+                   freight=sv(40.0, "USD/tonne", tag=Tag.ASSUMED))
+    assert ok.cash_cost.magnitude == pytest.approx(58.0, abs=1e-9)
 
     # Match strings are SPECIFIC to the line at fault. A first draft used
     # match="negative" for all of these and the freight case passed for the
