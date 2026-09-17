@@ -189,3 +189,94 @@ duplicate test had already been written before this was noticed.
 division as a readability change and described as one, and the genuinely
 missing case added: only `base_index` alone had a test, so the mirror case
 now has one too.
+
+---
+
+## C8. A test that agreed with the code, and both were wrong
+
+**Where:** `src/ae/physics/diffusion.py::fractional_extraction_sphere` and
+`tests/test_diffusion.py::test_golden_sphere_extraction_short_time_arithmetic`.
+
+**The claim:** that `6 sqrt(Fo/pi)` below `FO_SHORT_TIME_SWITCH = 1e-4` is
+"the exact short-time limit".
+
+**What was actually true:** it is the leading term. The `-3 Fo` term was
+missing, so the branch was one-sided high (measured relative error against a
+200000-term series: +8.870e-04 at Fo = 1e-6, +8.942e-03 at 1e-4, +9.724e-02 at
+1e-2) and the function was NON-MONOTONIC across the switch, extraction falling
+from 0.033838382230 to 0.033602473294, a drop of -2.359089e-04. The existing
+continuity test permitted the 8.862268267823e-03 step because its tolerance
+was 0.01. The golden test asserted the one-term value to rel 1e-12, so the
+test agreed with the code and neither could detect the other.
+
+**Replaced by:** the two-term expansion, the golden test rewritten against it
+and cross-checked against an independent series, the continuity tolerance
+tightened to 1e-9, and a monotonicity sweep added.
+
+---
+
+## C9. An assertion that could not fail, presented as a mass balance
+
+**Where:** `src/ae/physics/reagents.py::reagent_balance`.
+
+**The claim:** the docstring said it "closes the overall mass balance to a
+relative tolerance of 1e-9 and raises if it does not".
+
+**What was actually true:** the liquor mass is defined by difference
+(`m_liquor = m_in - m_product - m_sludge`) and the residual then compares
+`m_product + m_sludge + m_liquor` against `m_in`, which reduces to
+`m_in == m_in`. Verified symbolically: the by-difference liquor and the sum of
+its actual constituents both simplify to
+`acid + base - caf2 + imp + si + water`, difference exactly 0. The
+`AssertionError` was unreachable and a flowsheet creating or destroying an
+element would still have reported a perfect closure.
+
+**Replaced by:** per-element closures on the fluoride route that compare
+independently computed streams, and a docstring that calls the total-mass
+residual an identity. Control: injecting the stoichiometry error the docstring
+names (one CaF2 per mole of F rather than per two) fails the pre-existing
+`test_mass_balance_closes[HF-0.0]` and `[HF-0.001]`.
+
+---
+
+## C10. Numbers corrected in the test and left wrong in the source
+
+**Where:** `src/ae/physics/separation.py::rectangular_distribution_recovery`,
+committed in 52f581b.
+
+**The claim:** the docstring attributed a defective recovery of 2.545374e-08
+and an analytic 4.5e-10 to `x = 1e-8`, and -7.446633369934119e-08 to
+`x = 1e-9`.
+
+**What was actually true:** the 2.545373841700e-08 and its analytic
+4.499999998500e-10 belong to `x = 1e-9`; the negative -7.446633389918e-08
+belongs to `x = 1e-10`; at `x = 1e-8` the values are +5.469723873830e-09
+against 4.499999985000e-09. The misattribution was identified in review and
+corrected in `tests/test_physics_audit.py`, but the identical sentence in the
+module docstring was committed uncorrected. The file a reader reaches first is
+the source.
+
+**Replaced by:** the full six-row measured table in the docstring, argument by
+argument, with every row asserted against a recomputation of the committed
+formula rather than quoted. Every numeric literal added to `src/` across the
+five audit commits was then recomputed against the code.
+
+---
+
+## C11. Two mislabelled figures in a withdrawal note
+
+**Where:** `tests/test_physics_audit.py`, the pin recording a withdrawn
+finding about `liberation.exposure`.
+
+**The claim:** that a 1.0e9 um inclusion is "a 1 m inclusion", and that a
+guard rejecting `d_inc > d_p` broke four existing tests.
+
+**What was actually true:** 1.0e9 um is 1.0e3 m. And the four-test failure
+belongs to the FIRST guard, which rejected `d_inc >= d_p`; narrowing it to
+strict `d_inc > d_p` broke three of those four, the monotonicity test being
+the one that recovered.
+
+**Replaced by:** both figures corrected and both guards described separately.
+The withdrawal itself stands: grinding finer than the inclusion population
+shatters every inclusion, which is full exposure, so the existing tests
+asserting E = 1 there were right and the finding was wrong.
