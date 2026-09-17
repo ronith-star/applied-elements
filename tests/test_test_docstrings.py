@@ -127,6 +127,36 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_leaching.py", "40"),
     # publication year of the cited Liu et al. reference, not a computed quantity
     ("test_diffusion.py", "2026"),
+    # ------------------------------------------------------------------
+    # Audit track (econ / plant / ml). Figures recorded because they were
+    # MEASURED BEFORE A FIX and cannot be reproduced by the fixed code, or
+    # because they belong to a different fixture than the one this test runs.
+    # Registered here rather than closed with a comparison that is true by
+    # construction, which is what test_no_assertion_compares_a_literal_
+    # against_itself forbids and what a first draft of these tests did.
+    # ------------------------------------------------------------------
+    # The IRR scan's historical upper bound (10.0 = a 1000 percent return),
+    # the rate that fell above it expressed as a percentage, and the widened
+    # bound of the abandoned first repair. The post-fix code has no bracket,
+    # so none of these can appear in an assertion about its behaviour.
+    ("test_valuation.py", "10.0"), ("test_valuation.py", "1900"),
+    ("test_valuation.py", "1000"), ("test_valuation.py", "1e4"),
+    # Single-station cycle and residence means, quoted to explain why THAT
+    # fixture cannot discriminate the two time bases. This test deliberately
+    # runs the three-station fixture instead, whose figures it does assert.
+    ("test_scheduling.py", "3.239539"), ("test_scheduling.py", "3.231749"),
+    # My own arithmetic error, recorded: 13 was the wrong divisor, 0.6923 the
+    # wrong analytic index it produced, and 0.6429 the estimator value I
+    # misread as an error. The test asserts the CORRECT 9/14 = 0.642857.
+    ("test_uncertainty.py", "13"), ("test_uncertainty.py", "0.6923"),
+    ("test_uncertainty.py", "0.6429"),
+    # EVPI estimator noise measured before the pairing fix, at three outer
+    # sample sizes, plus the paired-estimator values from a hand-written
+    # control. The fixed estimator does not reproduce any of them.
+    ("test_decisions.py", "72.8091"), ("test_decisions.py", "49.7340"),
+    ("test_decisions.py", "49.8785"), ("test_decisions.py", "27.5788"),
+    ("test_decisions.py", "27.7527"), ("test_decisions.py", "0.017578"),
+    ("test_decisions.py", "0.007080"), ("test_decisions.py", "0.009094"),
 }
 
 #: Numbers in prose, INCLUDING scientific notation. A first version matched

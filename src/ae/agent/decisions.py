@@ -207,6 +207,47 @@ def evpi(problem: DecisionProblem, parameter: str, *,
     not a speed knob, and :func:`evpi_convergence` below reports the trend so
     the bias is visible rather than assumed away.
 
+    THE BASELINE IS PAIRED WITH THE RESOLVED SAMPLE, and an earlier version
+    was not, which was a larger error than the bias above and was misdiagnosed
+    as that bias. The baseline came from ``best_action_now`` drawing its own
+    independent sample, so the subtraction ``resolved - baseline`` differenced
+    two quantities estimated on different draws and did not cancel their
+    common sampling error. On a problem with a parameter that shifts every
+    action's payoff equally (true EVPI exactly zero, since a constant added to
+    all actions cannot move the argmax), with that parameter distributed
+    N(0, 1000), the raw estimate was +73.1086 at ``n_outer`` 256, -49.7340 at
+    1024 and -27.5788 at 4096: falling as 1/sqrt(n_outer) and completely
+    unresponsive to ``n_inner``, which is the signature of outer-sample noise
+    rather than of the inner-maximum bias. The clamp at zero made it worse
+    than a visible error: negative excursions were hidden as a correct-looking
+    zero while positive ones were reported as a large information value on a
+    parameter that cannot matter.
+
+    Both terms are now accumulated over the SAME outer and inner draws (common
+    random numbers), so the per-action expectation and the max-over-actions
+    expectation share every source of noise and the difference is a paired
+    estimator. Measured on that test problem AFTER this rewrite, at
+    ``n_inner`` 16: 0.167969 at ``n_outer`` 256, 0.168945 at 1024 and 0.164062
+    at 4096. Two things changed. The magnitude fell by more than two orders of
+    magnitude, and it stopped scaling with ``n_outer``, because what remains
+    is no longer outer-sample noise. It is the inner-maximum bias this
+    docstring opens by describing, and it responds to ``n_inner`` as that bias
+    must: at ``n_outer`` 512, seed 0, the residual falls 2.964844, 0.671875,
+    0.136719, 0.009766, 0.000000 across ``n_inner`` 1, 4, 16, 64, 256. When
+    every action has an identical payoff the two terms agree exactly, giving
+    resolved 66796.4468022350 against baseline 66796.4468022350 and an EVPI of
+    0.0 rather than a small residual.
+
+    (A hand-written prototype of the pairing, not this code, gave 0.017578,
+    0.007080 and 0.009094 on the same problem at ``n_inner`` 1. Those figures
+    are the prototype's and are recorded as such: an earlier draft of this
+    docstring presented them as this function's own output, which they were
+    not.)
+
+    ``baseline_value`` is therefore the paired baseline, which differs from
+    ``problem.best_action_now()`` by sampling error. ``prior_best_action`` is
+    the argmax of the paired per-action means, for the same reason.
+
     Raises
     ------
     KeyError
@@ -222,15 +263,14 @@ def evpi(problem: DecisionProblem, parameter: str, *,
 
     rng = np.random.default_rng(seed)
     others = [k for k in problem.priors if k != parameter]
-
-    # Baseline: best action under the full joint prior.
-    prior_best, baseline = problem.best_action_now(
-        n_draws=max(n_outer * 2, 512), seed=seed)
+    costs = {a.name: a.cost for a in problem.actions}
 
     focus = np.asarray(problem.priors[parameter](rng, n_outer), dtype=float)
     resolved_total = 0.0
-    switches = 0
-    costs = {a.name: a.cost for a in problem.actions}
+    # Per-action totals accumulated over the SAME draws as resolved_total, so
+    # the baseline is a paired estimate rather than an independent one.
+    action_totals = {a.name: 0.0 for a in problem.actions}
+    per_outer_best: list[str] = []
 
     for i in range(n_outer):
         inner = {k: np.asarray(problem.priors[k](rng, n_inner), dtype=float)
@@ -244,13 +284,17 @@ def evpi(problem: DecisionProblem, parameter: str, *,
                 params[parameter] = float(focus[i])
                 acc += problem.value(a.name, params)
             v = acc / n_inner - costs[a.name]
+            action_totals[a.name] += v
             if v > best_v:
                 best_v, best_a = v, a.name
         resolved_total += best_v
-        if best_a != prior_best:
-            switches += 1
+        per_outer_best.append(best_a)
 
     resolved = resolved_total / n_outer
+    action_means = {k: v / n_outer for k, v in action_totals.items()}
+    prior_best = max(action_means, key=lambda k: action_means[k])
+    baseline = action_means[prior_best]
+    switches = sum(1 for a in per_outer_best if a != prior_best)
     # EVPI is non-negative by construction: knowing more cannot hurt a
     # decision-maker who may ignore what they learn. A negative estimate is
     # Monte Carlo noise, so it is clamped, and the clamp is recorded here

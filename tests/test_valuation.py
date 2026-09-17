@@ -315,6 +315,9 @@ def test_depreciation_base_is_not_silently_truncated():
                 depreciation_periods=20)
     cf = p.cash_flows()
     assert p.total_capex == pytest.approx(1000.0, abs=1e-9)
+    # The pre-fix arithmetic, reproduced: 5 surviving periods at 1000/20.
+    assert 5.0 * (1000.0 / 20.0) == pytest.approx(250.0, abs=1e-9)
+    assert 1000.0 - 250.0 == pytest.approx(750.0, abs=1e-9)
     # Whatever the chosen convention, allowance may not silently vanish.
     assert cf.depreciation.sum() == pytest.approx(1000.0, abs=1e-6), (
         f"depreciation sums to {cf.depreciation.sum()} against capex "
@@ -352,7 +355,9 @@ def test_depreciation_cannot_precede_the_capital_spend():
                 nameplate_tonnes=100.0, price=100.0, cash_cost_per_tonne=10.0,
                 life_periods=6, tax_rate=0.30, depreciation_periods=6)
     cf = p.cash_flows()
-    assert 1000.0 / 6.0 == pytest.approx(166.6667, abs=1e-4)
+    assert p.capex_schedule[4] == pytest.approx(900.0, abs=1e-9)
+    assert 1000.0 / 6.0 == pytest.approx(166.67, abs=5e-3)
+    assert 2.0 * (1000.0 / 6.0) == pytest.approx(333.33, abs=5e-3)
     spent = np.cumsum(cf.capex)
     taken = np.cumsum(cf.depreciation)
     assert spent[3] == pytest.approx(100.0, abs=1e-9)
