@@ -405,7 +405,10 @@ def test_benchmark_yang_2020_iron_removal(capsys: pytest.CaptureFixture[str]) ->
     stoichiometric factor 2 M_Fe / M_Fe2O3 = 111.69/159.687 = 0.699431
     (written 0.699435 before this revision, wrong in the sixth digit; the
     quotient is 0.6994308, and it is asserted below):
-      feed    = 0.0857 percent Fe2O3 -> 857 ppm Fe2O3  -> 599.42 ppm Fe
+      feed    = 0.0857 percent Fe2O3 -> 857 ppm Fe2O3  -> 599.41 ppm Fe
+                (written 599.42 before this revision: 857 x 0.6994308 is
+                 599.4122, which rounds to 599.41, the same class of drift as
+                 the factor digit above)
       product = 0.0223 percent Fe2O3 -> 223 ppm Fe2O3  -> 155.97 ppm Fe
       removal = 1 - 155.97/599.42 = 0.739790 -> 73.98 percent
     The error against the paper's stated 74 percent is reported below. This
@@ -432,8 +435,12 @@ def test_benchmark_yang_2020_iron_removal(capsys: pytest.CaptureFixture[str]) ->
     assert feed_pct == pytest.approx(0.0857, rel=1e-9)
     prod_pct = 223.0 / 1.0e4
     assert prod_pct == pytest.approx(0.0223, rel=1e-9)
-    assert feed_fe == pytest.approx(599.42, abs=0.02)
-    assert prod_fe == pytest.approx(155.97, abs=0.01)
+    assert feed_fe == pytest.approx(599.41, abs=0.005)
+    assert prod_fe == pytest.approx(155.97, abs=0.005)
+    # The superseded digit, measured as wrong rather than accommodated by a
+    # looser tolerance: 599.42 is not this product to two decimals.
+    assert abs(feed_fe - 599.42) > 0.005
+    assert feed_fe == pytest.approx(599.4122, abs=5e-5)
     assert model / 100.0 == pytest.approx(0.739790, rel=1e-5)
     assert model == pytest.approx(73.98, abs=0.01)
 

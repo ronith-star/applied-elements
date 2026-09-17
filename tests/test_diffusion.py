@@ -179,8 +179,11 @@ def test_golden_critical_activation_energy_arithmetic() -> None:
       ln(D_req/D0) = ln(4.629630e-13 / 1.0e-4) = ln(4.629630e-9) = -19.19079
       (written -19.19082 before this revision, wrong in the seventh digit;
       math.log gives -19.190789, and it is asserted below)
-      Ea_crit = -8.314462618 * 1473.15 * (-19.19082) J/mol
-              = 12248.4506 * 19.19082 = 235057.4 J/mol = 235.0574 kJ/mol
+      Ea_crit = -8.314462618 * 1473.15 * (-19.190789) J/mol
+              = 12248.4506 * 19.190789 = 235057.4 J/mol = 235.0574 kJ/mol
+      (this line carried the superseded -19.19082 until this revision, which
+      left the docstring quoting two different values for the same logarithm;
+      the product is 235057.4 J/mol either way, so no downstream figure moves)
 
     With D0 = 1.0e-10 m2/s:
       ln(4.629630e-13 / 1.0e-10) = ln(4.629630e-3) = -5.375278

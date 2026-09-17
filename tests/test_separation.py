@@ -127,6 +127,12 @@ def test_flotation_worked_example():
     """
     r = flotation_recovery(Q_(60.0, "s"), Q_(0.05, "1/s"), 0.90)
     assert r == pytest.approx(0.85519164, abs=1e-8)
+    kt = float((Q_(0.05, "1/s") * Q_(60.0, "s")).magnitude)
+    assert kt == pytest.approx(3.0, rel=1e-9)
+    exp_neg_kt = math.exp(-kt)
+    assert exp_neg_kt == pytest.approx(0.04978707, abs=1e-8)
+    one_minus = 1.0 - exp_neg_kt
+    assert one_minus == pytest.approx(0.95021293, abs=1e-8)
 
 
 @pytest.mark.golden
@@ -140,6 +146,11 @@ def test_flotation_limits():
     late = flotation_recovery(Q_(400.0, "s"), Q_(0.05, "1/s"), 0.9)
     assert late == pytest.approx(0.9, abs=1e-8)
     assert late < 0.9, "the exponential approaches but never reaches R_inf"
+    kt = float((Q_(0.05, "1/s") * Q_(400.0, "s")).magnitude)
+    assert kt == pytest.approx(20.0, rel=1e-9)
+    exp_term = math.exp(-kt)
+    assert exp_term == pytest.approx(2.061e-9, rel=1e-3)
+    assert late == pytest.approx(0.9 * (1.0 - exp_term), rel=1e-9)
 
 
 @pytest.mark.golden
@@ -151,6 +162,17 @@ def test_rate_constant_inversion_worked_example():
     """
     k = flotation_rate_constant_from_recovery(Q_(60.0, "s"), 0.85519164, 0.90)
     assert k.magnitude == pytest.approx(0.05, rel=1e-7)
+    ratio = 0.85519164 / 0.90
+    assert ratio == pytest.approx(0.95021293, abs=1e-8)
+    one_minus = 1.0 - ratio
+    assert one_minus == pytest.approx(0.04978707, abs=1e-8)
+    kt = -math.log(one_minus)
+    # The prose quotes ln(0.04978707) = -3.0 to the eight digits it carries,
+    # so the tolerance is set by that rounding, not by machine precision.
+    assert kt == pytest.approx(3.0, abs=1e-7)
+    # Same rounding basis: the recovery is supplied to eight digits, so kt
+    # recovers 3.0 to about 3e-8 and not to machine precision.
+    assert k.magnitude * 60.0 == pytest.approx(3.0, abs=1e-7)
 
 
 @pytest.mark.golden
@@ -163,6 +185,16 @@ def test_rectangular_distribution_worked_example():
     """
     r = rectangular_distribution_recovery(Q_(60.0, "s"), Q_(0.10, "1/s"), 0.90)
     assert r == pytest.approx(0.75037181, abs=1e-8)
+    kt = float((Q_(0.10, "1/s") * Q_(60.0, "s")).magnitude)
+    assert kt == pytest.approx(6.0, rel=1e-9)
+    exp_neg_kt = math.exp(-kt)
+    assert exp_neg_kt == pytest.approx(0.00247875, abs=1e-8)
+    one_minus_exp = 1.0 - exp_neg_kt
+    assert one_minus_exp == pytest.approx(0.99752125, abs=1e-8)
+    ratio = one_minus_exp / kt
+    assert ratio == pytest.approx(0.16625354, abs=1e-8)
+    one_minus_ratio = 1.0 - ratio
+    assert one_minus_ratio == pytest.approx(0.83374646, abs=1e-8)
 
 
 @pytest.mark.golden
@@ -172,14 +204,33 @@ def test_rectangular_is_slower_than_single_k_at_the_mean():
     A rectangular distribution on [0, 0.10] has mean 0.05. At t = 60 s the
     single-k model gives 0.85519164 and the distributed model 0.75037181, so
     the single-k fit OVERSTATES recovery by 0.10481983 in absolute terms, i.e.
-    by 13.97 percent relative. That is the scale-up risk of fitting one rate
-    constant, and it is why the choice is called out in LIMITATIONS item 3.
+    by 12.2569 percent relative to the single-k value it overstates. That is
+    the scale-up risk of fitting one rate constant, and it is why the choice is
+    called out in LIMITATIONS item 3.
+
+    The relative figure was written 13.97 percent before this revision. That is
+    0.10481983/0.75037181, the overstatement divided by the DISTRIBUTED
+    recovery, which is the same wrong-denominator error the guard module
+    records for test_streams.py: a relative overstatement is referred to the
+    quantity being overstated, here the single-k 0.85519164, which gives
+    12.2569 percent. Both denominators are computed below so the distinction
+    is measured rather than described.
     """
     single = flotation_recovery(Q_(60.0, "s"), Q_(0.05, "1/s"), 0.90)
     dist = rectangular_distribution_recovery(Q_(60.0, "s"), Q_(0.10, "1/s"), 0.90)
     assert single - dist == pytest.approx(0.10481983, abs=1e-8)
     assert (single - dist) / single == pytest.approx(0.1225681, abs=1e-6)
     assert dist < single
+    assert single == pytest.approx(0.85519164, abs=1e-8)
+    assert dist == pytest.approx(0.75037181, abs=1e-8)
+    percent_relative = (single - dist) / single * 100.0
+    assert percent_relative == pytest.approx(12.2569, abs=1e-4)
+    # The superseded 13.97 percent, reproduced from the wrong denominator so
+    # the defect is measured: dividing by the distributed recovery inflates the
+    # relative overstatement by about 1.7 percentage points.
+    percent_wrong_denominator = (single - dist) / dist * 100.0
+    assert percent_wrong_denominator == pytest.approx(13.97, abs=1e-2)
+    assert percent_wrong_denominator > percent_relative
 
 
 @pytest.mark.golden
@@ -198,6 +249,15 @@ def test_rectangular_limits():
     late = rectangular_distribution_recovery(Q_(1e9, "s"), Q_(0.1, "1/s"), 0.9)
     assert late == pytest.approx(0.9, abs=1e-7)
     assert late < 0.9
+    kt_mid = (Q_(0.1, "1/s") * Q_(1e6, "s")).to("dimensionless").magnitude
+    assert kt_mid == pytest.approx(1e5, rel=1e-9)
+    deficit_mid = 1.0 / kt_mid
+    assert deficit_mid == pytest.approx(1e-5, rel=1e-9)
+    assert 0.9 * (1.0 - deficit_mid) == pytest.approx(0.899991, abs=1e-6)
+    kt_late = (Q_(0.1, "1/s") * Q_(1e9, "s")).to("dimensionless").magnitude
+    assert kt_late == pytest.approx(1e8, rel=1e-9)
+    deficit_late = 1.0 / kt_late
+    assert 0.9 * (1.0 - deficit_late) == pytest.approx(0.89999999, abs=1e-8)
 
 
 @pytest.mark.golden
@@ -206,6 +266,7 @@ def test_logistic_scale_worked_example():
     assert logistic_scale_from_ep(20.0) == pytest.approx(18.20478453, abs=1e-8)
     assert logistic_scale_from_ep(20.0) * math.log(3.0) == pytest.approx(20.0,
                                                                          rel=1e-12)
+    assert math.log(3.0) == pytest.approx(1.09861229, abs=1e-8)
 
 
 @pytest.mark.golden
@@ -220,6 +281,14 @@ def test_partition_curve_hits_75_percent_at_x50_plus_ep():
     assert partition_number(120.0, 100.0, 20.0) == pytest.approx(0.75, abs=1e-12)
     assert partition_number(80.0, 100.0, 20.0) == pytest.approx(0.25, abs=1e-12)
     assert partition_number(100.0, 100.0, 20.0) == pytest.approx(0.5, abs=1e-15)
+    z = math.log(3.0)
+    assert z == pytest.approx(1.09861229, abs=1e-6)
+    s = 20.0 / z
+    assert s == pytest.approx(18.20478453, abs=1e-6)
+    frac = 1.0 / (1.0 + 1.0 / 3.0)
+    assert frac == pytest.approx(0.75, abs=1e-12)
+    check4 = 3.0 / frac
+    assert check4 == pytest.approx(4.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -249,6 +318,11 @@ def test_imperfection_worked_example_size():
                                                                           abs=1e-12)
     assert 0.05 / 1.60 == pytest.approx(0.03125, abs=1e-12)
     assert abs(0.03125 - 1.0 / 12.0) / (1.0 / 12.0) == pytest.approx(0.625, abs=1e-3)
+    dens_correct = imperfection(0.05, 1.60, PropertyBasis.DENSITY)
+    assert dens_correct == pytest.approx(0.0833333, abs=1e-6)
+    wrong_density_on_size = imperfection(20.0, 100.0, PropertyBasis.DENSITY)
+    assert wrong_density_on_size == pytest.approx(0.2020, abs=1e-4)
+    assert 20.0 / 99.0 == pytest.approx(0.2020, abs=1e-4)
 
 
 @pytest.mark.golden
@@ -264,6 +338,14 @@ def test_whims_field_scaling_worked_example():
     assert whims_rate_constant(Q_(0.02, "1/s"), Q_(0.5, "T"),
                                Q_(1.0, "T")).magnitude == pytest.approx(0.005,
                                                                         abs=1e-12)
+    # WHIMS_FIELD_EXPONENT is a Value wrapping a dimensionless quantity, so the
+    # exponent n_B the docstring names is read out of it rather than retyped.
+    n_b = float(WHIMS_FIELD_EXPONENT.quantity.to("dimensionless").magnitude)
+    assert n_b == pytest.approx(2.0, abs=1e-12)
+    ratio_up = (1.5 / 1.0) ** n_b
+    assert ratio_up == pytest.approx(2.25, abs=1e-12)
+    ratio_down = (0.5 / 1.0) ** n_b
+    assert ratio_down == pytest.approx(0.25, abs=1e-12)
 
 
 @pytest.mark.golden
@@ -277,6 +359,17 @@ def test_two_product_worked_example():
     y, r = two_product(1.0, 10.0, 0.1)
     assert y == pytest.approx(1.0 / 11.0, abs=1e-12)
     assert r == pytest.approx(10.0 / 11.0, abs=1e-12)
+    numerator = 1.0 - 0.1
+    assert numerator == pytest.approx(0.9, abs=1e-12)
+    denominator = 10.0 - 0.1
+    assert denominator == pytest.approx(9.9, abs=1e-12)
+    y_check = numerator / denominator
+    assert y_check == pytest.approx(0.09090909, abs=1e-8)
+    assert y_check == pytest.approx(y, rel=1e-9)
+    percent_mass = y * 100.0
+    assert percent_mass == pytest.approx(9.09, abs=1e-2)
+    percent_impurity = r * 100.0
+    assert percent_impurity == pytest.approx(90.9, abs=1e-2)
 
 
 @pytest.mark.golden
@@ -291,6 +384,10 @@ def test_product_grade_worked_example():
     g = product_grade_from_reject(30.0, 0.08, 280.0)
     assert g == pytest.approx(8.26086957, abs=1e-8)
     assert 0.08 * 280.0 + 0.92 * g == pytest.approx(30.0, abs=1e-12)
+    impurity_reject = 0.08 * 280.0
+    assert impurity_reject == pytest.approx(22.4, abs=1e-9)
+    remaining = 30.0 - impurity_reject
+    assert remaining == pytest.approx(7.6, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -318,6 +415,15 @@ def test_condition_number_worked_example():
     assert two_product_condition_number(5.0, 5.5, 4.9) == pytest.approx(
         7.0 / 6.0, abs=1e-12
     )
+    c2, t2, f2 = 5.5, 4.9, 5.0
+    diff_ct = c2 - t2
+    assert diff_ct == pytest.approx(0.6, abs=1e-9)
+    diff_ft = f2 - t2
+    assert diff_ft == pytest.approx(0.1, abs=1e-9)
+    kappa2 = two_product_condition_number(f2, c2, t2)
+    assert kappa2 == pytest.approx(1.16666667, abs=1e-8)
+    kappa1 = two_product_condition_number(30.0, 45.0, 28.0)
+    assert kappa1 == pytest.approx(1.11764706, abs=1e-8)
 
 
 # --- mass balance to MACHINE PRECISION --------------------------------------
@@ -336,6 +442,22 @@ def test_mass_balance_closes_exactly():
     assert bal["mass_residual_kg"] == 0.0
     assert bal["impurity_residual_kg"] == 0.0
     assert bal["impurity_in_kg"] == bal["impurity_out_kg"]
+    product_grade_ppm = product_grade_from_reject(30.0, 0.08, 280.0)
+    assert product_grade_ppm == pytest.approx(8.26086957, rel=1e-7)
+    product_impurity_frac = product_grade_ppm * 1e-6
+    assert product_impurity_frac == pytest.approx(8.26086957e-6, rel=1e-7)
+    feed_impurity_frac = 30.0 * 1e-6
+    assert feed_impurity_frac == pytest.approx(30e-6, rel=1e-9)
+    reject_impurity_frac = 280.0 * 1e-6
+    assert reject_impurity_frac == pytest.approx(280e-6, rel=1e-9)
+    impurity_in_kg = 1000.0 * feed_impurity_frac
+    assert impurity_in_kg == pytest.approx(0.03, abs=1e-9)
+    product_contrib_kg = bal["product_mass_kg"] * product_impurity_frac
+    assert product_contrib_kg == pytest.approx(0.0076, abs=1e-6)
+    reject_contrib_kg = bal["reject_mass_kg"] * reject_impurity_frac
+    assert reject_contrib_kg == pytest.approx(0.0224, abs=1e-6)
+    impurity_out_kg = product_contrib_kg + reject_contrib_kg
+    assert impurity_out_kg == pytest.approx(bal["impurity_out_kg"], rel=1e-9)
 
 
 @pytest.mark.parametrize(
@@ -553,6 +675,17 @@ def test_benchmark_flowsheet_grade_steps_against_lin_2020(capsys):
     # impurity left to reject, yet gets harder because the reject grade demanded
     # of a real separator rises. Mass balance alone does not see the difficulty.
     assert yields == sorted(yields, reverse=True)
+    assert yields[0] * 100.0 == pytest.approx(1.98, abs=1e-2)
+    # The lower edge of the Table 3 crushing and desliming band, carried through
+    # the same two-product arithmetic so the band edge is exercised rather than
+    # merely quoted: 90 percent SiO2 is 100000 ppm impurity.
+    band_lo_ppm = (100.0 - 90.0) * 1e4
+    assert band_lo_ppm == pytest.approx(1.0e5, rel=1e-9)
+    y_band, r_band = two_product(band_lo_ppm, 50.0 * 1e4, (100.0 - 99.0) * 1e4)
+    # Starting from the dirty edge of the band takes a far larger reject yield
+    # than any later step, which is why desliming is a bulk operation.
+    assert y_band > yields[0]
+    assert 0.0 < y_band < 1.0
 
 
 @pytest.mark.benchmark
@@ -608,6 +741,12 @@ def test_benchmark_whims_field_exponent_sensitivity(capsys):
               f"{short[2]:.4f}, spread {short_spread:.1f} percent relative")
     assert short_spread > 80.0
     assert WHIMS_FIELD_EXPONENT.tag is Tag.ASSUMED
+    assert short[0] == pytest.approx(0.2333, abs=1e-4)
+    assert short[1] == pytest.approx(0.3261, abs=1e-4)
+    assert short[2] == pytest.approx(0.4418, abs=1e-4)
+    assert short_spread == pytest.approx(89.4, abs=0.1)
+    rate_spread_factor = out[2][1] / out[0][1]
+    assert rate_spread_factor == pytest.approx(2.25, abs=1e-9)
 
 
 # --- physical sanity: no recovery above 1, no negatives ---------------------
@@ -693,6 +832,12 @@ def test_bypass_raises_the_floor_of_the_partition_curve():
     assert partition_number(100.0, 100.0, 20.0, bypass=0.15) == pytest.approx(
         0.15 + 0.85 * 0.5, abs=1e-12
     )
+    s_from_ep = logistic_scale_from_ep(20.0)
+    assert s_from_ep == pytest.approx(18.2048, abs=5e-4)
+    core = 1.0 / (1.0 + math.exp(-(1e-6 - 100.0) / s_from_ep))
+    assert core == pytest.approx(0.004098, abs=1e-6)
+    z_tail = (-1000.0 - 100.0) / s_from_ep
+    assert z_tail == pytest.approx(-60.4, abs=0.05)
 
 
 def test_density_imperfection_rejects_a_cut_below_water():
@@ -746,6 +891,7 @@ def test_infeasible_yield_enrichment_pairs_are_rejected(y, enrich):
     """y x enrichment > 1 means the reject carries more impurity than exists."""
     with pytest.raises(ValueError, match="mass balance violated"):
         product_grade_from_reject(30.0, y, 30.0 * enrich)
+    assert y * enrich > 1
 
 
 def test_product_grade_rejects_impossible_reject_inventory():
@@ -794,6 +940,14 @@ def test_feedstock_separation_worked_numbers():
     assert out["removed_ppm"] == pytest.approx(52.261711, abs=1e-6)
     assert out["residual_ppm"] == pytest.approx(47.738289, abs=1e-6)
     assert out["unit"] == "whims"
+    one_minus = out["recovery"] / 0.55
+    assert one_minus == pytest.approx(0.95021293, abs=1e-8)
+    # The comparison the docstring closes on: the residual clears the 45.0 ppm
+    # floor. Asserted as an inequality against the computed residual, which is
+    # the claim; the floor itself is the comparison point.
+    floor_ppm = 45.0
+    assert out["residual_ppm"] > floor_ppm
+    assert out["residual_ppm"] - floor_ppm == pytest.approx(2.738289, abs=1e-6)
 
 
 def test_feedstock_separation_raises_on_an_unmeasured_element():

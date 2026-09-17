@@ -41,6 +41,12 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_capex.py", "18"), ("test_capex.py", "97"),
     ("test_capex.py", "4"), ("test_capex.py", "5"), ("test_capex.py", "3"),
     ("test_capex.py", "1"), ("test_capex.py", "2"),
+    # Publication year of the Wills and Finch classification reference, a citation detail not a computed quantity.
+    ("test_separation.py", "2016"),
+    # Year in citation to Wills and Napier-Munn 2005 textbook, a publication date reference not a computed value
+    ("test_separation.py", "2005"),
+    # Year of the cited Polat and Chander publication, a bibliographic reference not a computed quantity.
+    ("test_separation.py", "2000"),
     # Publication year of the cited Liu et al. reference, not a computed quantity.
     ("test_chlorination.py", "2026"),
     # Year in Xia 2024 citation, not a computed quantity
