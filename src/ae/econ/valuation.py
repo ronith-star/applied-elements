@@ -101,14 +101,40 @@ def _sign_changes(f: np.ndarray) -> int:
     return int(np.sum(np.diff(np.sign(nz)) != 0)) if nz.size > 1 else 0
 
 
-def irr(flows: np.ndarray | list[float], bracket: tuple[float, float] = (-0.9999, 10.0),
-        tol: float = 1e-10) -> float | None:
+def irr(flows: np.ndarray | list[float], bracket: tuple[float, float] | None = None,
+        tol: float = 1e-9) -> float | None:
     """Internal rate of return, or ``None`` when it is not well defined.
 
-    Returns ``None`` when the stream never changes sign (no root exists) or when
-    it changes sign more than once AND more than one root is actually found in
-    the bracket, because reporting one of several roots as "the" IRR is
-    misleading. Use :func:`modified_irr`, which is unique by construction.
+    Returns ``None`` when the stream has no real rate above -100 percent, and
+    when it has more than one, because reporting one of several roots as "the"
+    IRR is misleading. Use :func:`modified_irr`, which is unique by
+    construction.
+
+    Why this is solved exactly rather than scanned. NPV as a function of
+    :math:`x = 1/(1+r)` is a polynomial in the cash flows, so its roots are
+    obtained exactly from the companion matrix (``numpy.roots``) and each real
+    root with :math:`x > 0` is a rate above -100 percent. The earlier
+    implementation scanned a grid over a bracket whose upper bound was 10.0 (a
+    1000 percent return), and that produced errors in BOTH directions which
+    were indistinguishable from correct answers.
+
+    Root above the bound, reported as no root at all: ``[-1.0, 20.0]`` has the
+    single exact root 20/1 - 1 = 19.0 and returned ``None``, which the
+    docstring reserves for streams that never turn positive.
+
+    Second root above the bound, invisible: flows built from roots at
+    :math:`r = 0.20` and :math:`r = 50.0` returned 0.19999999999995 as "the"
+    IRR on a stream that has two, the exact failure the multiplicity check
+    exists to catch. A first attempted repair widened the bound to 1e4 and
+    cross-examined the scan against the sign-change count. That repair was
+    UNSOUND and is recorded here rather than quietly replaced: equality of the
+    NPV sign at the bracket edge carries no information about roots beyond it,
+    and a root pair at 0.20 and 2.0e4 still returned 0.19999999999996645. A
+    grid scan can only ever lower-bound the root count, so no bracket-based
+    multiplicity test can be correct. The exact solve has no bracket.
+
+    ``bracket`` is retained for call compatibility and ignored; a value passed
+    for it is refused rather than silently disregarded.
 
     Examples
     --------
@@ -116,44 +142,64 @@ def irr(flows: np.ndarray | list[float], bracket: tuple[float, float] = (-0.9999
     0.130662
     >>> irr([-100.0, -50.0]) is None
     True
+    >>> round(irr([-1.0, 20.0]), 6)
+    19.0
+    >>> irr([-100.0, 230.0, -132.0]) is None
+    True
     """
+    if bracket is not None:
+        raise ValueError(
+            "irr no longer scans a bracket: the roots are solved exactly, and "
+            "a bracket-based multiplicity test cannot be correct because a "
+            "grid scan only lower-bounds the root count. Remove the argument."
+        )
     f = np.asarray(flows, dtype=float)
     if f.size < 2:
         raise ValueError("an IRR needs at least two periods")
     if _sign_changes(f) == 0:
         return None
-    lo, hi = bracket
 
-    def g(r: float) -> float:
-        return npv(r, f)
+    # NPV(r) = sum_t f_t x^t with x = 1/(1+r). numpy.roots wants descending
+    # powers, and leading zeros (trailing zero cash flows) must be dropped or
+    # the companion matrix is singular.
+    coef = f[::-1]
+    nonzero = np.flatnonzero(coef != 0.0)
+    if nonzero.size == 0:
+        return None
+    coef = coef[nonzero[0]:]
+    if coef.size < 2:
+        return None
 
-    # Scan for sign changes of NPV(r) across the bracket, to detect multiplicity.
-    grid = np.concatenate([np.linspace(lo, 0.0, 200), np.linspace(1e-6, hi, 800)])
-    vals = np.array([g(r) for r in grid])
-    roots: list[float] = []
-    for i in range(grid.size - 1):
-        a, b = vals[i], vals[i + 1]
-        if a == 0.0:
-            roots.append(float(grid[i]))
-        elif a * b < 0.0:
-            x0, x1, y0, y1 = grid[i], grid[i + 1], a, b
-            for _ in range(200):
-                xm = 0.5 * (x0 + x1)
-                ym = g(xm)
-                if abs(ym) < tol or (x1 - x0) < 1e-14:
-                    break
-                if y0 * ym < 0.0:
-                    x1, y1 = xm, ym
-                else:
-                    x0, y0 = xm, ym
-            roots.append(float(0.5 * (x0 + x1)))
-    uniq = [r for i, r in enumerate(roots)
-            if all(abs(r - s) > 1e-6 for s in roots[:i])]
-    if not uniq:
+    x = np.roots(coef)
+    scale = max(1.0, float(np.max(np.abs(x)))) if x.size else 1.0
+    real_x = x[np.abs(x.imag) <= 1e-8 * scale].real
+    positive_x = real_x[real_x > 1e-14]
+    rates = sorted(float(1.0 / xi - 1.0) for xi in positive_x)
+
+    distinct: list[float] = []
+    for r in rates:
+        if not distinct or abs(r - distinct[-1]) > 1e-7 * max(1.0, abs(r)):
+            distinct.append(r)
+    if len(distinct) != 1:
         return None
-    if len(uniq) > 1:
-        return None
-    return uniq[0]
+    r0 = distinct[0]
+    # Polish once by Newton so the returned rate satisfies npv(r) = 0 to tol
+    # even when the companion-matrix eigenvalue is slightly off.
+    for _ in range(50):
+        y = npv(r0, f)
+        if abs(y) < tol:
+            break
+        h = 1e-8 * max(1.0, abs(1.0 + r0))
+        dy = (npv(r0 + h, f) - npv(r0 - h, f)) / (2.0 * h)
+        if dy == 0.0:
+            break
+        step = y / dy
+        if not np.isfinite(step):
+            break
+        r0 -= step
+        if r0 <= -1.0:
+            return None
+    return float(r0)
 
 
 def modified_irr(flows: np.ndarray | list[float], finance_rate: float,
@@ -298,6 +344,50 @@ class Project:
             q[self.construction_periods + i] = frac * self.nameplate_tonnes
         return q
 
+    def _depreciation_schedule(self, capex: np.ndarray, n: int) -> np.ndarray:
+        """Straight-line allowance per tranche, never truncated, never early.
+
+        Two defects in the earlier single-line version are fixed here.
+
+        Truncation: it wrote ``total_capex / dep_periods`` into the slice
+        ``[construction : construction + dep_periods]``, which numpy silently
+        clips at the array end. With 1000 of capex, 20 depreciation periods and
+        a 5 period life, only 250 of the 1000 was ever booked and 750 of
+        allowance was discarded with no error, so tax was charged on income a
+        tax authority would have sheltered. The schedule is now laid down
+        tranche by tranche and any allowance that would fall past the final
+        period is recognised in that period, so the total always equals the
+        capital actually spent.
+
+        Allowance before the spend: it started every period's allowance at
+        ``construction_periods`` regardless of when the money left. A 100 spend
+        at t=0 with a 900 expansion at t=4, written over 6 periods from t=2,
+        reached 333.33 of cumulative allowance by t=3 against 100.00 spent.
+        Each tranche now begins in the period it is spent, except tranches
+        inside the construction window which begin at first operation, since
+        an asset not yet in service is not yet depreciable.
+        """
+        dep_periods = self.depreciation_periods or self.life_periods
+        dep = np.zeros(n)
+        last = n - 1
+        for i, c in enumerate(capex):
+            if c <= 0.0:
+                continue
+            start = max(i, self.construction_periods)
+            if start > last:
+                dep[last] += c
+                continue
+            per = c / dep_periods
+            for k in range(dep_periods):
+                t = start + k
+                if t > last:
+                    # Remaining allowance is recognised on disposal rather than
+                    # lost: the alternative discards capital relief silently.
+                    dep[last] += per
+                else:
+                    dep[t] += per
+        return dep
+
     def cash_flows(self) -> CashFlowResult:
         """Build the after-tax cash flow stream with explicit timing."""
         q = self.output_profile()
@@ -320,12 +410,19 @@ class Project:
         wc_flow[-1] += wc_level[-1]
 
         ebitda = revenue - variable - fixed
-        dep_periods = self.depreciation_periods or self.life_periods
-        dep = np.zeros(n)
-        annual_dep = self.total_capex / dep_periods
-        dep[self.construction_periods:self.construction_periods + dep_periods] = annual_dep
+        dep = self._depreciation_schedule(capex, n)
+
+        # Terminal disposal is a taxable event, not a cash windfall. Book value
+        # is capex spent less allowance claimed, and the gain over book value is
+        # taxed at the same rate as operating income. Adding salvage to the net
+        # flow AFTER tax, as an earlier version did, let a fully depreciated
+        # asset be sold tax free: with 1000 of capex fully written down, a 400
+        # salvage is a 400 gain and owes 120 at 30 percent.
+        book_value = float(np.sum(capex) - np.sum(dep))
+        disposal_gain = self.salvage - book_value
 
         taxable = ebitda - dep
+        taxable[-1] += disposal_gain
         tax = np.zeros(n)
         carry = 0.0
         for i in range(n):

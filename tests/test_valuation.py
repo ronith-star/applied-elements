@@ -286,3 +286,191 @@ def test_records_and_validation():
         proj(nameplate_tonnes=0.0)
     with pytest.raises(ValueError, match="at or below -100 percent"):
         npv(-1.0, [1.0, 2.0])
+
+
+# ---------------------------------------------------------------------------
+# Adversarial audit: depreciation, salvage tax and IRR bracket.
+# Added by the econ/plant/ml audit track. Each test below was written to FAIL
+# against the module as committed, and the measured failure is quoted in the
+# docstring.
+# ---------------------------------------------------------------------------
+
+
+def test_depreciation_base_is_not_silently_truncated():
+    """A depreciation life longer than the operating life loses capital allowance.
+
+    The defect as committed: ``annual_dep = total_capex / dep_periods`` is
+    written into ``dep[construction:construction + dep_periods]``, but that
+    slice is clipped by the array length, so only ``life_periods`` of the
+    schedule survive. With 1000 of capex over 20 depreciation periods and a
+    5 period life, 50 per period is booked 5 times, 250 in total, and 750 of
+    allowance is discarded with no error. Tax is then charged on 750 of income
+    that a tax authority would have sheltered.
+
+    Measured before the fix: dep summed to 250.0 against total_capex 1000.0.
+    """
+    p = Project(capex_schedule=[1000.0], construction_periods=1,
+                ramp_fractions=[1.0], nameplate_tonnes=100.0, price=50.0,
+                cash_cost_per_tonne=10.0, life_periods=5, tax_rate=0.30,
+                depreciation_periods=20)
+    cf = p.cash_flows()
+    assert p.total_capex == pytest.approx(1000.0, abs=1e-9)
+    # Whatever the chosen convention, allowance may not silently vanish.
+    assert cf.depreciation.sum() == pytest.approx(1000.0, abs=1e-6), (
+        f"depreciation sums to {cf.depreciation.sum()} against capex "
+        f"{p.total_capex}: allowance was truncated by the array length"
+    )
+    # The convention adopted is the stated 20 period rate, 1000/20 = 50.0 per
+    # period, with the unclaimed balance recognised on disposal in the final
+    # period as a balancing allowance. Four periods run at rate and the fifth
+    # carries 1000 - 4 x 50 = 800. An earlier draft of this test asserted
+    # 1000/5 = 200 per period, which is a DIFFERENT convention (re-spreading
+    # the base over the shorter life) and would have overstated the shelter in
+    # every early period. That draft was wrong and is recorded here rather
+    # than quietly replaced.
+    assert 1000.0 / 20.0 == pytest.approx(50.0, abs=1e-9)
+    assert cf.depreciation[1] == pytest.approx(50.0, abs=1e-6)
+    assert cf.depreciation[4] == pytest.approx(50.0, abs=1e-6)
+    assert 1000.0 - 4.0 * 50.0 == pytest.approx(800.0, abs=1e-9)
+    assert cf.depreciation[-1] == pytest.approx(800.0, abs=1e-6)
+
+
+def test_depreciation_cannot_precede_the_capital_spend():
+    """Allowance taken before the asset is paid for is not a tax position.
+
+    The defect as committed: depreciation starts at ``construction_periods``
+    and runs for ``depreciation_periods`` regardless of WHEN capex is spent. A
+    100 spend at t=0 and a 900 expansion at t=4, depreciated over 6 periods
+    from t=2, books 166.67 per period from t=2, so cumulative allowance
+    reaches 333.33 by t=3 against 100.00 actually spent.
+
+    Measured before the fix: periods 2 and 3 had depreciation-to-date above
+    capex-to-date.
+    """
+    p = Project(capex_schedule=[100.0, 0.0, 0.0, 0.0, 900.0],
+                construction_periods=2, ramp_fractions=[1.0],
+                nameplate_tonnes=100.0, price=100.0, cash_cost_per_tonne=10.0,
+                life_periods=6, tax_rate=0.30, depreciation_periods=6)
+    cf = p.cash_flows()
+    assert 1000.0 / 6.0 == pytest.approx(166.6667, abs=1e-4)
+    spent = np.cumsum(cf.capex)
+    taken = np.cumsum(cf.depreciation)
+    assert spent[3] == pytest.approx(100.0, abs=1e-9)
+    bad = np.flatnonzero(taken > spent + 1e-9)
+    assert bad.size == 0, (
+        f"depreciation-to-date exceeds capex-to-date in periods {bad.tolist()}: "
+        f"taken {taken[bad].tolist()} against spent {spent[bad].tolist()}"
+    )
+
+
+def test_salvage_is_taxed_against_its_book_value():
+    """Selling a fully depreciated asset for 400 is a 400 taxable gain.
+
+    The defect as committed: ``net[-1] += self.salvage`` adds the terminal
+    value after tax has been computed, so a salvage receipt is untaxed however
+    much allowance has already been claimed. With capex 1000 fully depreciated
+    over the life, book value is 0, so the whole 400 is a gain and 0.30 x 400 =
+    120 of tax is owed.
+
+    Measured before the fix: tax in the final period was exactly
+    0.30 x (ebitda - depreciation), with 0.0 attributable to the salvage.
+    """
+    kw = dict(capex_schedule=[1000.0], construction_periods=1,
+              ramp_fractions=[1.0], nameplate_tonnes=100.0, price=100.0,
+              cash_cost_per_tonne=10.0, life_periods=5, tax_rate=0.30,
+              depreciation_periods=5)
+    no_salvage = Project(salvage=0.0, **kw).cash_flows()
+    with_salvage = Project(salvage=400.0, **kw).cash_flows()
+    assert with_salvage.depreciation.sum() == pytest.approx(1000.0, abs=1e-6)
+    assert 0.30 * 400.0 == pytest.approx(120.0, abs=1e-9)
+    extra_tax = with_salvage.tax[-1] - no_salvage.tax[-1]
+    assert extra_tax == pytest.approx(120.0, abs=1e-6), (
+        f"salvage of 400 against zero book value added {extra_tax} of tax, "
+        f"not 120.0: the terminal receipt bypasses the tax calculation"
+    )
+    # Net receipt is the after-tax 280, not the gross 400.
+    assert 400.0 - 120.0 == pytest.approx(280.0, abs=1e-9)
+    assert (with_salvage.net_cash_flow[-1]
+            - no_salvage.net_cash_flow[-1]) == pytest.approx(280.0, abs=1e-6)
+
+
+def test_irr_above_the_default_bracket_is_not_reported_as_undefined():
+    """A 1900 percent return is a real IRR, and None reads as "no IRR exists".
+
+    The defect as committed: the scan grid ends at the bracket's upper bound of
+    10.0, so a stream whose only root lies above 1000 percent finds no sign
+    change and ``irr`` returns None through the ``if not uniq`` branch, which
+    the docstring reserves for streams that never turn positive. Flows
+    -1.0, 20.0 have the single exact root 20/1 - 1 = 19.0.
+
+    Measured before the fix: irr([-1.0, 20.0]) returned None with one sign
+    change in the stream, so the no-root branch was reached on a stream that
+    has exactly one root.
+    """
+    assert 20.0 / 1.0 - 1.0 == pytest.approx(19.0, abs=1e-12)
+    got = irr([-1.0, 20.0])
+    assert got is not None, (
+        "irr([-1.0, 20.0]) returned None, but the stream has one sign change "
+        "and the single root r = 19.0"
+    )
+    assert got == pytest.approx(19.0, rel=1e-6)
+    assert npv(got, [-1.0, 20.0]) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_irr_reports_none_when_a_second_root_lies_outside_the_bracket():
+    """Two roots is two roots, whether or not both fall inside the scan range.
+
+    Flows built from roots at r = 0.20 and r = 50.0 have two sign changes. The
+    scan grid stops at 10.0 and therefore sees only the first, so a single
+    value is returned as "the" IRR on a stream that has two, which is the
+    misleading answer the function's own docstring says it exists to avoid.
+
+    Measured before the fix: irr returned 0.19999999999995005 on a stream with
+    npv(0.2) = -1.1e-13 and npv(50.0) = -1.3e-15, both roots.
+    """
+    x1, x2 = 1.0 / 1.2, 1.0 / 51.0
+    flows = [1000.0 * x1 * x2, -1000.0 * (x1 + x2), 1000.0]
+    assert npv(0.2, flows) == pytest.approx(0.0, abs=1e-9)
+    assert npv(50.0, flows) == pytest.approx(0.0, abs=1e-9)
+    assert irr(flows) is None, (
+        f"irr returned {irr(flows)} on a stream with roots at 0.2 and 50.0; "
+        f"reporting one of two roots is the documented failure mode"
+    )
+    # MIRR is unique by construction and is the answer to offer instead.
+    assert modified_irr(flows, 0.08, 0.08) is not None
+
+
+def test_irr_multiplicity_is_detected_however_far_away_the_second_root_is():
+    """The test that killed the first repair. A grid scan cannot do this.
+
+    A first attempt at the bracket fix widened the upper bound to 1e4 and added
+    a check comparing the NPV sign at the bracket edge. It passed the roots at
+    0.20 and 50.0 case and looked correct. It was not: with the second root
+    moved to 2.0e4 the same function returned 0.19999999999996645, because the
+    sign of NPV at a finite bound carries no information about roots beyond it.
+    A scan lower-bounds the root count and can never establish uniqueness, so
+    the roots are now solved exactly from the companion matrix.
+
+    Each root pair below is verified with numpy.roots before the module is
+    asked, so the test does not depend on the implementation it audits.
+    """
+    for second in (50.0, 2.0e4, 1.0e5):
+        x1, x2 = 1.0 / 1.2, 1.0 / (1.0 + second)
+        flows = [1000.0 * x1 * x2, -1000.0 * (x1 + x2), 1000.0]
+        indep = np.roots(np.asarray(flows, dtype=float)[::-1])
+        real_rates = sorted(1.0 / r.real - 1.0 for r in indep
+                            if abs(r.imag) < 1e-8 and r.real > 0.0)
+        assert len(real_rates) == 2, f"fixture must have two real rates, got {real_rates}"
+        assert real_rates[0] == pytest.approx(0.2, rel=1e-6)
+        assert real_rates[1] == pytest.approx(second, rel=1e-6)
+        assert irr(flows) is None, (
+            f"irr returned {irr(flows)} on a stream with roots at 0.2 and "
+            f"{second}; multiplicity must not depend on a scan window"
+        )
+
+
+def test_irr_refuses_a_bracket_rather_than_ignoring_it():
+    """A silently ignored argument is worse than a removed one: a caller who
+    passes bracket=(0.0, 0.5) believes the search was constrained."""
+    with pytest.raises(ValueError, match="no longer scans a bracket"):
+        irr([-100.0, 60.0, 60.0], bracket=(0.0, 0.5))
