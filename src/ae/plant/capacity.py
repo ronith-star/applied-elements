@@ -71,6 +71,14 @@ __all__ = ["OEE", "LineCapacity", "UnitCapacity", "assess_line"]
 #: Hours in a calendar year, used when planned time is quoted as a utilisation.
 HOURS_PER_YEAR = 8760.0
 
+#: Relative gap below which two units count as binding simultaneously. Set at
+#: 1e-9, which is nine orders of magnitude above the 1.343102e-16 float
+#: residue measured on an exact real-arithmetic tie (10 t/h at 1.25 t/t
+#: against 8 t/h at 1.0 t/t, 8000 planned hours) and six orders below any
+#: capacity difference an engineer would act on: a 1e-9 relative gap on a
+#: 50,000 t/yr line is 0.00005 t/yr.
+TIE_TOLERANCE = 1e-9
+
 
 @dataclass(frozen=True)
 class OEE:
@@ -228,15 +236,53 @@ class LineCapacity:
         moves it elsewhere, so debottlenecking one unit buys little. Reported so
         that a capital plan is not built on a bottleneck that shifts.
 
-        Exactly 0.0 means two or more units bind simultaneously, in which case
-        the ``bottleneck`` name is arbitrary (first in declaration order) and
-        both must be expanded together to gain any capacity. Infinite for a
-        single-unit line.
+        A margin at or below :data:`TIE_TOLERANCE` means two or more units
+        bind simultaneously and both must be expanded together to gain any
+        capacity. Use :meth:`is_tied` and :meth:`tied_units` for that question
+        rather than comparing this value to zero.
+
+        AN EARLIER VERSION OF THIS DOCSTRING SAID "Exactly 0.0 means two or
+        more units bind simultaneously, in which case the bottleneck name is
+        arbitrary (first in declaration order)". Both halves are wrong, and
+        they are wrong on the tie example :func:`assess_line`'s own docstring
+        gives. A 10 t/h mill at 1.25 t/t against an 8 t/h leach at 1.0 t/t is
+        an exact tie in real arithmetic, and measured at 8000 planned hours
+        the margin comes back 1.343102e-16 rather than 0.0, because the two
+        capacities are the same real number but not the same float after the
+        OEE and hours multiplications. The name comes back 'leach' although
+        'mill' is declared first, because ``min`` correctly returns the true
+        minimum and at one part in 1e16 the leach is genuinely smaller. So the
+        name was not arbitrary-but-deterministic, it was selected by rounding
+        noise, and which unit wins moves with the planned hours.
+
+        Infinite for a single-unit line.
         """
         caps = sorted(q.to("tonne").magnitude for q in self.product_capacity.values())
         if len(caps) < 2 or caps[0] <= 0:
             return float("inf")
         return (caps[1] - caps[0]) / caps[0]
+
+    def is_tied(self, tol: float = TIE_TOLERANCE) -> bool:
+        """Whether two or more units bind within ``tol`` of the bottleneck.
+
+        This is the question a capital plan needs answered, and it cannot be
+        answered by ``bottleneck_margin == 0.0``: see that property's note.
+        """
+        return len(self.tied_units(tol)) > 1
+
+    def tied_units(self, tol: float = TIE_TOLERANCE) -> list[str]:
+        """Every unit binding within ``tol`` of the tightest, sorted by name.
+
+        A single-element list means the bottleneck is unambiguous. Two or more
+        means expanding any one of them alone buys no capacity.
+        """
+        caps = {k: q.to("tonne").magnitude for k, q in self.product_capacity.items()}
+        if not caps:
+            return []
+        lo = min(caps.values())
+        if lo <= 0:
+            return sorted(caps)
+        return sorted(k for k, v in caps.items() if (v - lo) / lo <= tol)
 
 
 def assess_line(units: Iterable[UnitCapacity]) -> LineCapacity:
@@ -269,10 +315,13 @@ def assess_line(units: Iterable[UnitCapacity]) -> LineCapacity:
     0.125
 
     A 10 t/h mill at a feed-to-product ratio of 1.25 and an 8 t/h leach at 1.0
-    would instead give
-    IDENTICAL product capacities. That is a tie, not a finding: the name
-    returned is then merely first-in-declaration-order, and
-    ``bottleneck_margin`` is 0.0 to say so.
+    give product capacities that are equal in real arithmetic. That is a tie,
+    not a finding, and both units must be expanded together to gain any
+    capacity. Ask :meth:`LineCapacity.is_tied`, NOT
+    ``bottleneck_margin == 0.0``: measured at 8000 planned hours that example
+    returns a margin of 1.343102e-16 and names 'leach' despite 'mill' being
+    declared first, because the two capacities differ in their last bits. See
+    the note on :meth:`LineCapacity.bottleneck_margin`.
     """
     units = list(units)
     if not units:
@@ -281,10 +330,11 @@ def assess_line(units: Iterable[UnitCapacity]) -> LineCapacity:
     if len(set(names)) != len(names):
         raise ValueError(f"duplicate unit names: {names}")
     prod_cap = {u.name: u.product_capacity for u in units}
-    # On an exact tie min() returns the first in declaration order, which is
-    # deterministic but arbitrary. The tie is not hidden: bottleneck_margin is
-    # then 0.0, which is the signal that naming a single bottleneck is
-    # meaningless because two units bind simultaneously.
+    # On a tie min() returns whichever capacity is smaller by the last bits,
+    # which is NOT first-in-declaration-order and not stable against a change
+    # in planned hours. The name is therefore never the whole answer: callers
+    # deciding where to spend capital must ask is_tied() / tied_units(), which
+    # compare against TIE_TOLERANCE rather than against zero.
     bottleneck = min(prod_cap, key=lambda k: prod_cap[k].to("tonne").magnitude)
     line = prod_cap[bottleneck]
     line_t = line.to("tonne").magnitude

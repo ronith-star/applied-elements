@@ -229,3 +229,66 @@ def test_empty_and_duplicate_lines_rejected():
     with pytest.raises(ValueError, match="duplicate unit names"):
         assess_line([UnitCapacity("x", Q_(1.0, "tonne/hour"), 100.0, o),
                      UnitCapacity("x", Q_(2.0, "tonne/hour"), 100.0, o)])
+
+
+def test_a_tie_is_reported_as_a_tie_rather_than_as_a_float_accident():
+    """The docstring's own tie example does not produce an exact zero margin.
+
+    bottleneck_margin's docstring said "Exactly 0.0 means two or more units
+    bind simultaneously, in which case the bottleneck name is arbitrary (first
+    in declaration order)". Both halves of that fail on the example
+    assess_line's own docstring gives for a tie, a 10 t/h mill at 1.25 t/t
+    against an 8 t/h leach at 1.0 t/t:
+
+      the margin comes back 1.343102e-16, not 0.0, because 10/1.25 and 8/1.0
+      are the same real number but not the same float after the OEE and
+      planned-hours multiplications;
+
+      and the name comes back 'leach' although 'mill' is declared first,
+      because min() returns the first true MINIMUM and at a difference of one
+      part in 1e16 the leach really is smaller. So the name is not
+      arbitrary-but-deterministic, it is selected by rounding noise, and which
+      unit wins changes with the planned hours.
+
+    The existing tie test passes only because it asserts
+    pytest.approx(0.0, abs=1e-12), which a 1e-16 margin satisfies; nothing
+    pinned the exact-equality claim the docstring made.
+
+    Neither half matters for the capacity NUMBER, which is right either way.
+    Both matter for the reading: a capital plan that expands the named unit
+    alone gains nothing when two units bind, and the margin is the only signal
+    that says so. So the tie needs a test with a tolerance, not an equality,
+    and that is what is_tied provides.
+    """
+    o = OEE(0.90, 0.95, 0.99)
+    r = assess_line([
+        UnitCapacity("mill", Q_(10.0, "tonne/hour"), 8000.0, o, 1.25),
+        UnitCapacity("leach", Q_(8.0, "tonne/hour"), 8000.0, o, 1.0),
+    ])
+    caps = sorted(q.to("tonne").magnitude for q in r.product_capacity.values())
+    # Equal as real numbers, unequal as floats.
+    assert 10.0 / 1.25 == pytest.approx(8.0 / 1.0, rel=1e-15)
+    assert caps[0] != caps[1], (
+        "this fixture is only interesting while the two capacities differ in "
+        "the last bits; if the arithmetic changes so they are exactly equal, "
+        "the claim under test is no longer reachable here"
+    )
+    assert r.bottleneck_margin > 0.0
+    assert r.bottleneck_margin < 1e-15
+    # The named unit is NOT first-in-declaration-order.
+    assert list(r.product_capacity)[0] == "mill"
+    assert r.bottleneck == "leach"
+
+    # What the reader actually needs: a tie predicate with a tolerance.
+    assert r.is_tied()
+    assert sorted(r.tied_units()) == ["leach", "mill"]
+
+    # A real single bottleneck is not reported as a tie.
+    single = assess_line([
+        UnitCapacity("mill", Q_(10.0, "tonne/hour"), 8000.0, o, 1.25),
+        UnitCapacity("leach", Q_(9.0, "tonne/hour"), 8000.0, o, 1.0),
+    ])
+    assert not single.is_tied()
+    assert single.tied_units() == ["mill"]
+    assert single.bottleneck == "mill"
+    assert single.bottleneck_margin == pytest.approx(0.125, abs=1e-4)
