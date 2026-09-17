@@ -211,11 +211,16 @@ def test_memo_quoted_test_count_matches_the_files_it_names():
     assert m, "memo must quote a measured pytest result"
     claimed = int(m.group(1))
     counted = 0
-    for f in ("test_memo_numbers.py", "test_memo_traceability.py"):
+    for f in ("test_memo_numbers.py", "test_memo_traceability.py",
+              "test_memo_pdf.py"):
         src = (ROOT / "tests" / f).read_text()
         counted += len(re.findall(r"^def test_", src, flags=re.M))
+        # parametrize multiplies the collected count; add the extra cases
+        for m2 in re.finditer(r"@pytest\.mark\.parametrize\([^\[]*\[(.*?)\]\)",
+                              src, flags=re.S):
+            counted += len(re.findall(r"\(", m2.group(1))) - 1
     assert claimed == counted, (
-        f"memo quotes {claimed} passing tests; the two named files define "
+        f"memo quotes {claimed} passing tests; the three named files define "
         f"{counted}")
 
 

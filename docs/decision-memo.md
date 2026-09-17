@@ -374,7 +374,9 @@ python scripts/memo_evpi_joint.py     # group EVPI, definitional control
 python scripts/memo_evpi_ceiling.py   # paired EVPI(all), the ceiling
 python scripts/memo_append_csv.py     # control/group/ceiling rows into the CSV
 python scripts/memo_falsification.py  # section 7 thresholds, solved by root-finding
-pytest tests/test_memo_numbers.py tests/test_memo_traceability.py
+python scripts/memo_pdf.py            # render this memo to docs/decision-memo.pdf
+pytest tests/test_memo_numbers.py tests/test_memo_traceability.py \
+       tests/test_memo_pdf.py
 ```
 
 Outputs: `docs/memo_numbers.csv` (430 data rows, one per reported quantity, each
@@ -383,10 +385,11 @@ with a tag and a basis note), `docs/memo_numbers.json`,
 `docs/memo_evpi_ceiling.json`, `docs/memo_falsification.json`, and
 `docs/figures/`.
 
-Measured test result, quoted from the run: `24 passed in 0.82s`, being 9 in
-`tests/test_memo_numbers.py` and 15 in `tests/test_memo_traceability.py`. One of
-those 15 checks this very sentence: it counts the test functions in both files
-and fails if the number quoted here drifts from them, which it did once already.
+Measured test result, quoted from the run: `34 passed in 1.60s`, being 9 in
+`tests/test_memo_numbers.py`, 15 in `tests/test_memo_traceability.py`, and 10
+in `tests/test_memo_pdf.py`. One of those checks this very sentence: it counts
+the test functions across all three files and fails if the number quoted here
+drifts from them, which it did twice already.
 
 The guards were verified by control in both directions, each time by
 reintroducing the defect, observing the named test fail, then restoring and
@@ -456,3 +459,25 @@ After each restoration the suite returned to passing.
    a single crop that contained only seven, which is recorded here because the
    habit of overstating the scope of a check is the same error as overstating a
    result.
+8. `scripts/memo_pdf.py` asserted in its own docstring that
+   "test_memo_pdf.py exercises both" when no such file existed anywhere in the
+   repository or its history, and no test touched the converter at all. That is
+   a coverage claim with nothing measured behind it, the same class of error as
+   quoting an unmeasured test result. `tests/test_memo_pdf.py` now exists with
+   10 tests, and the docstring states what they actually check.
+9. That converter's first parser hung twice for 600 seconds before producing
+   any output. Its paragraph branch treated a bare backtick as the start of a
+   new block while only a TRIPLE backtick fence had a branch, so a paragraph
+   whose continuation line opens with an inline code span (this memo has nine)
+   consumed zero lines and the cursor never advanced. I initially described that
+   hang as a kernel stall, which was wrong: it was an infinite loop in code I
+   had written. The terminator set and the collection start are both fixed, and
+   a cursor-advance assertion now covers every branch, so a future non-consuming
+   branch raises with a line number instead of hanging.
+10. Table column widths mid-word-wrapped "SOURCED" as "SOURC ED", which reads as
+    a different provenance tag. The first fix estimated 4.0 pt per character,
+    which understates 6.8 pt Helvetica by 20 percent ("SOURCED" measures
+    34.00 pt, not 28.0), so the floor never bound. The second used measured
+    `stringWidth` but was then eroded by the width normalisation rescale. Floors
+    are now pinned through normalisation, and a test checks every column of
+    every table in this memo against its widest unbreakable word.
