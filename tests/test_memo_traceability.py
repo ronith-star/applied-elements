@@ -143,10 +143,11 @@ def test_memo_does_not_claim_the_yield_p10_is_the_npv_p10():
 def test_band_relative_notes_are_computed_not_asserted(rows):
     """A note claiming a threshold is below its band must actually be below it.
 
-    An earlier version hardcoded "below the ASSUMED band low end of 0.70" for
-    the implied flotation yield, while the solved value 0.7053 is INSIDE that
-    band. The note is now derived from the band, and this test compares every
-    such note against the input_band rows in the same CSV.
+    An earlier version hardcoded a "below the ASSUMED band low end" note for
+    the implied flotation yield, while the solved value is INSIDE that band.
+    The note is now derived from the band, and this test compares every such
+    note against the input_band rows in the same CSV, so the verdict in the
+    prose is checked against the numbers rather than asserted alongside them.
     """
     bands = {r["parameter"]: float(r["value"]) for r in rows
              if r["section"] == "input_band" and r["quantity"] == "low"}
@@ -207,9 +208,10 @@ def test_memo_reproduction_block_lists_every_script_that_writes_the_csv():
 def test_memo_quotes_no_pytest_wall_time():
     """A wall time cannot be guarded, so quoting one invites fabrication.
 
-    The memo once read "quoted from the run: `24 passed in 1.06s`" when no run
-    had produced that string: the count 24 came from a guard failure, and the
-    runtime was typed beside it. Counts are checkable; runtimes are not.
+    The memo once quoted a pytest line as verbatim run output when no run had
+    produced it: the count came from a guard failure and the runtime beside it
+    was typed because it looked plausible. Counts are checkable against the
+    files; runtimes are a property of the machine and are not.
     """
     text = MEMO.read_text()
     hits = re.findall(r"\d+ (?:passed|failed) in [\d.]+\s*s", text)

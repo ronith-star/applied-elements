@@ -32,7 +32,7 @@ MEMO = ROOT / "docs" / "decision-memo.md"
 
 
 def test_paragraph_continuing_with_an_inline_code_span_terminates():
-    """This exact shape hung the parser for 600 seconds, twice."""
+    """This exact shape hung the parser until the cursor guard was added."""
     md = ("Outputs: the file\n"
           "`docs/memo_numbers.csv`, one row per quantity, each with a tag.\n")
     flow = MP.build_flow(md)
@@ -138,7 +138,12 @@ def test_column_floor_fits_the_widest_word_in_every_memo_table():
 
 
 def test_measured_font_metrics_not_a_per_character_estimate():
-    """The first floor used 4.0 pt/char, 20 percent short for these strings."""
+    """The first floor used a 4.0 pt per character estimate, too short here.
+
+    The shortfall is asserted below rather than stated: the measured width of
+    the longest provenance tag must exceed what that estimate predicts, which
+    is why the first version of the column floor never bound.
+    """
     fs = MP.S["td"].fontSize
     true_w = stringWidth("SOURCED", "Helvetica", fs)
     assert true_w > 4.0 * len("SOURCED"), (

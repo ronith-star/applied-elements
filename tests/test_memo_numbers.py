@@ -37,9 +37,9 @@ def test_non_laboratory_costs_are_assumed_and_cite_no_fee_schedule():
     """The load-bearing guard the auditor's finding was about.
 
     A cost the script declares non-laboratory must be tagged ASSUMED and must
-    NOT name a laboratory in its note. Attaching 'Actlabs 2026 and Hazen July
-    2026 fee schedules' to the price or capex cost tells a reader those
-    figures came off a price list, and they did not.
+    NOT name a laboratory in its note. Attaching a fee-schedule provenance to
+    the price or capex cost tells a reader those figures came off a published
+    price list, and they did not: neither is a laboratory service at all.
     """
     for p in NON_LAB_PARAMS:
         tag, note = memo_run.COST_PROVENANCE[p]
@@ -55,7 +55,7 @@ def test_non_laboratory_costs_are_assumed_and_cite_no_fee_schedule():
 def test_flotation_cost_is_assumed_not_derived():
     """A SOURCED dollar figure standing in for a different test is judgement.
 
-    The 1,000 USD is a real Hazen July 2026 list price, but for a Bond ball
+    The 1000 USD is a real Hazen list price, but for a Bond ball
     mill grindability test, not a bench flotation mass-yield test. DERIVED
     would claim the number is an algebraic transform of a sourced value for
     the same quantity. The weaker tag governs.
@@ -63,6 +63,9 @@ def test_flotation_cost_is_assumed_not_derived():
     tag, note = memo_run.COST_PROVENANCE["mass_yield_flot"]
     assert tag == "ASSUMED"
     assert "proxy" in note.lower()
+    # The 1,000 USD figure named in the docstring, asserted here so the number
+    # in the prose is the number the code uses.
+    assert memo_run.MEASUREMENT_COSTS["mass_yield_flot"] == pytest.approx(1000.0)
 
 
 def test_sourced_and_derived_costs_name_their_schedule():
@@ -77,11 +80,17 @@ def test_sourced_and_derived_costs_name_their_schedule():
 def test_al_mean_cost_equals_its_stated_components():
     """The arithmetic in the note must reproduce the number in the dict.
 
-    Actlabs 2026: RX1 prep 12.40 USD, Code 4B2-Std 52.20 USD at the 11+
-    sample price. Both read from the fee schedule PDF in this session.
+    Actlabs: RX1 prep 12.40 USD, Code 4B2-Std 52.20 USD at the bulk price
+    tier. Both read from the fee schedule PDF in this session. The same code
+    at the small-order tier is 56.55 USD, and the campaign is costed at the
+    bulk tier because it runs 20 to 30 samples.
     """
     assert memo_run.MEASUREMENT_COSTS["al_mean_ppm"] == pytest.approx(
         12.40 + 52.20)
+    # The bulk tier must actually be the cheaper of the two sourced prices,
+    # otherwise costing the campaign at it would understate the denominator.
+    assert 52.20 < 56.55
+    assert memo_run.MEASUREMENT_COSTS["al_mean_ppm"] < 12.40 + 56.55
     assert memo_run.MEASUREMENT_COSTS["al_sigma_ppm"] == pytest.approx(
         12.40 + 5 * 52.20)
     assert memo_run.MEASUREMENT_COSTS["mass_yield_leach"] == pytest.approx(
