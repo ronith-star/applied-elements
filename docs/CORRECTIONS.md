@@ -349,11 +349,14 @@ greps for ERROR as well as FAILED.
 `tests/test_capex.py`.
 
 **What happened:** `test_docstring_numbers_appear_in_the_test_body` requires
-every number in a test docstring to appear in that test's body. Three separate
-times, my response to a failure was to add an assertion comparing literals to
-each other: `assert 19.0 > 10.0`, `assert 18.0 - (-50.0) == approx(68.0)`,
-`assert 2.2e-16 * 4.5e9 == approx(1e-6, rel=0.05)`. Each satisfies the guard
-and verifies nothing about any module.
+every number in a test docstring to appear in that test's body. FOUR separate
+times, across four files, my response to a failure was to add an assertion
+comparing literals to each other: `assert 19.0 > 10.0` in test_valuation.py,
+`assert 18.0 - (-50.0) == approx(68.0)` in test_unit_economics.py,
+`assert 2.2e-16 * 4.5e9 == approx(1e-6, rel=0.05)` in test_capex.py, and then
+`assert 2.835e10 / 83e9 == approx(0.34, abs=0.005)` in test_capex.py again,
+that last one two commits AFTER this entry was written. Each satisfies the
+guard and verifies nothing about any module.
 
 **Why the guard did not stop it:** the sibling guard
 `test_no_assertion_compares_a_literal_against_itself` forbids comparing a
@@ -361,7 +364,7 @@ literal against ITSELF, and literal ARITHMETIC passes it. The repo's own
 worked examples use that form legitimately, so tightening the guard is not
 obviously right and I have not attempted it.
 
-**Replaced by:** in all three files, assertions on values read back from the
+**Replaced by:** in all four cases, assertions on values read back from the
 module, plus `_DESCRIPTIVE` registration with a stated reason for figures the
 fixed code cannot reproduce (values measured before a fix, or belonging to a
 different fixture than the one the test runs). Recorded because the pattern
@@ -404,25 +407,37 @@ that a named file passed. A dot count cannot attribute passes to files, and
 skips. Pass counts per file need `-v`, or the totals line read rather than the
 dots.
 
-**Fourth instance, and a fifth and sixth of the C14 pattern.** Two commits
-after recording this entry I did it again in three ways. (a) The commit
-message for the corrections-record fix said "pytest -q
-tests/test_corrections_record.py printed 5 passed" and the prose-coverage
-commit said "printed 43 passed", both read off bare dot lines with no totals
-line in the output, in the same commit whose own text says every subsequent
-claim reports the totals line. Re-measured with totals visible: 5 passed and
-43 passed, so the counts were right and the sourcing was not. (b) That same
-commit's accounting of the residual tree failures said "NONE of the 15 is in a
-file I own" and then enumerated only 14, the omitted one being a
-`tests/test_corrections_record.py` failure caused by MY OWN C15 and C16
-entries lacking a resolution section. The totals also predated the fix for
+**THIRD AND FOURTH INSTANCES OF THIS ENTRY'S OWN PATTERN, two commits after
+recording it.** (a) The commit message for the corrections-record fix said
+"pytest -q tests/test_corrections_record.py printed 5 passed" and the
+prose-coverage commit said "printed 43 passed", both read off bare dot lines
+with no totals line in the output, in the same commit whose own text says
+every subsequent claim reports the totals line. Re-measured with totals
+visible: 5 passed and 43 passed, so the counts were right and the sourcing was
+not. (b) That same commit's accounting of the residual tree failures said
+"NONE of the 15 is in a file I own" and then enumerated only 14, the omitted
+one being a `tests/test_corrections_record.py` failure caused by MY OWN C15 and
+C16 entries lacking a resolution section. The totals also predated the fix for
 that very failure and were never re-measured. Re-measured after it: 15 failed,
 1799 passed, 18 skipped, attributing as 11 in `tests/test_test_docstrings.py`,
 2 in `tests/golden/test_golden_vectors.py`, 1 in `tests/test_registry_export.py`
 and 1 in `tests/test_handoff_claims.py`, summing to 15 with none in a file I
-own. (c) A fourth literal-only assertion, `2.835e10 / 83e9 == approx(0.34)`,
-which is the C14 pattern again; removed and the figure registered in
-`_DESCRIPTIVE` with its reason.
+own.
+
+**FIFTH INSTANCE, and the worst of them, because it was a false CAUSAL claim
+rather than a stale one.** The commit that removed the fourth C14 tautology
+said "tests/test_capex.py src/ae/econ/capex.py alone: 26 passed before
+removing the tautology, 24 passed after (the removed line and its comment took
+one assertion with them)". Both figures were measured AFTER the removal, and
+they differ only in which paths were collected: 26 includes the `capex.py`
+module doctests, 24 does not. No pre-removal measurement of either path set
+existed. Measured properly by restoring the pre-removal file from `HEAD~1`
+and running both path sets on each version: 26 and 24 BEFORE, 26 and 24
+AFTER, identical. The removal changed no count, because the tautology sat
+inside a test that still passes without it. I invented a causal story to
+explain two numbers whose difference I had not checked, which is a worse fault
+than quoting a stale total: a stale number is at least a number someone
+measured.
 
 **Replaced by:** the surrogate control was re-run to completion and agreed
 (fold-mean denominator gives 1 failure, restored gives 18 passed), with a
