@@ -424,11 +424,21 @@ class SizeLaw(str, enum.Enum):
 
 
 def _check_sizes(f80_um: float, p80_um: float) -> None:
-    """Physical sanity on a size pair. Assertions live here, not only in tests."""
+    """Physical sanity on a size pair. Assertions live here, not only in tests.
+
+    The f80 test previously read ``if f80_um <= 0.0`` with no finiteness clause,
+    which is not equivalent to the p80 test one line above it: ``nan <= 0.0`` is
+    False in IEEE 754, so a nan f80 passed the guard, ``p80 > f80`` was also
+    False, and Bond returned ``nan kWh/ton`` with no error. An inf f80 passed
+    for the same reason and returned exactly the work index, since the
+    ``f**-0.5`` term goes to zero. Both are refused now: in a flowsheet a
+    non-finite size is a missing measurement, and a plausible number returned
+    for a missing measurement is worse than an exception.
+    """
     if not math.isfinite(p80_um) or p80_um <= 0.0:
         raise ValueError(f"p80 must be finite and positive, got {p80_um}")
-    if f80_um <= 0.0:
-        raise ValueError(f"f80 must be positive, got {f80_um}")
+    if not math.isfinite(f80_um) or f80_um <= 0.0:
+        raise ValueError(f"f80 must be finite and positive, got {f80_um}")
     if p80_um > f80_um:
         raise ValueError(
             f"p80 ({p80_um} um) exceeds f80 ({f80_um} um): comminution cannot make "
@@ -436,8 +446,26 @@ def _check_sizes(f80_um: float, p80_um: float) -> None:
         )
 
 
+def _check_finite_constant(value: float, label: str) -> float:
+    """Reject a non-finite work index or law constant.
+
+    ``_positive_energy`` cannot serve here: ``nan < 0.0`` is False, so every
+    law in this module returned nan for a nan constant, and Bond returned
+    ``inf kWh/ton`` for an infinite work index. A nan specific energy multiplies
+    into a nan energy cost and a nan operating cost without ever raising.
+    """
+    if not math.isfinite(value):
+        raise ValueError(f"{label} must be finite, got {value}")
+    return value
+
+
 def _positive_energy(w: float, label: str) -> float:
-    """Second law guard: grinding consumes work, so specific energy is non-negative."""
+    """Second law guard: grinding consumes work, so specific energy is non-negative.
+
+    Note what this does NOT catch: ``nan < 0.0`` is False, so a nan reaches the
+    caller. Finiteness is checked by :func:`_check_finite_constant` on the way
+    in, not here on the way out.
+    """
     if w < 0.0:
         raise AssertionError(
             f"{label} returned negative specific energy ({w}), which would mean "
@@ -491,7 +519,7 @@ def bond_specific_energy(
     expected = convention.energy_unit
     if work_index.dimensionality != DIMS["specific_energy_mass"]:  # pragma: no cover
         raise AssertionError("dimensionality check above should have caught this")
-    wi_mag = float(work_index.to(expected).magnitude)
+    wi_mag = _check_finite_constant(float(work_index.to(expected).magnitude), "work index")
     if wi_mag < 0.0:
         raise ValueError(f"work index must be non-negative, got {wi_mag}")
     f = float(f80.to("um").magnitude)
@@ -585,6 +613,7 @@ def rittinger_specific_energy(
     ``kWh*um/metric_ton``, so that the product with a reciprocal length is a
     specific energy. The returned unit follows from the constant's unit.
     """
+    _check_finite_constant(float(constant.magnitude), "rittinger constant")
     f = float(f80.to("um").magnitude)
     p = float(p80.to("um").magnitude)
     _check_sizes(f, p)
@@ -603,6 +632,7 @@ def kick_specific_energy(
     :math:`\\ln(F_{80}/P_{80})` is dimensionless.
     """
     require_dimensionality(constant, "specific_energy_mass", "constant")
+    _check_finite_constant(float(constant.magnitude), "kick constant")
     f = float(f80.to("um").magnitude)
     p = float(p80.to("um").magnitude)
     _check_sizes(f, p)
@@ -621,10 +651,23 @@ def walker_specific_energy(
     three named laws can be exercised as one family, and so a fitted
     non-classical exponent (Hukki's observation that ``n`` drifts with size) can
     be used without a new function.
+
+    ``constant`` must carry units of specific energy times
+    :math:`\\mu m^{n-1}`, which is what makes the integral a specific energy.
+    The RESULT is checked against that dimensionality, not the constant, because
+    the required constant unit depends on the exponent and only the product is
+    constrained. This check was previously absent while Kick and Rittinger both
+    had it, so a Bond-unit constant (kWh/ton) used at n = 1.5 returned
+    8.205266807797946 carrying ``kilowatt_hour / micrometer ** 0.5 / ton``,
+    dimensionality ``[length]**1.5 / [time]**2`` against specific energy's
+    ``[length]**2 / [time]**2``. That magnitude is the same number Bond returns
+    for the same reduction, i.e. dimensionally wrong and numerically plausible,
+    which is the defect class hardest to see in a review.
     """
     f = float(f80.to("um").magnitude)
     p = float(p80.to("um").magnitude)
     _check_sizes(f, p)
+    _check_finite_constant(float(constant.magnitude), "walker constant")
     if exponent <= 0.0:
         raise ValueError(f"exponent must be positive, got {exponent}")
     if abs(exponent - 1.0) < 1e-12:
@@ -634,6 +677,7 @@ def walker_specific_energy(
         m = exponent - 1.0
         factor = (p ** -m - f ** -m) / m
         out = cast(Qty, constant * Q_(factor, f"um**{-m}"))
+    require_dimensionality(out, "specific_energy_mass", "walker result")
     _positive_energy(float(out.magnitude), "walker_specific_energy")
     return out
 
