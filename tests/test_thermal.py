@@ -199,11 +199,17 @@ def test_golden_cp_alpha_quartz_at_298() -> None:
       a            = 92.9
       bT           = -6.42e-4 x 298.15      = -0.19141230
       c/T^2        = -714900 / 88893.4225   = -8.04221482
-      d/sqrt(T)    = -716.1 / 17.2670496    = -41.47212290
+      d/sqrt(T)    = -716.1 / 17.2670206    = -41.47212290
       -----------------------------------------------------
       Cp                                    = 43.19424998 J/(mol K)
 
     Per unit mass: 43.19424998 / 0.0600843 = 718.894 J/(kg K).
+
+    sqrt(298.15) was written 17.2670496 before this revision. It is 17.2670206,
+    wrong in the sixth digit, and it does not reproduce the quotient on the
+    same line: -716.1/17.2670496 is -41.47205322, not -41.47212290. The
+    corrected root gives -41.47212290 exactly as written, so the quoted term
+    was right and only the intermediate was drifted. Both are asserted below.
     """
     cp = molar_heat_capacity(Polymorph.ALPHA_QUARTZ, Q_(298.15, "K"), include_landau=False)
     assert float(cp.magnitude) == pytest.approx(43.19424998, abs=1e-7)
@@ -218,6 +224,19 @@ def test_golden_cp_alpha_quartz_at_298() -> None:
     cs = specific_heat_capacity(Polymorph.ALPHA_QUARTZ, Q_(298.15, "K"),
                                 include_landau=False)
     assert float(cs.to("J/(kg*K)").magnitude) == pytest.approx(718.894, abs=1e-3)
+    assert a == pytest.approx(92.9, abs=1e-6)
+    assert b == pytest.approx(-6.42e-4, rel=1e-9)
+    assert c == pytest.approx(-714900, rel=1e-9)
+    assert d == pytest.approx(-716.1, abs=1e-6)
+    assert t * t == pytest.approx(88893.4225, abs=1e-4)
+    assert math.sqrt(t) == pytest.approx(17.2670206, abs=5e-8)
+    # The superseded root, measured as wrong rather than annotated: it does not
+    # reproduce the d/sqrt(T) term the same docstring line quotes.
+    assert abs(math.sqrt(t) - 17.2670496) > 1e-6
+    assert d / 17.2670496 == pytest.approx(-41.47205322, abs=5e-8)
+    assert d / math.sqrt(t) == pytest.approx(-41.47212290, abs=5e-8)
+    molar_mass = float(cp.magnitude) / float(cs.to("J/(kg*K)").magnitude)
+    assert molar_mass == pytest.approx(0.0600843, rel=1e-6)
 
 
 @pytest.mark.golden
@@ -230,8 +249,13 @@ def test_golden_landau_excess_heat_capacity_at_298() -> None:
 
     Cp_ex = T S_D / (2 Tc_0 Q^2)
           = 298.15 x 4.95 / (2 x 847 x 0.80498007)
-          = 1475.8425 / 1363.63627
+          = 1475.8425 / 1363.63624
           = 1.08228460 J/(mol K)
+    (the denominator was written 1363.63627 before this revision. The exact
+    product 2 x 847 x Q_0^2 is 1363.636252, and the quotients are NOT equal at
+    the eight digits quoted: 1475.8425/1363.63627 gives 1.08228457 against
+    1.08228460 for the corrected denominator, which is the value the model
+    returns and the test asserts. Both quotients are computed below.)
 
     So the ordering transition contributes 2.5 percent of the total Cp at room
     temperature, and the total is 43.19424998 + 1.08228460 = 44.27653458 J/(mol K).
@@ -246,6 +270,22 @@ def test_golden_landau_excess_heat_capacity_at_298() -> None:
 
     total = molar_heat_capacity(Polymorph.ALPHA_QUARTZ, Q_(298.15, "K"))
     assert float(total.magnitude) == pytest.approx(44.27653458, abs=1e-7)
+    diff = 847.0 - 298.15
+    assert diff == pytest.approx(548.85, abs=1e-6)
+    ratio = diff / 847.0
+    assert ratio == pytest.approx(0.64799291, abs=1e-8)
+    numerator = 298.15 * 4.95
+    assert numerator == pytest.approx(1475.8425, abs=1e-4)
+    denominator = 2.0 * 847.0 * q0 * q0
+    assert denominator == pytest.approx(1363.63624, abs=5e-5)
+    # The superseded denominator, measured: it misses the asserted Cp_ex in the
+    # eighth digit, which is why the digit was corrected rather than tolerated.
+    assert numerator / denominator == pytest.approx(1.08228460, abs=5e-9)
+    assert numerator / 1363.63627 == pytest.approx(1.08228457, abs=5e-9)
+    baseline = float(total.magnitude) - float(cp_ex.magnitude)
+    assert baseline == pytest.approx(43.19424998, abs=1e-7)
+    percent_contribution = float(cp_ex.magnitude) / float(total.magnitude) * 100.0
+    assert percent_contribution == pytest.approx(2.5, abs=0.1)
 
 
 @pytest.mark.golden
@@ -271,6 +311,16 @@ def test_golden_landau_excess_diverges_at_tc_and_vanishes_above() -> None:
     assert cp_ex > base
     assert float(landau_excess_heat_capacity(Q_(847.0, "K")).magnitude) == 0.0
     assert float(landau_excess_heat_capacity(Q_(1000.0, "K")).magnitude) == 0.0
+    num = (847.0 - 846.0) / 847.0
+    assert num == pytest.approx(0.00118064, abs=1e-8)
+    q_sq = q ** 2
+    assert q_sq == pytest.approx(0.03436041, abs=1e-8)
+    denom = 2.0 * 847.0 * q_sq
+    assert denom == pytest.approx(58.20653, abs=1e-5)
+    numerator = cp_ex * denom
+    assert numerator == pytest.approx(4187.7, abs=1e-1)
+    landau_a = numerator / 846.0
+    assert landau_a == pytest.approx(4.95, abs=5e-3)
 
 
 @pytest.mark.golden
@@ -310,6 +360,26 @@ def test_golden_integrated_enthalpy_quartz_298_to_1000() -> None:
     assert float(dh_total.magnitude) == pytest.approx(45312.2074, abs=1e-3)
     kwh_per_t = float(dh_total.magnitude) / M_SIO2 / 3.6e6 * 1000.0
     assert kwh_per_t == pytest.approx(209.484, abs=1e-3)
+    # Each term of the antiderivative at both limits, taken from the sourced Cp
+    # coefficients rather than retyped, so the hand-check verifies the table.
+    assert a == pytest.approx(92.9, abs=1e-9)
+    assert 0.5 * b == pytest.approx(-3.21e-4, abs=1e-9)
+    assert -c == pytest.approx(714900.0, abs=1e-6)
+    assert 2.0 * d == pytest.approx(-1432.2, abs=1e-9)
+    assert a * 1000.0 == pytest.approx(92900.0000, abs=1e-4)
+    assert 0.5 * b * 1000.0 ** 2 == pytest.approx(-321.0000, abs=1e-4)
+    assert -c / 1000.0 == pytest.approx(714.9000, abs=1e-4)
+    assert 2.0 * d * math.sqrt(1000.0) == pytest.approx(-45290.1406, abs=1e-3)
+    assert a * 298.15 == pytest.approx(27698.1350, abs=1e-3)
+    assert 0.5 * b * 298.15 ** 2 == pytest.approx(-28.5348, abs=1e-4)
+    assert -c / 298.15 == pytest.approx(2397.7863, abs=1e-4)
+    assert 2.0 * d * math.sqrt(298.15) == pytest.approx(-24729.8269, abs=1e-3)
+    # The per-mass conversion the docstring closes on, through the molar mass the
+    # module actually uses.
+    assert M_SIO2 == pytest.approx(0.0600843, abs=1e-9)
+    j_per_kg = float(dh_total.magnitude) / M_SIO2
+    assert j_per_kg == pytest.approx(754143.9, abs=1.0)
+    assert j_per_kg / 1.0e6 == pytest.approx(0.7541439, abs=1e-6)
 
 
 @pytest.mark.golden
@@ -328,6 +398,14 @@ def test_golden_inversion_enthalpy() -> None:
     per_kg = dh / M_SIO2
     assert per_kg == pytest.approx(44038.2, abs=1.0)
     assert per_kg / 3.6e6 * 1000.0 == pytest.approx(12.23, abs=0.01)
+    assert M_SIO2 == pytest.approx(0.0600843, abs=1e-6)
+    kj_per_kg = per_kg / 1000.0
+    assert kj_per_kg == pytest.approx(44.04, abs=0.01)
+    dh_sensible = float(integrated_enthalpy(
+        Polymorph.QUARTZ, Q_(298.15, "K"), Q_(1000.0, "K")).magnitude)
+    per_kg_sensible = dh_sensible / M_SIO2
+    kwh_per_tonne_sensible = per_kg_sensible / 3.6e6 * 1000.0
+    assert kwh_per_tonne_sensible == pytest.approx(209.0, rel=0.05)
 
 
 @pytest.mark.golden
@@ -362,6 +440,24 @@ def test_golden_fusion_path_enthalpy(ore, eta_unity) -> None:
     bal = fusion_energy(ore, step)
     assert bal.theoretical_kwh_per_tonne == pytest.approx(599.7, abs=0.1)
     assert float(bal.theoretical.to("MJ/kg").magnitude) == pytest.approx(2.159, abs=1e-3)
+    # The temperature span and the absolute-enthalpy arithmetic the docstring
+    # tabulates, derived from the phase enthalpies the model returns.
+    span_k = 1996.0 - 298.15
+    assert span_k == pytest.approx(1697.85, abs=1e-9)
+    assert float(h_q.magnitude) == pytest.approx(-921080.0 + 10360.0, abs=1.0)
+    dh_j = float(h_liq.magnitude) - float(h_q.magnitude)
+    assert dh_j == pytest.approx(129712.6, abs=1.0)
+    assert dh_j / 1000.0 == pytest.approx(129.71, abs=0.01)
+    # Per unit mass, then into industry units, through the module's molar mass.
+    assert M_SIO2 == pytest.approx(0.0600843, abs=1e-9)
+    j_per_kg = dh_j / M_SIO2
+    assert j_per_kg == pytest.approx(2158843.0, abs=20.0)
+    # 2158.8435 kJ/kg, which is the quoted 2158.8 to the five significant
+    # figures the prose carries, so the tolerance follows that rounding.
+    assert j_per_kg / 1000.0 == pytest.approx(2158.8, abs=0.05)
+    # kWh/tonne from MJ/kg: 1000 kg per tonne over 3.6 MJ per kWh.
+    kwh_per_t = j_per_kg / 1.0e6 * 1000.0 / 3.6
+    assert kwh_per_t == pytest.approx(bal.theoretical_kwh_per_tonne, rel=1e-6)
 
 
 @pytest.mark.golden
@@ -386,6 +482,34 @@ def test_golden_quench_heat_rejection(ore) -> None:
     assert float(q.to("kJ/kg").magnitude) == pytest.approx(955.4, abs=0.1)
     assert float(rate.to("K/s").magnitude) == pytest.approx(14.5833, abs=1e-4)
     assert (1173.15 - 298.15) / 60.0 == pytest.approx(14.5833, abs=1e-4)
+    # Every term of the antiderivative at the hot limit, plus the Landau term and
+    # the sum, recomputed from the sourced coefficients rather than restated.
+    a, b, c, d = CP_COEFFICIENTS[Polymorph.QUARTZ].raw
+    assert a * 1173.15 == pytest.approx(108985.635, abs=1e-3)
+    assert 0.5 * b * 1173.15 ** 2 == pytest.approx(-441.786, abs=1e-3)
+    assert -c / 1173.15 == pytest.approx(609.385, abs=1e-3)
+    assert 2.0 * d * math.sqrt(1173.15) == pytest.approx(-49054.679, abs=1e-3)
+    f_hot = (a * 1173.15 + 0.5 * b * 1173.15 ** 2 - c / 1173.15
+             + 2.0 * d * math.sqrt(1173.15))
+    assert f_hot == pytest.approx(60098.554, abs=1e-3)
+    f_cold = (a * 298.15 + 0.5 * b * 298.15 ** 2 - c / 298.15
+              + 2.0 * d * math.sqrt(298.15))
+    assert f_cold == pytest.approx(5337.560, abs=1e-3)
+    base_j = f_hot - f_cold
+    assert base_j == pytest.approx(54760.995, abs=1e-3)
+    landau_j = float((landau_excess_enthalpy(Q_(1173.15, "K"))
+                      - landau_excess_enthalpy(Q_(298.15, "K"))).magnitude)
+    assert landau_j == pytest.approx(2646.008, abs=1e-3)
+    total_j = base_j + landau_j
+    assert total_j == pytest.approx(57407.003, abs=1e-2)
+    # Per unit mass, through the module's molar mass.
+    assert M_SIO2 == pytest.approx(0.0600843, abs=1e-9)
+    assert total_j / M_SIO2 == pytest.approx(955441.0, abs=200.0)
+    # The quench span in degC and K, and the mean rate over 60 s.
+    span_k = 1173.15 - 298.15
+    assert span_k == pytest.approx(875.0, abs=1e-9)
+    assert 1173.15 - 273.15 == pytest.approx(900.0, abs=1e-9)
+    assert 298.15 - 273.15 == pytest.approx(25.0, abs=1e-9)
 
 
 @pytest.mark.golden
@@ -461,6 +585,14 @@ def test_benchmark_theoretical_melt_energy_against_lbnl(ore, eta_unity) -> None:
         f"model floor {model_kwh_per_t:.1f} kWh/tonne should sit modestly below the "
         f"soda-lime batch figure {lit_kwh_per_t:.1f}; got {error_pct:+.2f} percent"
     )
+    step_j = 2.2 * mmbtu_j
+    assert step_j == pytest.approx(2.3211229e9, rel=1e-6)
+    j_per_kg = step_j / short_ton_kg
+    assert j_per_kg == pytest.approx(2558600, rel=1e-5)
+    mj_per_kg = j_per_kg / 1e6
+    assert mj_per_kg == pytest.approx(2.5586, abs=1e-4)
+    assert model_kwh_per_t == pytest.approx(599.7, abs=0.1)
+    assert error_pct == pytest.approx(-15.6, abs=0.1)
 
 
 @pytest.mark.benchmark
@@ -512,6 +644,15 @@ def test_benchmark_electric_melter_efficiency_against_lbnl(ore) -> None:
 
     assert 10.0 < eta_specialty < 33.0
     assert 40.0 < eta_soa < 100.0
+    low_range = 8.9 * mmbtu_j / short_ton_kg / 3.6e6 * 1000.0
+    high_range = 11.6 * mmbtu_j / short_ton_kg / 3.6e6 * 1000.0
+    assert low_range == pytest.approx(2875.2, abs=0.1)
+    assert high_range == pytest.approx(3747.4, abs=0.1)
+    soa_800 = 800.0 / (short_ton_kg / 1000.0)
+    assert soa_800 == pytest.approx(881.8, abs=0.1)
+    assert floor == pytest.approx(599.7, abs=0.1)
+    assert eta_specialty == pytest.approx(18.0, abs=0.1)
+    assert eta_soa == pytest.approx(69.7, abs=0.1)
 
 
 @pytest.mark.benchmark
@@ -543,6 +684,7 @@ def test_benchmark_quartz_cp_against_dulong_petit() -> None:
           f"\n  error: {error_pct:+.2f} percent (must be negative: a solid approaches "
           f"the limit from below)")
     assert -15.0 < error_pct < 0.0
+    assert error_pct == pytest.approx(-7.93, abs=0.01)
 
 
 @pytest.mark.benchmark
@@ -577,6 +719,15 @@ def test_benchmark_transition_enthalpies_are_small_and_positive() -> None:
         assert per_mol == pytest.approx(expected, abs=5e-3)
         assert per_mol > 0.0, f"{label} must absorb heat on heating (second law)"
         assert per_mol < 15.0, f"{label} should be a few kJ/mol, not a fusion-scale value"
+    dh_qt = specific_transition_enthalpy(rows[0][1], rows[0][2], Q_(rows[0][3], "K"), allow_extrapolation=True)
+    kjkg_qt = float(dh_qt.to("kJ/kg").magnitude)
+    assert kjkg_qt == pytest.approx(45.9, abs=0.05)
+    dh_qc = specific_transition_enthalpy(rows[1][1], rows[1][2], Q_(rows[1][3], "K"), allow_extrapolation=True)
+    kjkg_qc = float(dh_qc.to("kJ/kg").magnitude)
+    assert kjkg_qc == pytest.approx(50.9, abs=0.05)
+    dh_cl = specific_transition_enthalpy(rows[2][1], rows[2][2], Q_(rows[2][3], "K"), allow_extrapolation=True)
+    kjkg_cl = float(dh_cl.to("kJ/kg").magnitude)
+    assert kjkg_cl == pytest.approx(150.9, abs=0.05)
 
 
 # --------------------------------------------------------------------------------------

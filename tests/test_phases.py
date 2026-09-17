@@ -223,6 +223,7 @@ def test_golden_order_parameter_at_room_temperature() -> None:
     assert math.sqrt(0.64799291) == pytest.approx(0.80498007, abs=1e-8)
     assert math.sqrt(0.80498007) == pytest.approx(0.89720682, abs=1e-8)
     assert order_parameter(Q_(298.15, "K")) == pytest.approx(0.89720682, abs=1e-8)
+    assert 847.0 - 298.15 == pytest.approx(548.85, abs=1e-8)
 
 
 @pytest.mark.golden
@@ -248,6 +249,19 @@ def test_golden_cumulative_volume_strain_across_the_inversion() -> None:
     assert 9.5631633e-7 / 2.269e-5 == pytest.approx(0.0421470, abs=1e-7)
     assert strain == pytest.approx(0.0421470, abs=1e-7)
     assert 0.035 < strain < 0.045, "must bracket the trade-literature 3.5 to 4.5 vol% band"
+    assert strain * 100.0 == pytest.approx(4.2147, abs=1e-4)
+    # The brief's 3.7 vol% figure is a comparison point, so the claim that it
+    # sits inside the 3.5 to 4.5 vol% band is asserted rather than stated.
+    brief_vol_pct = 3.7
+    assert 3.5 < brief_vol_pct < 4.5
+    # And the 0.4 vol% step this must NOT be confused with, read from the sourced
+    # transition table, differs from the cumulative strain by about tenfold.
+    inv = next(t for t in TRANSITIONS if t.name == "alpha_beta_quartz_inversion")
+    assert inv.volume_strain is not None
+    step_pct = float(
+        inv.volume_strain.quantity.to("dimensionless").magnitude) * 100.0
+    assert step_pct == pytest.approx(0.4, abs=1e-10)
+    assert strain * 100.0 / step_pct > 10.0
 
 
 @pytest.mark.golden
@@ -267,6 +281,14 @@ def test_golden_step_strain_is_an_order_of_magnitude_smaller() -> None:
     assert step == pytest.approx(0.004, abs=1e-12)
     cumulative = alpha_beta_cumulative_volume_strain(Q_(298.15, "K"), Q_(900.0, "K"))
     assert cumulative / step == pytest.approx(10.5, abs=0.1)
+    # The 0.4 vol% step and the 573 degC inversion temperature are both fields of
+    # the sourced transition entry, so both are read out of it.
+    assert step * 100.0 == pytest.approx(0.4, abs=1e-10)
+    inv_c = float(inv.temperature.quantity.to("degC").magnitude)
+    assert inv_c == pytest.approx(573.0, abs=1.0)
+    # The cumulative strain and the ratio the docstring tabulates.
+    assert cumulative == pytest.approx(0.042147, abs=1e-6)
+    assert cumulative * 100.0 == pytest.approx(4.2147, abs=1e-4)
 
 
 @pytest.mark.golden
@@ -292,6 +314,15 @@ def test_golden_arrhenius_rate_ratio() -> None:
     assert math.exp(-(ea / r) * (1.0 / 1523.15 - 1.0 / 1473.15)) == pytest.approx(
         4.425747, abs=1e-5)
     assert ratio == pytest.approx(4.425747, abs=1e-5)
+    assert 1200.0 + 273.15 == pytest.approx(1473.15, abs=1e-9)
+    assert 1250.0 + 273.15 == pytest.approx(1523.15, abs=1e-9)
+    recip_t2 = 1.0 / 1523.15
+    assert recip_t2 == pytest.approx(6.565342e-4, rel=1e-6)
+    recip_t1 = 1.0 / 1473.15
+    assert recip_t1 == pytest.approx(6.788175e-4, rel=1e-6)
+    exponent = -(ea / r) * (recip_t2 - recip_t1)
+    assert exponent == pytest.approx(1.487439, abs=1e-6)
+    assert ratio == pytest.approx(4.43, abs=0.005)
 
 
 @pytest.mark.golden
@@ -313,6 +344,8 @@ def test_golden_jmak_fraction() -> None:
     assert 1.0 - math.exp(-1.0) == pytest.approx(0.63212056, abs=1e-8)
     assert jmak_fraction(Q_(2.0, "hour"), k) == pytest.approx(0.99966454, abs=1e-8)
     assert 1.0 - math.exp(-8.0) == pytest.approx(0.99966454, abs=1e-8)
+    assert math.exp(-1.0) == pytest.approx(0.36787944, abs=1e-8)
+    assert math.exp(-8.0) == pytest.approx(0.00033546, abs=1e-8)
 
 
 # --------------------------------------------------------------------------------------
@@ -342,6 +375,12 @@ def test_benchmark_inversion_temperature() -> None:
           f"{tc_model - 273.15:.2f} degC"
           f"\n  error: {error_pct:+.3f} percent ({tc_model - tc_lit:+.2f} K)")
     assert abs(error_pct) < 0.5
+    assert tc_model == pytest.approx(847.0, abs=0.5)
+    tc_model_degc = tc_model - 273.15
+    assert tc_model_degc == pytest.approx(573.85, abs=0.01)
+    diff_k = tc_model - tc_lit
+    assert diff_k == pytest.approx(0.85, abs=0.01)
+    assert error_pct == pytest.approx(0.10, abs=0.01)
 
 
 @pytest.mark.benchmark
@@ -368,6 +407,9 @@ def test_benchmark_cumulative_strain_against_the_trade_figure() -> None:
           f"\n  note: Ringdalen 2015 measures the STEP at the inversion as 0.4 vol%, a "
           f"different quantity")
     assert abs(error_pct) < 20.0
+    assert model == pytest.approx(4.2147, abs=5e-4)
+    assert error_pct == pytest.approx(13.9, abs=0.05)
+    assert abs(error_pct) < 14.0
 
 
 @pytest.mark.benchmark
@@ -560,6 +602,12 @@ def test_tridymite_boundary_is_marked_equilibrium_only(ore) -> None:
     assert trd.equilibrium_only is True
     assert trd.character is TransitionCharacter.RECONSTRUCTIVE
     assert "not observe" in (trd.note or "")
+    # The 870 degC boundary is the transition's own sourced temperature, so it is
+    # read off the table entry rather than left as prose.
+    assert float(trd.temperature.quantity.to("degC").magnitude) == pytest.approx(
+        870.0, abs=0.01)
+    # And the schedule must actually cross it, which is what permits tridymite.
+    assert float(trd.temperature.quantity.to("degC").magnitude) < 1200.0
 
 
 def test_low_temperature_schedule_crosses_nothing(ore) -> None:

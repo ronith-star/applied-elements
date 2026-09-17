@@ -41,6 +41,36 @@ _DESCRIPTIVE: set[tuple[str, str]] = {
     ("test_capex.py", "18"), ("test_capex.py", "97"),
     ("test_capex.py", "4"), ("test_capex.py", "5"), ("test_capex.py", "3"),
     ("test_capex.py", "1"), ("test_capex.py", "2"),
+    # refers to equation (1) mentioned in the docstring, a section/equation reference, not a computed value
+    ("test_thermal.py", "1"),
+    # part of a DOI identifier for the cited LBNL report, not a computed quantity
+    ("test_thermal.py", "10.2172"),
+    # part of a DOI identifier for the cited LBNL report, not a computed quantity
+    ("test_thermal.py", "927883"),
+    # publication year of the cited Galitsky and Worrell reference, not a computed quantity
+    ("test_thermal.py", "2008"),
+    # Publication year of the Ringdalen citation, not a computed quantity.
+    ("test_phases.py", "2015"),
+    # Publication year of the Ringdalen citation, not a computed quantity.
+    ("test_phases.py", "2015"),
+    # Citation year for Warden et al. reference, not a computed quantity.
+    ("test_phases.py", "2024"),
+    # Citation year for Ringdalen reference, not a computed quantity.
+    ("test_phases.py", "2015"),
+    # Publication year of the cited Ringdalen literature reference, not a computed quantity.
+    ("test_psd.py", "2015"),
+    # Publication year of the cited Alderliesten reference, not a computed quantity.
+    ("test_psd.py", "2013"),
+    # Publication year of the Ringdalen citation, not a computed quantity.
+    ("test_phases.py", "2015"),
+    # Equation reference to equation (8) in the source material, not a computed value.
+    ("test_psd.py", "8"),
+    # fragment of the DOI 10.1007/s11837-014-1149-y citation identifier, not a computed value
+    ("test_psd.py", "014"),
+    # DOI prefix of the Ringdalen 2015 citation identifier, not a computed value
+    ("test_psd.py", "10.1007"),
+    # fragment of the DOI 10.1007/s11837-014-1149-y citation identifier, not a computed value
+    ("test_psd.py", "1149"),
     # NIST Special Publication document number, a standard identifier reference, not a computed quantity
     ("test_comminution.py", "811"),
     # Equation number reference in the source citation, not a computed value.

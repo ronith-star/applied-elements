@@ -94,6 +94,8 @@ def test_sauter_mean_is_the_ratio_of_the_third_to_second_moment(ln) -> None:
     ratio = m3 / m2
     closed = float(ln.sauter_d32().to("m").magnitude)
     assert ratio == pytest.approx(closed, rel=1e-12)
+    exponent_coeff = 3.0**2 - 2.0**2
+    assert exponent_coeff == pytest.approx(5.0, rel=1e-12)
 
 
 def test_diameters_are_lengths(ln, rr) -> None:
@@ -117,12 +119,22 @@ def test_golden_lognormal_weighted_medians() -> None:
 
     s = ln(1.5) = 0.40546511, so s^2 = 0.16440195.
 
-      d_ga = d_gn exp(2 s^2) = 10 x exp(0.32880390) = 10 x 1.38930540 = 13.89305 um
-      d_gv = d_gn exp(3 s^2) = 10 x exp(0.49320585) = 10 x 1.63755760 = 16.37558 um
+      d_ga = d_gn exp(2 s^2) = 10 x exp(0.32880391) = 10 x 1.38930540 = 13.89305 um
+      d_gv = d_gn exp(3 s^2) = 10 x exp(0.49320586) = 10 x 1.63755760 = 16.37558 um
       d_32 = d_gn exp(2.5 s^2) = 10 x exp(0.41100488) = 10 x 1.50833272 = 15.08333 um
 
     The volume median is 64 percent larger than the count median for this perfectly
     ordinary width, which is the whole reason the weighting basis must be stated.
+
+    The 2 s^2 and 3 s^2 exponents were written 0.32880390 and 0.49320585 before
+    this revision, each low by one in the eighth decimal. Both came from
+    multiplying the ROUNDED s^2 = 0.16440195 rather than s^2 itself: 2 and 3
+    times ln(1.5)^2 are 0.32880391 and 0.49320586. The exp() values they give
+    differ in the eighth digit (exp(0.49320585) = 1.63755758 against
+    1.63755760 for the exact exponent), so the quoted 1.63755760 belongs to
+    the corrected exponent. The diameters at five decimals, 13.89305 and
+    16.37558 um, are unaffected either way. Both exponents and both exp values
+    are asserted below.
     """
     s = math.log(1.5)
     assert s == pytest.approx(0.40546511, abs=1e-8)
@@ -140,6 +152,15 @@ def test_golden_lognormal_weighted_medians() -> None:
         16.37558, abs=1e-5)
     assert float(p.sauter_d32().to("um").magnitude) == pytest.approx(15.08333, abs=1e-5)
     assert 16.37558 / 10.0 == pytest.approx(1.637558, abs=1e-6)
+    assert 2.0 * s * s == pytest.approx(0.32880391, abs=5e-9)
+    assert 3.0 * s * s == pytest.approx(0.49320586, abs=5e-9)
+    # The superseded exponents came from multiplying the ROUNDED s^2, and
+    # each is low by 1e-8; the exp() values they give are unchanged at the
+    # eight digits the docstring quotes, which is why only the exponents moved.
+    assert 3.0 * 0.16440195 == pytest.approx(0.49320585, abs=5e-9)
+    assert math.exp(0.49320585) == pytest.approx(1.63755758, abs=5e-9)
+    assert math.exp(3.0 * s * s) == pytest.approx(1.63755760, abs=5e-9)
+    assert 2.5 * s * s == pytest.approx(0.41100488, abs=1e-8)
 
 
 @pytest.mark.golden
@@ -178,6 +199,10 @@ def test_golden_weighting_conversion_relationship_pinned() -> None:
     assert float(fwd.to("um").magnitude) == pytest.approx(d_gv, rel=1e-12)
     area = convert_lognormal_median(Q_(d_gv, "um"), 1.5, Weighting.VOLUME, Weighting.AREA)
     assert float(area.to("um").magnitude) == pytest.approx(d_ga, rel=1e-12)
+    assert s2 == pytest.approx(0.16440195, abs=1e-8)
+    assert d_ga == pytest.approx(13.89305, abs=1e-5)
+    assert d32 == pytest.approx(15.08333, abs=1e-5)
+    assert d_gv == pytest.approx(16.37558, abs=1e-5)
 
 
 @pytest.mark.golden
@@ -202,6 +227,11 @@ def test_golden_lognormal_quantiles_and_span() -> None:
     assert float(p.quantile(0.9).to("um").magnitude) == pytest.approx(27.53383, abs=1e-5)
     assert p.span() == pytest.approx(1.086652, abs=1e-6)
     assert (27.53383 - 9.73927) / 16.375576 == pytest.approx(1.086652, abs=1e-6)
+    assert s == pytest.approx(0.40546511, abs=1e-8)
+    assert -Z_10 == pytest.approx(1.28155157, abs=1e-8)
+    d10 = float(p.quantile(0.1).to("um").magnitude)
+    d90 = float(p.quantile(0.9).to("um").magnitude)
+    assert (d90 - d10) == pytest.approx(17.79456, abs=1e-5)
 
 
 @pytest.mark.golden
@@ -224,6 +254,8 @@ def test_golden_specific_surface_area() -> None:
     s = specific_surface_area(Q_(d32, "m"), QUARTZ_DENSITY)
     assert float(s.to("m**2/kg").magnitude) == pytest.approx(150.1095, abs=1e-4)
     assert float(s.to("m**2/g").magnitude) == pytest.approx(0.1501, abs=1e-4)
+    geometric_estimate = float(s.to("m**2/g").magnitude)
+    assert 0.38 / 3.0 <= geometric_estimate <= 0.47 / 3.0
 
 
 @pytest.mark.golden
@@ -251,6 +283,10 @@ def test_golden_rosin_rammler_diameters() -> None:
     assert float(p.sauter_d32().to("um").magnitude) == pytest.approx(15.674072, abs=1e-6)
     assert p.cumulative_undersize(Q_(20.0, "um")) == pytest.approx(0.6321206, abs=1e-7)
     assert 1.0 - math.exp(-1.0) == pytest.approx(0.6321206, abs=1e-7)
+    assert 1.0 / 3.5 == pytest.approx(0.28571429, abs=1e-8)
+    assert math.log(2.0) == pytest.approx(0.69314718, abs=1e-8)
+    assert 1.0 - 1.0 / 3.5 == pytest.approx(0.71428571, abs=1e-8)
+    assert 1.0 + 1.0 / 3.5 == pytest.approx(1.28571429, abs=1e-8)
 
 
 # --------------------------------------------------------------------------------------
@@ -299,6 +335,11 @@ def test_benchmark_geometric_ssa_against_ringdalen_bet() -> None:
             "the geometric model must understate BET by orders of magnitude on lump; if "
             "it did not, equation (8) would be being misread as a BET predictor"
         )
+    assert float(bet_mid.to("m**2/kg").magnitude) == pytest.approx(420.0, rel=1e-3)
+    geom_1mm = specific_surface_area(Q_(1.0, "mm"), QUARTZ_DENSITY)
+    geom_1mm_m2_g = float(geom_1mm.to("m**2/g").magnitude)
+    order_of_magnitude = math.floor(math.log10(geom_1mm_m2_g))
+    assert order_of_magnitude == -3
 
 
 @pytest.mark.benchmark
@@ -347,6 +388,8 @@ def test_benchmark_rosin_rammler_against_lognormal_sauter_mean() -> None:
         "two closed-form Sauter means matched on median and span must agree to well "
         "within a factor of two; a larger gap indicates an algebra error"
     )
+    assert target_median == pytest.approx(18.011569, abs=1e-6)
+    assert rr_d32 == pytest.approx(15.674072, abs=1e-6)
 
 
 # --------------------------------------------------------------------------------------
