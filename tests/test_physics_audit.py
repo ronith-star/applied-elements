@@ -69,7 +69,24 @@ from ae.physics.packing import (
     furnas_max_packing,
     krieger_dougherty_relative_viscosity,
 )
-from ae.physics.reagents import Acid, reagent_balance
+from ae.physics.chlorination import CHLORIDES, vapour_pressure
+from ae.physics.leaching import Regime, conversion, g_of_conversion
+from ae.physics.phases import (
+    alpha_beta_cumulative_volume_strain,
+    excess_molar_volume,
+)
+from ae.physics.psd import Z_10, Z_90, LogNormalPSD, Weighting, _norm_ppf
+from ae.physics.reagents import (
+    LEACH_REACTIONS,
+    Acid,
+    check_reaction_balance,
+    reagent_balance,
+)
+from ae.physics.thermal import (
+    M_SIO2,
+    landau_excess_enthalpy,
+    landau_excess_heat_capacity,
+)
 from ae.physics.separation import (
     PropertyBasis,
     imperfection,
@@ -623,3 +640,166 @@ def test_liberation_size_refuses_a_target_exposure_it_cannot_bound() -> None:
     assert liberation_size(Q_(20.0, "um"), 1.0).to("um").magnitude == pytest.approx(
         20.0, rel=1e-12
     )
+
+
+# --- pins on behaviour verified correct during this audit -------------------
+
+
+def test_pin_landau_excess_heat_capacity_is_the_derivative_of_its_enthalpy() -> None:
+    """Cp_ex must equal dH_ex/dT, checked by central difference, not by algebra.
+
+    The two are separate implementations of the same thermodynamics, so their
+    agreement is a real consistency check on the Landau treatment. Measured
+    ratio 1.000000 at every temperature below T_c tested here.
+    """
+    for t in (300.0, 500.0, 700.0, 800.0, 840.0):
+        h = 1e-4
+        num = (
+            landau_excess_enthalpy(Q_(t + h, "K")).to("J/mol").magnitude
+            - landau_excess_enthalpy(Q_(t - h, "K")).to("J/mol").magnitude
+        ) / (2 * h)
+        cp = landau_excess_heat_capacity(Q_(t, "K")).to("J/(mol*K)").magnitude
+        assert float(num) == pytest.approx(float(cp), rel=1e-6)
+
+
+def test_pin_landau_inversion_energy_and_its_sign() -> None:
+    """The alpha to beta inversion energy is +2646 J/mol, not -4104.
+
+    H_ex(T_c) - H_ex(298.15 K) = 2646.0077329267015 J/mol = 44.03825513364891
+    J/g, i.e. 44.0 kJ/kg, and it must be POSITIVE: heating through the inversion
+    absorbs energy. Pinned with the sign-flipped value computed alongside it,
+    because the thermal module docstring records that sign error as a defect
+    that reached a previous build, and -4103.991664073273 J/mol is what the
+    flipped convention gives.
+    """
+    h_tc = landau_excess_enthalpy(Q_(847.0, "K")).to("J/mol").magnitude
+    h_298 = landau_excess_enthalpy(Q_(298.15, "K")).to("J/mol").magnitude
+    delta = float(h_tc) - float(h_298)
+    assert delta == pytest.approx(2646.0077329267015, rel=1e-9)
+    assert delta > 0.0, "heating through the inversion must absorb energy"
+    # In kJ/kg, against the 44.0 the module docstring quotes. Uses the module's
+    # own M_SIO2 (0.0600843 kg/mol): a hand-typed 60.083 g/mol gives
+    # 44.03920797774248 and does not reproduce the published figure.
+    per_kg = delta / 1000.0 / M_SIO2
+    assert per_kg == pytest.approx(44.03825513364891, rel=1e-9)
+
+
+def test_pin_excess_molar_volume_falls_to_zero_at_tc_and_stays_there() -> None:
+    """V_ex must decrease monotonically to exactly 0 at T_c and remain 0 above.
+
+    Q = 0 above T_c by construction, so V_ex = V_D Q^2 must be identically zero
+    there rather than small. Measured: 0.956316325430929 cm3/mol at 298.15 K,
+    0.7603953858731278 at 500 K, 0.4949181750552307 at 700 K,
+    0.04082016308499654 at 846 K, exactly 0.0 at 847 K and at 900 K.
+    """
+    vals = [
+        float(excess_molar_volume(Q_(t, "K")).to("cm**3/mol").magnitude)
+        for t in (298.15, 500.0, 700.0, 846.0, 847.0, 900.0)
+    ]
+    assert vals[0] == pytest.approx(0.956316325430929, rel=1e-9)
+    assert vals[1] == pytest.approx(0.7603953858731278, rel=1e-9)
+    assert vals[2] == pytest.approx(0.4949181750552307, rel=1e-9)
+    assert vals[3] == pytest.approx(0.04082016308499654, rel=1e-9)
+    assert vals[4] == 0.0
+    assert vals[5] == 0.0
+    for lo, hi in zip(vals, vals[1:], strict=False):
+        assert hi <= lo, "excess volume cannot rise with temperature"
+    # Antisymmetry of the cumulative strain between the same two endpoints.
+    fwd = alpha_beta_cumulative_volume_strain(Q_(298.15, "K"), Q_(900.0, "K"))
+    rev = alpha_beta_cumulative_volume_strain(Q_(900.0, "K"), Q_(298.15, "K"))
+    assert float(fwd) == pytest.approx(0.04214703946368132, rel=1e-9)
+    assert float(rev) == pytest.approx(-0.04214703946368132, rel=1e-9)
+
+
+def test_pin_product_layer_inversion_is_exact_not_iterative() -> None:
+    """The trigonometric inversion of g(X) must return to machine precision.
+
+    Product-layer control inverts a cubic, and this module solves it in closed
+    form rather than by iteration. Residuals g(X(t)) - t/tau measured at
+    tau = 100 s: +1.613e-16 at t = 1e-6 s, +4.528e-16 at 1 s, +2.220e-16 at
+    50 s, +1.998e-15 at 99 s and -3.664e-15 at 99.9 s. The bound below is 1e-14,
+    which is the observed scale near the endpoint and not a loose tolerance
+    chosen to pass: the residual grows toward X = 1 because g''(X) diverges
+    there, so a single tight bound across the whole domain would be the wrong
+    claim.
+    """
+    tau = Q_(100.0, "s")
+    for t_s in (1e-6, 1.0, 50.0, 99.0, 99.9):
+        x = conversion(Regime.PRODUCT_LAYER, Q_(t_s, "s"), tau)
+        g = g_of_conversion(Regime.PRODUCT_LAYER, float(x))
+        residual = float(np.asarray(g).ravel()[0]) - t_s / 100.0
+        assert abs(residual) < 1e-14, f"residual {residual:.3e} at t = {t_s} s"
+        if t_s <= 50.0:
+            assert abs(residual) < 1e-15, (
+                f"away from the endpoint the inversion is tighter still: "
+                f"residual {residual:.3e} at t = {t_s} s"
+            )
+    # At and beyond tau the conversion is complete and clamped, not extrapolated.
+    assert float(conversion(Regime.PRODUCT_LAYER, Q_(100.0, "s"), tau)) == 1.0
+    assert float(conversion(Regime.PRODUCT_LAYER, Q_(1000.0, "s"), tau)) == 1.0
+
+
+def test_pin_psd_span_is_independent_of_the_reporting_basis() -> None:
+    """(d90 - d10)/d50 must not depend on whether the basis is number or volume.
+
+    A lognormal's span is a property of sigma_g alone (the Hatch-Choate shift
+    multiplies every quantile by the same factor), so the three weightings must
+    agree. Measured for sigma_g = 1.5: 1.0866522072246398 on number,
+    1.08665220722464 on area, 1.0866522072246396 on volume. The module's own
+    tabulated quantiles Z_90 = 1.2815515655446004 and Z_10 = -1.2815515655446004
+    close the closed form.
+    """
+    psd = LogNormalPSD(
+        d_gn=Q_(10.0, "um"), sigma_g=1.5, density=Q_(2650.0, "kg/m**3")
+    )
+    spans = [float(psd.span(w)) for w in
+             (Weighting.NUMBER, Weighting.AREA, Weighting.VOLUME)]
+    assert spans[0] == pytest.approx(1.0866522072246398, rel=1e-12)
+    for sp in spans:
+        assert sp == pytest.approx(spans[0], rel=1e-9)
+    assert Z_90 == pytest.approx(1.2815515655446004, rel=1e-12)
+    assert Z_10 == pytest.approx(-Z_90, rel=1e-12)
+    assert _norm_ppf(0.90) == pytest.approx(Z_90, rel=1e-12)
+    closed = math.exp(Z_90 * math.log(1.5)) - math.exp(Z_10 * math.log(1.5))
+    assert spans[0] == pytest.approx(closed, rel=1e-9)
+
+
+def test_pin_vapour_pressure_is_one_atmosphere_at_the_boiling_point() -> None:
+    """TiCl4's Clausius-Clapeyron curve must pass through 101325 Pa at T_b.
+
+    T_b = 136.45 degC is SOURCED (PubChem CID 24193, at 760 mm Hg), so the
+    integrated curve passing exactly through one atmosphere there is a check on
+    the integration constant rather than a coincidence. Above T_b the value is
+    capped and the flag says so, which is pinned here so the cap is not later
+    read as a physical plateau.
+    """
+    p_tb, capped_tb = vapour_pressure(CHLORIDES["TiCl4"], Q_(136.45, "degC"))
+    assert float(p_tb.to("Pa").magnitude) == pytest.approx(101325.0, rel=1e-9)
+    assert not capped_tb
+    p_25, capped_25 = vapour_pressure(CHLORIDES["TiCl4"], Q_(25.0, "degC"))
+    assert float(p_25.to("Pa").magnitude) == pytest.approx(1.905905e03, rel=1e-5)
+    assert not capped_25
+    p_500, capped_500 = vapour_pressure(CHLORIDES["TiCl4"], Q_(500.0, "degC"))
+    assert capped_500, "beyond T_b the curve must be reported as capped"
+    assert float(p_500.to("Pa").magnitude) == pytest.approx(101325.0, rel=1e-9)
+    # Monotone in T below T_b.
+    prev = -1.0
+    for t_c in (-50.0, 0.0, 25.0, 60.0, 100.0, 136.0):
+        p, _ = vapour_pressure(CHLORIDES["TiCl4"], Q_(t_c, "degC"))
+        val = float(p.to("Pa").magnitude)
+        assert val > prev
+        prev = val
+
+
+def test_pin_every_tabulated_leach_reaction_balances_in_mass_and_charge() -> None:
+    """All five LEACH_REACTIONS must close per element and in charge.
+
+    Already exercised in tests/test_reagents.py; pinned here with the measured
+    residual bound because a reaction table is the kind of data that grows
+    without its checker being re-run.
+    """
+    assert len(LEACH_REACTIONS) == 5
+    for name in LEACH_REACTIONS:
+        residuals = check_reaction_balance(LEACH_REACTIONS[name])
+        for key, resid in residuals.items():
+            assert abs(float(resid)) < 1e-12, f"{name} unbalanced in {key}: {resid}"

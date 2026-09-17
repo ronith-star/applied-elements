@@ -521,17 +521,36 @@ def rectangular_distribution_recovery(
     >>> round(rectangular_distribution_recovery(Q_(60.0, "s"), Q_(0.10, "1/s"), 0.90), 8)
     0.75037181
 
-    Small-argument behaviour. As :math:`k_{max} t \\to 0` the bracket goes to
-    zero like :math:`k_{max}t/2 - (k_{max}t)^2/6`, so recovery goes to zero from
-    ABOVE. Evaluating :math:`(1 - e^{-x})/x` directly destroys that: at
-    :math:`x = 10^{-9}` the numerator has no significant figures left and the
-    function returned a recovery of -7.446633369934119e-08, which raised on the
-    fraction check, while at :math:`x = 10^{-8}` it returned 2.545374e-08
-    against the analytic 4.5e-10, a factor of 56.56 too high. ``-expm1(-x)``
-    computes the same numerator without cancellation and reproduces the analytic
-    limit to 1e-9 relative at every argument down to 1e-12. The old code
-    special-cased only ``x == 0.0`` exactly, which is the one argument where
-    catastrophic cancellation does not occur.
+    Small-argument behaviour. As :math:`x = k_{max} t \\to 0` the bracket goes to
+    zero like :math:`x/2 - x^2/6`, so recovery goes to zero from ABOVE.
+    Evaluating :math:`(1 - e^{-x})/x` directly destroys that. Measured at
+    :math:`k_{max} = 1` 1/s and :math:`R_\\infty = 0.90`, committed form against
+    the analytic limit:
+
+    ===========  =====================  =====================  ==============
+    x            committed              analytic               relative error
+    ===========  =====================  =====================  ==============
+    1e-12        +1.990954810935e-05    4.499999999998e-13     +4.424344e+07
+    1e-10        -7.446633389918e-08    4.499999999850e-11     -1.655807e+03
+    1e-09        +2.545373841700e-08    4.499999998500e-10     +5.556386e+01
+    1e-08        +5.469723873830e-09    4.499999985000e-09     +2.154942e-01
+    1e-07        +4.543775276034e-08    4.499999850000e-08     +9.727873e-03
+    1e-06        +4.500141251640e-07    4.499998500000e-07     +3.172260e-05
+    ===========  =====================  =====================  ==============
+
+    At :math:`x = 10^{-10}` the result is NEGATIVE and raised on the fraction
+    check, so the failure mode is not merely imprecise. ``-expm1(-x)`` computes
+    the same numerator without cancellation and reproduces the analytic limit to
+    1e-9 relative at every argument in the table. The old code special-cased
+    only ``x == 0.0`` exactly, which is the one argument where catastrophic
+    cancellation does not occur.
+
+    An earlier revision of this docstring attributed the 4.499999998500e-10
+    analytic value and the +5.556386e+01 error to :math:`x = 10^{-8}`. Both
+    belong to :math:`x = 10^{-9}`; every row above is now asserted against a
+    recomputation in
+    ``tests/test_physics_audit.py::test_rectangular_recovery_survives_a_short_residence_time``
+    rather than quoted.
     """
     require_dimensionality(time, "time", "time")
     require_dimensionality(k_max, "rate_first_order", "k_max")
