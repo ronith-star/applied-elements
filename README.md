@@ -280,7 +280,7 @@ src/ae/plant/       streams, yield_cascade, capacity, scheduling
 src/ae/econ/        unit_economics, capex, valuation, uncertainty
 src/ae/ml/          surrogate (trained on synthetic data, see HANDOFF.md)
 src/ae/agent/       decisions (EVPI; no test file, see HANDOFF.md)
-tests/              40 files including conftest.py
+tests/              41 files including conftest.py
 scripts/            build_workbook.py, export_registry.py,
                     export_validation.py, commit_with_count.sh
 data/registry/      parameter_registry.csv, definitional_constants.csv,
