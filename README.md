@@ -11,8 +11,12 @@ architecture. `CONTRIBUTING-provenance.md` describes the tagging discipline.
 `docs/CORRECTIONS.md` is the repository's record of errors found in its own
 committed work.
 
-Every command and every count in this file was run in a clone with no editable
-install at commit `c920e1d` and the output read. Nothing here is recalled.
+Every command and every count in this file was run and the output read. Nothing
+here is recalled. Two kinds of run are reported and labelled as such: runs in an
+INDEPENDENT CLONE of `origin/main` (a fresh `git clone`, no editable install,
+`python -m pip show ae-platform` reporting the package not found, my four
+documents and guard file copied in), and runs in the WORKING TREE, which also has
+no editable install. Where they differ the difference is stated.
 
 ## Requirements
 
@@ -62,16 +66,16 @@ scripts it resolves to `src/ae/`.
 python -m pytest tests/
 ```
 
-Measured at `c920e1d`, counts parsed from `--junitxml`:
+Measured in the working tree at `fbefb47`, counts parsed from `--junitxml`:
 
 | | count |
 | --- | --- |
-| collected | 1,527 |
-| passed | 1,498 |
+| collected | 1,733 |
+| passed | 1,704 |
 | failed | 11 |
 | errors | 0 |
 | skipped | 18 |
-| wall time | 326 s |
+| wall time | 170 s |
 
 Exit code 1. These counts include the 11 guards in `tests/test_handoff_claims.py`,
 which this track adds and which all pass.
@@ -79,9 +83,11 @@ which this track adds and which all pass.
 All 11 failures are in `tests/test_test_docstrings.py`, the docstring audit, and
 all 11 are unasserted numbers in test files belonging to other tracks
 (`test_physics_audit.py` 9, `test_diffusion.py` 1, `test_registry_export.py` 1).
-I measured a fully green suite at `c920e1d` (1,463 collected, 1,445 passed, 0
-failed) before those files landed, so this is work in flight rather than a
-regression in anything documented here. Since commit `56e61ff` folded the audit
+The independent-clone run at `c920e1d`, before those files landed, measured 1,461
+collected, 1,442 passed, 1 failed, 18 skipped, 324 s (the single failure was an
+unasserted number in my own guard docstring, which I then removed), and the
+working tree at that commit measured 1,463 collected, 1,445 passed, 0 failed.
+So this is work in flight rather than a regression in anything documented here. Since commit `56e61ff` folded the audit
 into the fatal gate, CI goes red on them, which is the intended behaviour.
 
 The 18 skips break down as 2 in `tests/test_workbook.py`, skipped at collection
@@ -104,8 +110,8 @@ python -m pytest tests/ \
   --ignore=tests/test_docstring_arithmetic.py
 ```
 
-Measured: 970 collected, 968 passed, 0 failed, 0 errors, 2 skipped, 147 s, exit
-code 0. The 11 failures above are all in the audit files, so excluding them is
+Measured: 1,139 collected, 1,137 passed, 0 failed, 0 errors, 2 skipped, 264 s,
+exit code 0. The 11 failures above are all in the audit files, so excluding them is
 what separates a documentation defect from a model defect.
 
 ### Doctests
@@ -122,7 +128,7 @@ doctests run on any path you pass that contains modules.
 
 ```bash
 python -m pytest tests/ -m benchmark      # 50 collected, 0 failed, 2 skipped
-python -m pytest tests/ -m golden         # 128 collected, 0 failed, 2 skipped
+python -m pytest tests/ -m golden         # 262 collected, 0 failed, 2 skipped
 ```
 
 Add `-s` to see the benchmark output. Each benchmark prints its reference value,
@@ -170,7 +176,8 @@ instead, with the rule that new undocumented numbers could not enter while the
 backlog was worked down, and that at zero the step would be deleted and the three
 files folded into the fatal suite. That is what happened. Measured at
 `c920e1d`, the three files alone gave 532 collected, 516 passed, 0 failed, 16
-skipped, and `56e61ff` removed the pinned step. The 11 failures recorded in the
+skipped, and `56e61ff` removed the pinned step. Re-measured at `fbefb47` they
+give 594 collected, 567 passed, 11 failed, 16 skipped. The 11 failures recorded in the
 full-suite table above arrived after that, from test files another track is
 still writing, and they are exactly what the now-fatal audit is meant to catch.
 
@@ -247,14 +254,17 @@ under test cites a DOI anywhere in its reference block, and I measured that 22 o
 the 28 reach that class by the fallback alone, with no reported-value phrase in
 the test's own docstring. Several of those are analytic checks.
 
-Both exporters are idempotent against upstream code. `export_registry.py` run in
-a clean clone left `git status --porcelain data/` empty, and `export_validation.py`
-reproduces the committed `data/registry/validation_record.csv` exactly (162 marked
-tests, 115 golden, 47 benchmark) when `tests/test_handoff_claims.py` is absent.
-With that file present the regenerated CSV holds 173 marked tests and 126 golden,
-because its 11 guards carry the `golden` marker and the exporter collects every
-marked test. That is the exporter working, not drift. I have not committed a
-regenerated CSV.
+`export_registry.py` is idempotent: running it in a clean clone left
+`git status --porcelain data/` empty. `export_validation.py` is deterministic,
+and measured at `fbefb47` the committed `data/registry/validation_record.csv`
+(162 marked tests, 115 golden, 47 benchmark) is now behind it by two benchmark
+rows: regenerating with `tests/test_handoff_claims.py` moved out of the tree
+gives 164 marked tests, 115 golden, 49 benchmark, the two additions coming from
+another track's commits. Regenerating with that file present adds its 11
+golden-marked guards on top. Neither difference touches the literature,
+analytic or self-consistency split (28 / 12 / 7), so no measured error in
+`HANDOFF.md` changes. I have not committed a regenerated CSV, because that file
+belongs to another track.
 
 ## Layout
 
@@ -265,7 +275,7 @@ src/ae/plant/       streams, yield_cascade, capacity, scheduling
 src/ae/econ/        unit_economics, capex, valuation, uncertainty
 src/ae/ml/          surrogate (trained on synthetic data, see HANDOFF.md)
 src/ae/agent/       decisions (EVPI; no test file, see HANDOFF.md)
-tests/              37 files including conftest.py
+tests/              40 files including conftest.py
 scripts/            build_workbook.py, export_registry.py,
                     export_validation.py, commit_with_count.sh
 data/registry/      parameter_registry.csv, definitional_constants.csv,

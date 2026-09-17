@@ -1,6 +1,6 @@
 # HANDOFF: what is validated, what is scaffolding, what needs data
 
-Measured at commit `c920e1d`. Every number below was produced by a command run in
+Measured at commit `fbefb47`. Every number below was produced by a command run in
 this repository during the session that wrote this file. Where a quantity could
 not be measured or sourced, it says so.
 
@@ -287,7 +287,7 @@ its status:
    important the parameter is, because a confident prior says there is little left
    to learn; with `ASSUMED` priors the confidence itself is invented.
 2. **There is no test file.** `tests/test_decisions.py` does not exist, the module
-   contributes 0 of the 1,527 collected tests, and it has no doctest. I verified
+   contributes 0 of the 1,733 collected tests, and it has no doctest. I verified
    this session that its public API imports and that `evpi`, `rank_measurements`
    and `measurement_priority` have the signatures given in `PLAN.md`. Nothing
    beyond importability is verified.
@@ -510,22 +510,24 @@ file exists to close, so a tenth guard now re-derives the count from the tree.
 Verified by control: drifting the README back to 35 fails with "README.md says 35
 test files, the tree has 36"; restoring it passes.
 
-## My guard file adds rows to the validation record
+## The committed validation record, and what changes it
 
-Measured at `c920e1d`. Every count in the VALIDATED section above is read from
+Measured at `fbefb47`. Every count in the VALIDATED section above is read from
 the **committed** `data/registry/validation_record.csv`: 162 marked tests, 115
-golden, 47 benchmark. That file is current with respect to upstream code:
-regenerating it with `tests/test_handoff_claims.py` absent reproduces 162 / 115 /
-47 exactly.
+golden, 47 benchmark.
 
-Regenerating it with my guard file PRESENT gives 173 marked tests, 126 golden, 47
-benchmark, because the 11 guards in that file are `@pytest.mark.golden` and the
-exporter collects every marked test. The benchmark side is untouched, so no
-measured error in the VALIDATED section changes.
+Regenerating that file moves it, for two separate reasons that must not be
+confused. With `tests/test_handoff_claims.py` moved out of the tree, the
+exporter produces 164 marked tests, 115 golden, 49 benchmark: two benchmark rows
+added by another track's commits after the CSV was last written. With my guard
+file present, its 11 `@pytest.mark.golden` guards are collected on top, raising
+the golden count further. The first is upstream drift, the second is my own
+additions being counted, and an earlier draft of this document attributed the
+second to the first.
 
-I have not committed a regenerated CSV. Whoever next regenerates it will see the
-golden count rise by the number of guards in that file, and that is the expected
-behaviour of a marker-driven exporter, not drift. An earlier draft of this
-document described the committed file as stale on the basis of a regeneration run
-that had my guard file in the tree, which confused my own additions with upstream
-drift; the measurement above separates the two.
+Neither difference touches the benchmark classification (literature 28, analytic
+12, self-consistency 7), so no measured error in the VALIDATED section changes.
+I have not committed a regenerated CSV. Regenerate it before quoting the
+marked-test totals, and expect the golden count to rise by the number of guards
+in that file, which is the expected behaviour of a marker-driven exporter rather
+than drift.
