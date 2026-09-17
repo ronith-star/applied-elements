@@ -1,14 +1,13 @@
 {
- "total": 1733,
- "passed": 1703,
- "failed": 12,
+ "total": 1740,
+ "passed": 1711,
+ "failed": 11,
  "errors": 0,
  "skipped": 18,
  "failures_by_file": {
-  "test_handoff_claims": 1,
   "test_test_docstrings": 11
  },
- "measured_at_rev": "72ae802",
- "measured_at": "2026-09-17T00:09:32",
+ "measured_at_rev": "fc4f16b",
+ "measured_at": "2026-09-17T00:27:40",
  "provenance_note": "measured by this build: pytest was run over the whole suite and its junit XML parsed, at the time and commit recorded here"
 }

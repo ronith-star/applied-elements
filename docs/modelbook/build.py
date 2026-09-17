@@ -190,38 +190,88 @@ SYMBOL_RULE = __import__("re").compile(r"^\s*=+(\s+=+)+\s*$")
 DOI_TRAILING_JUNK = "\"'`.,;:)]}"
 
 
-#: CrossRef resolution checks for the stripped DOIs, written by
-#: scripts-free manual verification and read back here. The book must not
+#: CrossRef resolution checks for the stripped DOIs: one entry per distinct
+#: DOI, written by querying api.crossref.org/works/<doi> for each and
+#: recording whether it resolved and the title it returned. The book must not
 #: claim a check it cannot point at: an earlier version asserted in prose that
-#: "each distinct DOI" had been checked against the CrossRef REST API when only
-#: 8 of the 17 distinct DOIs had been, which is the kind of unearned
-#: verification claim this file exists to prevent.
+#: "each distinct DOI" had been checked when only 8 of the 17 distinct DOIs
+#: had been, which is the kind of unearned verification claim this file exists
+#: to prevent. (An earlier version of this comment described the file as
+#: "scripts-free manual verification", which was wrong in the other direction:
+#: the checks were made by a scripted loop, not by hand.)
 DOI_CHECKS = HERE / "_doi_checks.json"
 
 
-def doi_resolution_sentence() -> str:
+def distinct_record_dois(findings: list[str]) -> list[str]:
+    """The distinct stripped DOIs the current findings list actually contains.
+
+    Parsed back out of the finding strings, which are the same strings the book
+    prints, so the coverage check below is made against what the reader sees
+    rather than against a separately maintained list that could diverge.
+    """
+    caps = [m.group(1) for m in
+            (re.search(r"captured '([^']*)' as a DOI", f) for f in findings) if m]
+    return sorted({c.rstrip(DOI_TRAILING_JUNK) for c in caps})
+
+
+def doi_resolution_sentence(findings: list[str]) -> str:
     """State what was actually checked, from the check file, or say nothing was.
 
     Reads the recorded CrossRef results and describes exactly the coverage they
-    support. If the file is missing or does not cover every distinct DOI in the
-    current record, the sentence says so rather than implying full coverage.
+    support, against the DOIs present in THIS build's record.
+
+    Three cases, because all three have occurred or can occur:
+
+    1. The check file is absent. No resolution claim is made at all.
+    2. The check file does not cover every distinct DOI in the current record.
+       This is the failure that produced the defect this guard exists for: the
+       record grew from 12 cases with 8 distinct DOIs to 24 cases with 17 as
+       other tracks' modules entered the validation record, while the prose
+       still asserted that each distinct DOI had been checked. The sentence now
+       names the shortfall instead of generalising the 8 to the 17.
+    3. Every distinct DOI is covered. The sentence reports the counts.
+
+    An earlier version of this function took no argument and compared the check
+    file only against itself, so it would have said "All 8 distinct DOIs in
+    this record were confirmed" for a 17-DOI record: the docstring promised
+    case 2 and the body never implemented it.
     """
+    record = distinct_record_dois(findings)
     if not DOI_CHECKS.exists():
         return ("Whether the stripped forms resolve was NOT checked for this "
                 "build, so no resolution claim is made here.")
     checks = json.loads(DOI_CHECKS.read_text())
-    n = len(checks)
-    ok = sum(1 for v in checks.values() if v.get("resolves"))
-    if ok == n:
-        return (f"All {n} distinct DOIs in this record were confirmed to "
-                "resolve through the CrossRef REST API once the trailing "
-                "characters are stripped, so the citations themselves are "
-                "sound and only the exporter's capture of them is wrong.")
-    bad = sorted(k for k, v in checks.items() if not v.get("resolves"))
-    return (f"Of the {n} distinct DOIs in this record, {ok} were confirmed to "
+    missing = [d for d in record if d not in checks]
+    covered = [d for d in record if d in checks]
+    ok = [d for d in covered if checks[d].get("resolves")]
+    bad = [d for d in covered if not checks[d].get("resolves")]
+    parts = []
+    if missing:
+        parts.append(
+            f"Of the {len(record)} distinct DOIs in this record, "
+            f"{len(covered)} were checked against the CrossRef REST API and "
+            f"{len(missing)} were NOT checked, so no resolution claim is made "
+            "for those: " + ", ".join(missing) + ".")
+        if ok:
+            parts.append(f"Of the {len(covered)} that were checked, "
+                         f"{len(ok)} resolve once the trailing characters are "
+                         "stripped.")
+    elif not bad:
+        parts.append(
+            f"All {len(record)} distinct DOIs in this record were confirmed to "
             "resolve through the CrossRef REST API once the trailing "
-            f"characters are stripped and {n - ok} were not: "
+            "characters are stripped, so the citations themselves are sound "
+            "and only the exporter's capture of them is wrong.")
+    else:
+        parts.append(
+            f"Of the {len(record)} distinct DOIs in this record, {len(ok)} "
+            "were confirmed to resolve through the CrossRef REST API once the "
+            f"trailing characters are stripped and {len(bad)} were not: "
             + ", ".join(bad) + ".")
+    if bad and missing:
+        parts.append("Of those checked, these did not resolve: "
+                     + ", ".join(bad) + ".")
+    return " ".join(parts)
 
 
 def doi_junk_sentence(findings: list[str]) -> str:
@@ -1097,7 +1147,8 @@ def emit_findings_chapter(discrepancies: list[str], dt_total: int, dt_blocks: in
         out.append(
             f"{len(doi_findings)} case(s). These are defects in the repository's "
             "validation exporter, found while typesetting its output, not "
-            "defects in the citations themselves. " + doi_resolution_sentence()
+            "defects in the citations themselves. "
+            + doi_resolution_sentence(doi_findings)
             + " " + doi_junk_sentence(doi_findings)
             + " Each entry below names the characters it absorbed.")
         out.append(r"\begin{itemize}")

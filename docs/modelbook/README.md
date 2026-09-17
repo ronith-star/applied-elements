@@ -49,6 +49,21 @@ and each aborts the build rather than degrading the output:
 5. A named LIMITATIONS section that has been renamed aborts, rather than
    silently emptying the chapter that quotes it.
 6. A suite-tally cache with no provenance note aborts.
+7. A README with no synchronisable `modelbook.pdf` page count aborts. The count
+   here read 194 while the shipped PDF was 202, because the number was typed
+   once and the book rebuilt twice after; it is now read from the compiled PDF
+   on every build.
+8. A DOI check file that does not cover every distinct DOI in the current
+   validation record makes the book name the shortfall rather than generalise
+   the checks it does have. The findings chapter asserted that each distinct
+   DOI had been verified against CrossRef when 8 of 17 had been, so that
+   sentence is now generated from `_doi_checks.json` and states exactly the
+   coverage the recorded results support.
+
+Guards 1 through 6 abort the build. Guards 7 and 8 differ: 7 aborts only when
+the README cannot be synchronised at all (a stale number is corrected rather
+than fatal), and 8 never aborts, because a missing check is a weaker claim to
+state, not a reason to withhold the chapter.
 
 ## Known limitations of the book itself
 
