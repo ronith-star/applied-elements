@@ -71,7 +71,7 @@ EQUATIONS
       k       rate constant of the JMAK kinetic law, units 1/s^n, never used absolutely
               here (see LIMITATIONS: no pre-exponential factor could be sourced).
       E_a     apparent activation energy, J/mol. 555 +/- 24 kJ/mol for cristobalite
-              formation from sintered silica glass (Zhang et al. 2014,
+              formation from sintered silica glass (Breneman and Halloran 2014,
               doi 10.1111/jace.12889), calibrated over 1200 to 1350 degC only.
       R       8.31446261815324 J/(mol K).
       T_1,T_2 temperatures, K, valid range 1473 to 1623 K by calibration of E_a.
@@ -91,7 +91,7 @@ EQUATIONS
       t   hold time, s, range 0 to 1e6 s.
       k   rate constant, 1/s. NOT DEFAULTED: see LIMITATIONS.
       n   Avrami exponent, dimensionless. 3.0 +/- 0.6 for cristobalite from sintered
-          silica (Zhang et al. 2014), consistent with three-dimensional growth from a
+          silica (Breneman and Halloran 2014), consistent with three-dimensional growth from a
           constant nucleus population.
 
 WHAT THE LITERATURE ACTUALLY SUPPORTS, AND WHERE THIS BRIEF WAS WRONG
@@ -123,13 +123,13 @@ LIMITATIONS
 -----------
 1. NO ABSOLUTE KINETICS. :func:`jmak_fraction` requires a rate constant because no source
    reachable from this environment reports a pre-exponential factor for the quartz to
-   cristobalite transformation. Zhang et al. 2014 report n and E_a but not A. Do not
+   cristobalite transformation. Breneman and Halloran 2014 report n and E_a but not A. Do not
    substitute a guessed A: Ringdalen 2015 measured 1% to 76% cristobalite after one hour
    at 1500 degC ACROSS DIFFERENT NATURAL QUARTZ SAMPLES, a 76-fold spread at fixed
    temperature and time, which means any single A is a property of one ore and not of
    SiO2. Absolute transformation kinetics for a specific deposit must be measured.
 2. E_a EXTRAPOLATION. The 555 kJ/mol value is calibrated on 1200 to 1350 degC data for
-   SINTERED SILICA GLASS, not for natural quartz, and Zhang et al. report the temperature
+   SINTERED SILICA GLASS, not for natural quartz, and Breneman and Halloran report the temperature
    of maximum rate as 1500 to 1600 degC. A rate ratio evaluated above roughly 1500 degC
    therefore extrapolates past a rate maximum and will overstate the rate increase. Above
    1623 K this module raises rather than extrapolate.
@@ -159,6 +159,68 @@ binding, not a type alias), so mypy cannot treat it as a type. The same errors a
 against the four core modules themselves (46 of them), and the core modules are not ours
 to change. Every annotation here follows the core convention deliberately rather than
 diverging from it for a clean checker run.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+Holland, T. J. B. and Powell, R. (2011) An improved and extended internally
+consistent thermodynamic dataset for phases of petrological interest, involving
+a new equation of state for solids, Journal of Metamorphic Geology 29(3),
+333-383, doi 10.1111/j.1525-1314.2010.00923.x (dataset ds62). Source of the
+Landau formalism used for equations (1) and (2) and of every Landau coefficient
+in :data:`QUARTZ_LANDAU`.
+
+Holland, T. J. B. and Powell, R. (1998) An internally consistent thermodynamic
+data set for phases of petrological interest, Journal of Metamorphic Geology
+16(3), 309-343, doi 10.1111/j.1525-1314.1998.00140.x. The earlier dataset of the
+same pair, cited only for the lineage of the Landau treatment. The in-text
+phrase "Holland and Powell 1998/2011 formalism" refers to these two papers; no
+numerical value in this module comes from the 1998 paper.
+
+Carpenter, M. A., Salje, E. K. H., Graeme-Barber, A., Wruck, B., Dove, M. T. and
+Knight, K. S. (1998) Calibration of excess thermodynamic properties and elastic
+constant variations associated with the alpha to beta phase transition in
+quartz, American Mineralogist 83(1-2), 2-22, doi 10.2138/am-1998-1-201. Cited
+for the tricritical character of the inversion, not for numerical input.
+
+Ringdalen, E. (2015) Changes in Quartz During Heating and the Possible Effects
+on Si Production, JOM 67(2), 484-492, doi 10.1007/s11837-014-1149-y. Source of
+the 0.4 percent step volume change at the inversion, of the up-to-37 percent
+expansion on cristobalite conversion, of the 1 to 76 percent cristobalite spread
+after one hour at 1500 degC across natural samples, and of the absence of
+tridymite in her heat-treated material. The year is the February 2015 print
+issue; Crossref's issued date is the 2014-10-10 online-first publication, which
+is why the DOI contains -014-.
+
+Breneman, R. C. and Halloran, J. W. (2014) Kinetics of Cristobalite Formation in
+Sintered Silica, Journal of the American Ceramic Society 97(7), 2272-2278,
+doi 10.1111/jace.12889. Source of the Avrami exponent n = 3.0 +/- 0.6, the
+apparent activation energy E_a = 555 +/- 24 kJ/mol, the 1200 to 1350 degC
+calibration window, and the 1500 to 1600 degC rate maximum, all taken from the
+published abstract. No pre-exponential factor is reported there, which is why
+:func:`jmak_fraction` has no default rate constant. THIS ENTRY WAS PREVIOUSLY
+WRONG: it named "Zhang, Y., Mavrogenes, J.A. and others" with pages 3378-3384,
+written from memory. Neither Zhang nor Mavrogenes is an author, and the page
+range was wrong.
+
+Bourova, E. and Richet, P. (1998) Quartz and Cristobalite: high-temperature cell
+parameters and volumes of fusion, Geophysical Research Letters 25(13),
+2333-2336, doi 10.1029/98gl01581. Source of the cristobalite and quartz
+high-temperature volume data used for the liquid-phase transition entry. THIS
+ENTRY WAS PREVIOUSLY WRONG: it named "Wenk, H.-R., Brunini, A. and others" with
+pages 2261-2264, written from memory. Neither is an author.
+
+Warden, G. K., Gawel, B. A., Juel, M., Erbe, A. and Di Sabatino, M. (2024)
+Cristobalite Formation in Fused Quartz Crucibles for Czochralski Silicon
+Production in Different Conditions, SiliconPV Conference Proceedings 2,
+doi 10.52825/siliconpv.v2i.1311. Source of the contact-material ranking and the
+1000 degC glass onset. One study, one temperature, one duration, one commercial
+crucible glass: the direction is credible, the magnitudes are not general.
+Crossref returns no page range for this article.
 """
 
 from __future__ import annotations
@@ -182,12 +244,12 @@ from ae.core.units import (
 __all__ = [
     "QUARTZ_LANDAU",
     "R_GAS",
+    "SRC_BOUROVA",
+    "SRC_BRENEMAN",
     "SRC_CARPENTER",
     "SRC_HP2011",
     "SRC_RINGDALEN",
     "SRC_WARDEN",
-    "SRC_WENK",
-    "SRC_ZHANG",
     "TRANSITIONS",
     "ContactMaterial",
     "DevitrificationAssessment",
@@ -276,12 +338,18 @@ SRC_CARPENTER: Final[Source] = Source(
 SRC_RINGDALEN: Final[Source] = Source(
     citation=(
         "Ringdalen, E. 2015, Changes in Quartz During Heating and the Possible Effects on "
-        "Si Production, JOM 67:484-492"
+        "Si Production, JOM 67(2):484-492"
     ),
     tier=Tier.T1,
     doi="10.1007/s11837-014-1149-y",
     accessed=_ACCESSED,
     extraction="manual",
+    note=(
+        "Sole author Eli Ringdalen, confirmed against Crossref for this DOI. The year is "
+        "the FEBRUARY 2015 print issue (JOM 67(2)); Crossref's issued date is the "
+        "2014-10-10 online-first publication, which is why the DOI carries -014-. Both "
+        "years refer to the same paper and 2015 is used throughout this module."
+    ),
 )
 
 SRC_WARDEN: Final[Source] = Source(
@@ -302,27 +370,29 @@ SRC_WARDEN: Final[Source] = Source(
     ),
 )
 
-SRC_ZHANG: Final[Source] = Source(
+SRC_BRENEMAN: Final[Source] = Source(
     citation=(
-        "Zhang, Y., Mavrogenes, J.A. and others 2014, Kinetics of Cristobalite Formation in "
-        "Sintered Silica, Journal of the American Ceramic Society 97:3378-3384"
+        "Breneman, R. C. and Halloran, J. W. 2014, Kinetics of Cristobalite Formation in "
+        "Sintered Silica, Journal of the American Ceramic Society 97(7):2272-2278"
     ),
     tier=Tier.T1,
     doi="10.1111/jace.12889",
     accessed=_ACCESSED,
     extraction="manual",
     note=(
-        "n = 3.0 +/- 0.6 and E_a = 555 +/- 24 kJ/mol taken from the published abstract; the "
-        "full text is paywalled from this sandbox, so the author list beyond the first is "
-        "not verified and no pre-exponential factor was obtainable."
+        "n = 3.0 +/- 0.6 and E_a = 555 +/- 24 kJ/mol taken from the published abstract, "
+        "which states both explicitly; the full text is paywalled from this sandbox and no "
+        "pre-exponential factor was obtainable. AUTHORS AND PAGES CORRECTED: this entry "
+        "read \"Zhang, Y., Mavrogenes, J.A. and others 2014 ... 97:3378-3384\" until it "
+        "was resolved against Crossref. Neither Zhang nor Mavrogenes is an author and the "
+        "page range was wrong; both were written from memory and never checked."
     ),
 )
 
-SRC_WENK: Final[Source] = Source(
+SRC_BOUROVA: Final[Source] = Source(
     citation=(
-        "Wenk, H.-R., Brunini, A. and others 1998, Quartz and Cristobalite: "
-        "high-temperature cell parameters and volumes of fusion, Geophysical Research "
-        "Letters 25:2261-2264"
+        "Bourova, E. and Richet, P. 1998, Quartz and Cristobalite: high-temperature cell "
+        "parameters and volumes of fusion, Geophysical Research Letters 25(13):2333-2336"
     ),
     tier=Tier.T1,
     doi="10.1029/98gl01581",
@@ -547,8 +617,8 @@ TRANSITIONS: Final[tuple[Transition, ...]] = (
         to_phase=Polymorph.SILICA_LIQUID,
         temperature=_sourced(
             Q_(1996.0, "K"),
-            SRC_WENK,
-            "Wenk et al. 1998 report the volume of beta-cristobalite returning to its "
+            SRC_BOUROVA,
+            "Bourova and Richet 1998 report the volume of beta-cristobalite returning to its "
             "750 K value at the melting temperature of 2000 K; 1996 K is the Holland, "
             "Green and Powell ds633 melting point of the quartz liquid endmember used in "
             "ae.physics.thermal. See LIMITATIONS: sources disagree at the 1996 to 2000 K "
@@ -559,8 +629,8 @@ TRANSITIONS: Final[tuple[Transition, ...]] = (
         note=(
             "Silica does not recrystallise on cooling at industrial rates: the melt "
             "vitrifies. The brief's 'melting near 1723 C' is a unit slip; 1723 K (1450 "
-            "degC) is the commonly quoted metastable melting point of QUARTZ, and Wenk et "
-            "al. 1998 adjust it to 1673 K."
+            "degC) is the commonly quoted metastable melting point of QUARTZ, and Bourova and "
+            "Richet 1998 adjust it to 1673 K."
         ),
     ),
 )
@@ -773,10 +843,10 @@ def arrhenius_rate_ratio(
     t_ref, t_query
         Reference and query temperatures.
     activation_energy
-        Molar activation energy as a Value. Defaults to the Zhang et al. 2014 cristobalite
+        Molar activation energy as a Value. Defaults to the Breneman and Halloran 2014 cristobalite
         value of 555 kJ/mol.
     allow_extrapolation
-        The default E_a is calibrated on 1200 to 1350 degC data and Zhang et al. report the
+        The default E_a is calibrated on 1200 to 1350 degC data and Breneman and Halloran report the
         rate MAXIMUM at 1500 to 1600 degC, so an Arrhenius extrapolation above 1350 degC
         overstates the rate. Outside 1473 to 1623 K this raises unless set True.
 
@@ -797,7 +867,7 @@ def arrhenius_rate_ratio(
     ea = activation_energy if activation_energy is not None else Value(
         quantity=Q_(555.0, "kJ/mol"),
         tag=Tag.SOURCED,
-        source=SRC_ZHANG,
+        source=SRC_BRENEMAN,
         basis="apparent activation energy 555 +/- 24 kJ/mol for the kinetic constant of "
               "cristobalite formation from sintered silica, 1200 to 1350 degC",
         confidence="medium",
@@ -815,7 +885,7 @@ def arrhenius_rate_ratio(
             if not 1473.0 <= t <= 1623.0:
                 raise ValueError(
                     f"{t} K is outside the 1473 to 1623 K band in which the default "
-                    f"E_a (Zhang et al. 2014, calibrated 1200 to 1350 degC, rate maximum "
+                    f"E_a (Breneman and Halloran 2014, calibrated 1200 to 1350 degC, rate maximum "
                     f"reported at 1500 to 1600 degC) can be used without extrapolating "
                     f"past a rate maximum; pass allow_extrapolation=True to override and "
                     f"record that the result is an extrapolation"
@@ -840,7 +910,7 @@ def jmak_fraction(hold_time: Quantity, rate_constant: Value, avrami_n: Value | N
         in cristobalite fraction across natural quartz samples at fixed temperature and
         time, so k is an ore property that must be measured.
     avrami_n
-        Avrami exponent. Defaults to the Zhang et al. 2014 value of 3.0.
+        Avrami exponent. Defaults to the Breneman and Halloran 2014 value of 3.0.
 
     Returns
     -------
@@ -860,8 +930,8 @@ def jmak_fraction(hold_time: Quantity, rate_constant: Value, avrami_n: Value | N
     n_val = avrami_n if avrami_n is not None else Value(
         quantity=Q_(3.0, "dimensionless"),
         tag=Tag.SOURCED,
-        source=SRC_ZHANG,
-        basis="Avrami time exponent 3.0 +/- 0.6 (Zhang et al. 2014), consistent with "
+        source=SRC_BRENEMAN,
+        basis="Avrami time exponent 3.0 +/- 0.6 (Breneman and Halloran 2014), consistent with "
               "three-dimensional growth from a constant nucleus population",
         confidence="medium",
     )

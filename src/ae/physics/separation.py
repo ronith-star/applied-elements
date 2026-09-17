@@ -199,6 +199,41 @@ LIMITATIONS
    to the froth by water recovery regardless of its surface chemistry, which in
    a fine HPQ grind is a material yield loss. That requires a water-recovery
    model this module does not have.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+Polat, M. and Chander, S. (2000) First-order flotation kinetics models and
+methods for estimation of the true distribution of flotation rate constants,
+International Journal of Mineral Processing 58(1-4), 145-166,
+doi 10.1016/S0301-7516(99)00069-1. Source of Eq. E1 and Eq. E2, and of the
+argument that a single rate constant fits batch data poorly because the true
+rate constant is distributed. Closed access; abstract and the equations as
+restated in the derivations above.
+
+Wills, B. A. and Finch, J. A. (2016) Classification, in Wills' Mineral
+Processing Technology, 8th edition, Elsevier, pp. 199-221,
+doi 10.1016/b978-0-08-097053-0.00009-1. Source of the partition-curve
+vocabulary: cut point, Ecart probable, imperfection, bypass.
+
+Wills, B. A. and Napier-Munn, T. (2005) Metallurgical accounting, control and
+simulation, in Wills' Mineral Processing Technology, Elsevier, pp. 39-89,
+doi 10.1016/b978-075064450-1/50005-9. Source of the two-product mass-balance
+formula, Eq. E6.
+
+Lin, M., Liu, Z., Wei, Y., Liu, B., Meng, Y., Qiu, H., Lei, S., Zhang, X. and
+Li, Y. (2020) A Critical Review on the Mineralogy and Processing for High-Grade
+Quartz, Mining, Metallurgy and Exploration 37(5), 1627-1639,
+doi 10.1007/s42461-020-00247-0.
+
+Du, S., Pan, B., Xia, L., Zhu, G., Wu, L., Yu, C., Li, F. and Diao, Z. (2024)
+Purification of Vein Quartz Using a New Fluorine-Free Flotation: A Case from
+Southern Anhui Province, China, Minerals 14(12), 1191,
+doi 10.3390/min14121191.
 """
 
 from __future__ import annotations

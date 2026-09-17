@@ -175,6 +175,44 @@ binding, not a type alias), so mypy cannot treat it as a type. The same errors a
 against the four core modules themselves (46 of them), and the core modules are not ours
 to change. Every annotation here follows the core convention deliberately rather than
 diverging from it for a clean checker run.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+Holland, T. J. B. and Powell, R. (2011) An improved and extended internally
+consistent thermodynamic dataset for phases of petrological interest, involving
+a new equation of state for solids, Journal of Metamorphic Geology 29(3),
+333-383, doi 10.1111/j.1525-1314.2010.00923.x. Dataset ds62. Source of the heat
+capacity functional form and of every coefficient for the solid quartz
+endmembers.
+
+Holland, T. J. B., Green, E. C. R. and Powell, R. (2018) Melting of Peridotites
+through to Granites: A Simple Thermodynamic Model in the System KNCFMASHTOCr,
+Journal of Petrology 59(5), 881-900, doi 10.1093/petrology/egy048. Dataset
+ds633. Source of the quartz LIQUID endmember, including the constant
+Cp = 82.5 J/(mol K) used above.
+
+Richet, P., Bottinga, Y., Denielou, L., Petitet, J. P. and Tequi, C. (1982)
+Thermodynamic properties of quartz, cristobalite and amorphous SiO2: drop
+calorimetry measurements between 1000 and 1800 K and a review from 0 to 2000 K,
+Geochimica et Cosmochimica Acta 46(12), 2639-2658,
+doi 10.1016/0016-7037(82)90383-0. Independent drop-calorimetry dataset over the
+temperature range this module integrates across. Closed access; cited as the
+comparison dataset, not as the source of any coefficient used here.
+
+Galitsky, C., Worrell, E., Masanet, E. and Graus, W. (2008) Energy Efficiency
+Improvement and Cost Saving Opportunities for the Glass Industry: An ENERGY STAR
+Guide for Energy and Plant Managers, Lawrence Berkeley National Laboratory,
+report LBNL-57335, doi 10.2172/927883 (OSTI 927883). Source of the statement
+that only about 33 to 40 percent of the energy consumed by a continuous furnace
+goes toward melting, and of the observation that all-electric furnaces are
+typically used below 75 ton/day. Crossref lists Galitsky twice in the author
+record for this DOI; the duplicate is in the upstream metadata, not a second
+person.
 """
 
 from __future__ import annotations
@@ -582,10 +620,10 @@ def integrated_enthalpy(phase: Polymorph, t_from: Quantity, t_to: Quantity,
       F(1000)   = 92900.0000 - 321.0000 + 714.9000 - 45290.1406 = 48003.7594
       F(298.15) = 27698.1350 -  28.5348 + 2397.7863 - 24729.8269 =  5337.5597
       ----------------------------------------------------------------------
-      difference                                                 = 42666.1996 J/mol
+      difference                                                 = 42666.1997 J/mol
 
     (1432.2 sqrt(1000) = 1432.2 x 31.6227766 = 45290.1406 and
-    1432.2 sqrt(298.15) = 1432.2 x 17.2670496 = 24729.8269)
+    1432.2 sqrt(298.15) = 1432.2 x 17.2670206 = 24729.8269)
 
     >>> from ae.core.units import Q_
     >>> dh = integrated_enthalpy(Polymorph.QUARTZ, Q_(298.15, "K"), Q_(1000.0, "K"),

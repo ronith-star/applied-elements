@@ -64,7 +64,7 @@ naive one-dimensional argument suggests.
   inclusion size, which is the asymptote and usually uneconomic.
 
 Worked consequence: for :math:`E^{*} = 0.5`, the denominator is
-:math:`1 - 0.5^{1/3} = 1 - 0.793700 = 0.206300`, so
+:math:`1 - 0.5^{1/3} = 1 - 0.793701 = 0.206299`, so
 :math:`d_p^{*} = 4.847 \\, d_{inc}`. Half of all inclusions are exposed once
 particles are ground to roughly five times the inclusion size. For
 :math:`E^{*} = 0.9`, :math:`1 - 0.1^{1/3} = 1 - 0.464159 = 0.535841` and
@@ -154,6 +154,30 @@ LIMITATIONS
    fines are more liberated than the coarse, and a real circuit produces a
    spread. Passing a P80 into E1 gives the exposure of a hypothetical
    monodisperse feed at that size.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+King, R. P. (1979) A model for the quantitative estimation of mineral
+liberation by grinding, International Journal of Mineral Processing 6(3),
+207-220, doi 10.1016/0301-7516(79)90037-1. Cited as the standard stereological
+liberation model. This module does NOT implement it: E1 here is the geometric
+exposure probability, which is a weaker and different construct. Closed access,
+abstract only from this sandbox.
+
+Lin, M., Liu, Z., Wei, Y., Liu, B., Meng, Y., Qiu, H., Lei, S., Zhang, X. and
+Li, Y. (2020) A Critical Review on the Mineralogy and Processing for High-Grade
+Quartz, Mining, Metallurgy and Exploration 37(5), 1627-1639,
+doi 10.1007/s42461-020-00247-0.
+
+Xia, M., Yang, X. and Hou, Z. (2024) Preparation of High-Purity Quartz Sand by
+Vein Quartz Purification and Characteristics: A Case Study of Pakistan Vein
+Quartz, Minerals 14(7), 727, doi 10.3390/min14070727. Feed-to-product endpoints
+only; NO per-stage intermediate is reported there or modelled here.
 """
 
 from __future__ import annotations

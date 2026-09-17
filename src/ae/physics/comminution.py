@@ -158,6 +158,68 @@ LIMITATIONS
    a whole distribution to one number. For a bimodal feed, or for the deliberate
    narrow size cuts an HPQ sand plant sells, energy predicted from an 80 percent
    passing pair can be substantially wrong.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+Austin, L. G. (1973) A commentary on the Kick, Bond and Rittinger laws of
+grinding, Powder Technology 7(6), 315-317, doi 10.1016/0032-5910(73)80042-7.
+Source of the claim that the three laws are limiting cases of one relation
+rather than competing theories. Closed access, abstract only from this sandbox;
+the exponent argument is cited, no numerical constant is taken from it.
+
+Arellano-Pina, R., Sanchez-Ramirez, E. A., Perez-Garibay, R. and
+Gutierrez-Perez, V. H. (2023) Bond's work index estimation using non-standard
+ball mills, Physicochemical Problems of Mineral Processing,
+doi 10.37190/ppmp/172458. Open access, full text retrieved. Source of Eq. E1 and
+Eq. E2 as restated here, of the constants alpha = 0.23, beta = 0.82,
+gamma = 44.5, of the statement that Bond's criteria for those constants are not
+recorded, and of the non-standard-mill error measurements. Crossref returns no
+volume, issue or page range for this article.
+
+Garcia, G. G., Oliva, J., Guasch, E., Anticoi, H., Coello-Velazquez, A. L. and
+Menendez-Aguado, J. M. (2021) Variability Study of Bond Work Index and
+Grindability Index on Various Critical Metal Ores, Metals 11(6), 970,
+doi 10.3390/met11060970. Source of the W and Ta finding that the work index does
+not correlate cleanly with grinding size while the grindability index does.
+Abstract only; the publisher blocked the full text from this sandbox. THIS ENTRY
+WAS PREVIOUSLY WRONG: it named "Rodriguez B. A., Menendez-Aguado J. M. et al.",
+written from memory. Rodriguez is not an author of this paper.
+
+Wills, B. A. and Finch, J. A. (2016) Comminution, in Wills' Mineral Processing
+Technology, 8th edition, Elsevier, pp. 109-122,
+doi 10.1016/b978-0-08-097053-0.00005-4. Cited for the size ranges over which
+each size-reduction law is conventionally applied. Crossref gives 2016 as the
+year of this chapter record.
+
+Bond, F. C. (1952) The Third Theory of Comminution, Transactions AIME, Mining
+Engineering, 484-494. NOT SOURCED DIRECTLY: no DOI exists for this article and
+no full text or publisher record was reachable from this sandbox. The author,
+year, title, and page range above are as cited in the reference list of
+Arellano-Pina et al. 2023 (verified, above), which is the route by which Eq. E1
+enters this module. It is a secondary attribution, not a primary verification.
+
+Bond, F. C. (1961) Crushing and grinding calculations, Allis-Chalmers
+Publication No. 07R9235B. NOT SOURCED DIRECTLY: same status as Bond 1952. The
+bibliographic fields above are as cited by Arellano-Pina et al. 2023, who
+attribute the Eq. E2 form and its constants to it. No primary copy was reachable.
+
+Hukki, R. T. (1961). NOT SOURCED. The in-text reference to Hukki's 1961
+argument is retained only as reported by Austin 1973, which is the form in which
+it reaches this module; no Hukki publication record could be resolved from this
+sandbox by DOI, by Crossref bibliographic search, or by OpenAlex search. Nothing
+in this module depends numerically on it.
+
+NIST Special Publication 811 (2008 edition), Guide for the Use of the
+International System of Units (SI), Appendix B.8. Source of the exact
+conversion 1 short ton = 907.18474 kg. Reachable only as a document reference,
+not through Crossref; the conversion factor itself is exact by definition of the
+avoirdupois pound (0.45359237 kg exactly) and is reproduced arithmetically in
+this module's tests rather than taken on the authority of the page citation.
 """
 
 from __future__ import annotations
@@ -312,8 +374,9 @@ SRC_WILLS_COMMINUTION: Final[Source] = Source(
 
 SRC_MET_VARIABILITY: Final[Source] = Source(
     citation=(
-        "Rodriguez B. A., Menendez-Aguado J. M. et al. 2021, Variability Study of Bond "
-        "Work Index and Grindability Index on Various Critical Metal Ores, Metals 11(6):970"
+        "Garcia G. G., Oliva J., Guasch E., Anticoi H., Coello-Velazquez A. L. and "
+        "Menendez-Aguado J. M. 2021, Variability Study of Bond Work Index and Grindability "
+        "Index on Various Critical Metal Ores, Metals 11(6):970"
     ),
     tier=Tier.T1,
     doi="10.3390/met11060970",
@@ -322,7 +385,10 @@ SRC_MET_VARIABILITY: Final[Source] = Source(
     note=(
         "Abstract read; full text blocked by publisher in this environment. Cited only "
         "for the abstract's own conclusion that Wi varies with grinding size while the "
-        "grindability index correlates robustly with it."
+        "grindability index correlates robustly with it. AUTHOR LIST CORRECTED: this "
+        "entry read \"Rodriguez B. A., Menendez-Aguado J. M. et al.\" until it was "
+        "resolved against Crossref, which gives Garcia as first author. Rodriguez is not "
+        "an author of this paper; the name was written from memory and never checked."
     ),
 )
 

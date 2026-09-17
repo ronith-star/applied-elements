@@ -168,6 +168,47 @@ LIMITATIONS
    module models the lattice as unremovable by the PHYSICAL flowsheet, which is
    its scope, and :func:`floor_profile` will accept a lattice removal
    efficiency only if the caller passes one explicitly and names the mechanism.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+Muller, A., Wanvik, J. E. and Ihlen, P. M. (2012) Petrological and Chemical
+Characterisation of High-Purity Quartz Deposits with Examples from Norway, in
+Gotze, J. and Mockel, R. (eds.) Quartz: Deposits, Mineralogy and Analytics,
+Springer Geology, pp. 71-118, doi 10.1007/978-3-642-22161-3_4 (volume DOI
+10.1007/978-3-642-22161-3). Source of the HPQ single-grain reference limits used
+by the gate. Closed access: the chapter full text was not retrievable from this
+sandbox, so the limits are carried as previously extracted values and the
+chapter's author list, title, pages and volume are what was verified here.
+
+Lin, M., Liu, Z., Wei, Y., Liu, B., Meng, Y., Qiu, H., Lei, S., Zhang, X. and
+Li, Y. (2020) A Critical Review on the Mineralogy and Processing for High-Grade
+Quartz, Mining, Metallurgy and Exploration 37(5), 1627-1639,
+doi 10.1007/s42461-020-00247-0. Source of the chlorination-activation
+description and of the conceptual flowsheet placing hot chlorination against
+lattice impurities.
+
+Xia, M., Yang, X. and Hou, Z. (2024) Preparation of High-Purity Quartz Sand by
+Vein Quartz Purification and Characteristics: A Case Study of Pakistan Vein
+Quartz, Minerals 14(7), 727, doi 10.3390/min14070727. Source of the 128.86 ug/g
+feed and 24.23 ug/g product trace sums and of the residual being lattice-bound
+Al, Ti and Li.
+
+Qu, S., Yang, X., Xia, M., Hou, Z. and Wang, Y. (2025) Analyzing trace element
+distribution and purification of vein quartz: a case study of Qianqi Furong mine
+in Inner Mongolia, European Journal of Mineralogy 37(6), 953-970,
+doi 10.5194/ejm-37-953-2025. Source of the 18.72 ug/g and 114.56 ug/g figures
+and of the published SiO2 upper bounds against which they are inconsistent by
+difference.
+
+Liu, L., Liu, H., Li, J., Peng, T., Wang, W., Wang, F. and Liu, G. (2026)
+Mechanism Study on Deep Removal of Lattice Impurities from High-Purity Quartz by
+Chlorination Roasting, Minerals 16(8), 836, doi 10.3390/min16080836. Source of
+the requirement for a carbonaceous reductant for Ti, Al and B.
 """
 
 from __future__ import annotations
@@ -966,7 +1007,7 @@ def implied_removal_rate(feed_sum_ppm: float, product_sum_ppm: float) -> float:
     Examples
     --------
     Xia et al. 2024: 128.86 ug/g feed, 24.23 ug/g product.
-    1 - 24.23/128.86 = 1 - 0.188032 = 0.811968, i.e. 81.20 percent, matching the
+    1 - 24.23/128.86 = 1 - 0.188034 = 0.811966, i.e. 81.20 percent, matching the
     81.20 percent the paper reports.
 
     >>> round(implied_removal_rate(128.86, 24.23) * 100, 2)

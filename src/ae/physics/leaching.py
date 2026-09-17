@@ -230,6 +230,18 @@ ultrasound-assisted leaching, High Temperature Materials and Processes 39(1),
 Xia, M., Yang, X. and Hou, Z. (2024) Preparation of High-Purity Quartz Sand by
 Vein Quartz Purification and Characteristics: A Case Study of Pakistan Vein
 Quartz, Minerals 14(7), 727, doi 10.3390/min14070727.
+
+Tiesinga, E., Mohr, P. J., Newell, D. B. and Taylor, B. N. (2021) CODATA
+Recommended Values of the Fundamental Physical Constants: 2018, Reviews of
+Modern Physics 93(2), article 025010, doi 10.1103/RevModPhys.93.025010 (also
+published as Journal of Physical and Chemical Reference Data 50(3), article
+033105, doi 10.1063/5.0064853). The source of the in-text "CODATA 2018" label on
+the molar gas constant. The 2021 publication year is the journal record for the
+2018 adjustment, which is the name the adjustment is known by. The value
+8.314462618 J mol^-1 K^-1 is EXACT by the 2019 SI redefinition, being the
+product of the two defining constants k = 1.380649e-23 J K^-1 and
+N_A = 6.02214076e23 mol^-1, and it is reproduced by that multiplication in this
+module's tests rather than taken on the authority of the citation.
 """
 
 from __future__ import annotations

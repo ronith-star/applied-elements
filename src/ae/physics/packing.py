@@ -169,6 +169,45 @@ binding, not a type alias), so mypy cannot treat it as a type. The same errors a
 against the four core modules themselves (46 of them), and the core modules are not ours
 to change. Every annotation here follows the core convention deliberately rather than
 diverging from it for a clean checker run.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+Furnas, C. C. (1931) Grading Aggregates - I - Mathematical Relations for Beds
+of Broken Solids of Maximum Density, Industrial and Engineering Chemistry 23(9),
+1052-1058, doi 10.1021/ie50261a017. Source of equation (1), the geometric
+filling of interstices by successive size classes.
+
+McGeary, R. K. (1961) Mechanical Packing of Spherical Particles, Journal of the
+American Ceramic Society 44(10), 513-522,
+doi 10.1111/j.1151-2916.1961.tb13716.x. Source of the 0.625 vibrated monomodal
+packing fraction, of the sevenfold size-ratio requirement, and of the quaternary
+1:7:38:316 optimum. Closed access; abstract and secondary citations only from
+this sandbox.
+
+Andreasen, A. H. M. (1930) Ueber die Beziehung zwischen Kornabstufung und
+Zwischenraum in Produkten aus losen Koernern (mit einigen Experimenten),
+Kolloid-Zeitschrift 50(3), 217-228, doi 10.1007/bf01422986. Source of equation
+(3), the continuous grading law.
+
+Funk, J. E. and Dinger, D. R. (1994) Predictive Process Control of Crowded
+Particulate Suspensions, Springer US, doi 10.1007/978-1-4615-3118-0. Source of
+equation (4), the modified Andreasen form with a finite minimum size. Book;
+Crossref returns no page range.
+
+Krieger, I. M. and Dougherty, T. J. (1959) A Mechanism for Non-Newtonian Flow
+in Suspensions of Rigid Spheres, Transactions of the Society of Rheology 3(1),
+137-152, doi 10.1122/1.548848. Source of equation (5), the relative-viscosity
+law, and of the intrinsic-viscosity value 2.5 for spheres.
+
+Scott, G. D. and Kilgour, D. M. (1969) The density of random close packing of
+spheres, Journal of Physics D: Applied Physics 2(6), 863-866,
+doi 10.1088/0022-3727/2/6/311. Source of the 0.6366 random-close-packing
+fraction.
 """
 
 from __future__ import annotations

@@ -162,6 +162,47 @@ binding, not a type alias), so mypy cannot treat it as a type. The same errors a
 against the four core modules themselves (46 of them), and the core modules are not ours
 to change. Every annotation here follows the core convention deliberately rather than
 diverging from it for a clean checker run.
+
+References
+----------
+Every entry below was resolved against the Crossref REST API for the DOI shown,
+and the fields here (author list, year, title, journal, volume, issue, pages)
+are as Crossref returned them. Resolved 17 September 2026. Entries without a
+DOI say what was checked instead and what remains unverified.
+
+Hatch, T. and Choate, S. P. (1929) Statistical description of the size
+properties of non uniform particulate substances, Journal of the Franklin
+Institute 207(3), 369-387, doi 10.1016/s0016-0032(29)91451-4. Source of
+equation (1), the log-normal number density, and of the Hatch-Choate weighted
+median conversions in equation (3).
+
+Alderliesten, M. (2013) Mean Particle Diameters. Part VII. The Rosin-Rammler
+Size Distribution: Physical and Mathematical Properties and Relationships to
+Moment-Ratio Defined Mean Particle Diameters, Particle and Particle Systems
+Characterization 30(3), 244-257, doi 10.1002/ppsc.201200021. Source of the
+characterisation of the Rosin-Rammler form used in equation (6), of the result
+that distributions with spread parameter below three cannot exist, and of the
+finding that the location parameter d' is not physically interpretable because
+its meaning depends on n. Closed access; the abstract states all three of these
+claims explicitly and is what was read.
+
+Rosin, P. and Rammler, E. (1933). NOT SOURCED DIRECTLY: no DOI could be
+resolved for the 1933 original by Crossref DOI lookup, Crossref bibliographic
+search, or OpenAlex search from this sandbox. Equation (6) is taken from
+Alderliesten 2013 (verified, above), which characterises the distribution and is
+the actual source used here. The in-text "Rosin and Rammler 1933" names the
+distribution's origin and no numerical value in this module depends on the 1933
+paper. A related later paper by the same pair does resolve (Rosin and Rammler
+1934, Die Kornzusammensetzung des Mahlgutes im Lichte der
+Wahrscheinlichkeitslehre, doi 10.1007/bf01439773) but it is not the 1933 work
+cited and is not used.
+
+Ringdalen, E. (2015) Changes in Quartz During Heating and the Possible Effects
+on Si Production, JOM 67(2), 484-492, doi 10.1007/s11837-014-1149-y. Source of
+the 0.38 to 0.47 m^2/g BET specific surface areas on heat-treated natural
+quartz lump, which bound how far the geometric equation (8) understates a
+measured value. The year is the February 2015 print issue; Crossref's issued
+date is the 2014-10-10 online-first publication.
 """
 
 from __future__ import annotations
@@ -236,13 +277,18 @@ SRC_ALDERLIESTEN: Final[Source] = Source(
 SRC_RINGDALEN_SSA: Final[Source] = Source(
     citation=(
         "Ringdalen, E. 2015, Changes in Quartz During Heating and the Possible Effects on "
-        "Si Production, JOM 67:484-492"
+        "Si Production, JOM 67(2):484-492"
     ),
     tier=Tier.T1,
     doi="10.1007/s11837-014-1149-y",
     accessed=_ACCESSED,
     extraction="manual",
-    note="BET specific surface areas of 0.38 to 0.47 m^2/g on heat-treated natural quartz.",
+    note=(
+        "BET specific surface areas of 0.38 to 0.47 m^2/g on heat-treated natural quartz. "
+        "Sole author Eli Ringdalen, confirmed against Crossref. The year is the February "
+        "2015 print issue (JOM 67(2)); Crossref's issued date is the 2014-10-10 "
+        "online-first publication, hence -014- in the DOI."
+    ),
 )
 
 

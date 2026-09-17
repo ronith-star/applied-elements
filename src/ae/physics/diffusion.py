@@ -195,7 +195,7 @@ result unverifiable:
   machine-readable text.
 - Ti: Cherniak, Watson and Wark (2007) Ti diffusion in quartz, Chemical Geology
   236(1-2), 65-74, doi 10.1016/j.chemgeo.2006.09.001. Paywalled. The one
-  open-access paper citing it that could be retrieved (Barker et al. 2018,
+  open-access paper citing it that could be retrieved (Gualda et al. 2018,
   Science Advances, doi 10.1126/sciadv.aap7567) states only that the
   activation-energy uncertainty is below 5 percent 1-sigma, without reproducing
   :math:`D_0` or :math:`E_a`.
@@ -293,6 +293,29 @@ the measurement that would supply the Al Arrhenius pair.
 Cherniak, D. J., Watson, E. B. and Wark, D. A. (2007) Ti diffusion in quartz,
 Chemical Geology 236(1-2), 65-74, doi 10.1016/j.chemgeo.2006.09.001. UNREACHABLE
 from this sandbox; cited as the measurement that would supply the Ti pair.
+
+Tiesinga, E., Mohr, P. J., Newell, D. B. and Taylor, B. N. (2021) CODATA
+Recommended Values of the Fundamental Physical Constants: 2018, Reviews of
+Modern Physics 93(2), article 025010, doi 10.1103/RevModPhys.93.025010 (also
+published as Journal of Physical and Chemical Reference Data 50(3), article
+033105, doi 10.1063/5.0064853). The source of the in-text "CODATA 2018" label on
+the molar gas constant. The 2021 publication year is the journal record for the
+2018 adjustment, which is the name the adjustment is known by. The value
+8.314462618 J mol^-1 K^-1 is EXACT by the 2019 SI redefinition, being the
+product of the two defining constants k = 1.380649e-23 J K^-1 and
+N_A = 6.02214076e23 mol^-1, and it is reproduced by that multiplication in this
+module's tests rather than taken on the authority of the citation.
+
+Gualda, G. A. R., Gravley, D. M., Connor, M., Hollmann, B., Pamukcu, A. S.,
+Begue, F., Ghiorso, M. S. and Deering, C. D. (2018) Climbing the crustal ladder:
+Magma storage-depth evolution during a volcanic flare-up, Science Advances 4(10),
+article eaap7567, doi 10.1126/sciadv.aap7567. Open access, full text retrieved
+and read. The only reachable open-access paper citing Cherniak et al. 2007 for Ti
+diffusion in quartz. It states that the uncertainty in the activation energy is
+below 5 percent 1-sigma and does NOT reproduce D_0 or E_a, which is why it cannot
+supply the Ti Arrhenius pair. THIS CITATION WAS PREVIOUSLY ATTRIBUTED TO "Barker
+et al. 2018", written from memory; Barker is not an author of this paper and no
+Barker 2018 paper matching the description could be resolved.
 """
 
 from __future__ import annotations
