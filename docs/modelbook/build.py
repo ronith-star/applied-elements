@@ -1272,10 +1272,19 @@ def main() -> int:
     for e in ex_mod.EXAMPLES:
         rel = e.module.replace("ae.", "").replace(".", "/") + ".py"
         ex_by_mod.setdefault(rel, []).append(e)
-        if e.error:
-            discrepancies.append(
-                f"worked example for {e.module} ({e.title}) raised: "
-                + e.error.strip().split("\n")[-1])
+    # A worked example that raises aborts the build. A worked example that
+    # cannot be run is worse than no worked example, because the reader has no
+    # way to tell which it is looking at. An earlier version only appended the
+    # traceback to the discrepancies list and carried on, so the rule was
+    # stated in this file and in the README while the code let a broken example
+    # ship inside the book.
+    broken = [e for e in ex_mod.EXAMPLES if e.error]
+    if broken:
+        raise RuntimeError(
+            "worked examples failed to run, so the book cannot be built:\n"
+            + "\n".join(
+                f"  {e.module} ({e.title}): "
+                + e.error.strip().split("\n")[-1] for e in broken))
     ex_ok = sum(1 for e in ex_mod.EXAMPLES if not e.error)
 
     doi_findings: list[str] = []

@@ -1,7 +1,7 @@
 {
  "modules_covered": 27,
  "doctest_blocks_executed": 57,
- "doctest_statements_executed": 154,
+ "doctest_statements_executed": 156,
  "supplementary_examples_executed": 19,
  "supplementary_examples_clean": 19,
  "examples_total": 76,
@@ -36,19 +36,22 @@
   "uncertainty: the validation exporter captured '10.1016/j.cpc.2009.09.018.' as a DOI, taking in a full stop, which is not part of the DOI. The book prints the stripped form. The root cause is the DOI character class at scripts/export_validation.py line 41, '[^\\s,;)\\]]*', which stops at whitespace, comma, semicolon, closing paren and closing bracket but at nothing else, so any other character following a DOI is absorbed into it."
  ],
  "suite": {
-  "total": 1740,
-  "passed": 1711,
-  "failed": 11,
+  "total": 1834,
+  "passed": 1802,
+  "failed": 14,
   "errors": 0,
   "skipped": 18,
   "failures_by_file": {
+   "test_golden_vectors": 2,
+   "test_registry_export": 1,
    "test_test_docstrings": 11
   },
-  "measured_at_rev": "fc4f16b",
-  "measured_at": "2026-09-17T00:27:40",
+  "measured_at_rev": "64c741b",
+  "measured_at": "2026-09-17T00:46:45",
   "provenance_note": "measured by this build: pytest was run over the whole suite and its junit XML parsed, at the time and commit recorded here"
  },
- "tex_bytes": 553698,
- "git_rev": "fc4f16b",
- "pdf_pages_of_previous_compile": 202
+ "tex_bytes": 565116,
+ "git_rev": "64c741b",
+ "pdf_pages_of_previous_compile": 205,
+ "readme_sync": "README page count synchronised to 205"
 }

@@ -248,6 +248,20 @@ def convert(doc: str, base_level: int = 0) -> str:
     str
         LaTeX body text, with no preamble and no chapter heading.
     """
+    # Enforce the converter's own scope at the one point every caller passes
+    # through. unhandled_constructs() documented that "this is called over
+    # every docstring by the build, and a non-empty result aborts it", but
+    # nothing ever called it: the guard existed as a function and a claim, not
+    # as behaviour. Checking here rather than at each call site means a new
+    # construct cannot reach a page through a caller that forgot to ask.
+    unhandled = unhandled_constructs(doc)
+    if unhandled:
+        raise ValueError(
+            "this converter does not implement " + ", ".join(unhandled)
+            + ", so the text would be mangled rather than typeset. Add "
+            "handling in convert() and count the construct in the header "
+            "table, or rewrite the docstring to use a handled form.")
+
     levels = ["subsection", "subsubsection", "paragraph"]
     lines = doc.expandtabs(4).split("\n")
     out: list[str] = []
@@ -442,9 +456,16 @@ def unhandled_constructs(doc: str) -> list[str]:
     """Report RST directives and roles this converter does not implement.
 
     Returns the distinct offending tokens. An empty list means every construct
-    in ``doc`` is one of the counted, handled forms. This is called over every
-    docstring by the build, and a non-empty result aborts it, so the failure
-    mode is a build error rather than a silently mangled page.
+    in ``doc`` is one of the counted, handled forms.
+
+    :func:`convert` calls this on every docstring it is given and raises on a
+    non-empty result, so the failure mode is a build error rather than a
+    silently mangled page. That enforcement is new: this docstring previously
+    asserted it while nothing in the tree called this function at all, so the
+    guard was a claim rather than a behaviour. It is checked inside
+    :func:`convert` rather than at each call site, because there are eight call
+    sites and a caller that forgets to ask is exactly how a construct would
+    reach a page.
     """
     found: list[str] = []
     for m in re.finditer(r"^\s*\.\.\s+([a-z\-]+)::", doc, re.M):
