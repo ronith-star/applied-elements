@@ -9,6 +9,7 @@ from ae.core.site import Currency, LabourRates, PowerSupply, Site
 from ae.core.units import Q_, DimensionalityError
 from ae.econ.capex import (
     SCALING_RANGE,
+    CapexEstimate,
     Equipment,
     escalate_cost,
     estimate_capex,
@@ -354,3 +355,119 @@ def test_the_other_one_sided_index_is_also_rejected():
     """
     with pytest.raises(ValueError, match="BOTH base_index and target_index"):
         estimate_capex(kit(), site(), 0.30, 0.15, target_index=800.0)
+
+
+def test_reconciles_tolerance_is_relative_not_absolute():
+    """An absolute 1e-6 currency tolerance rejects correct large estimates.
+
+    CapexEstimate.reconciles compared the component sum against the stored
+    total with an ABSOLUTE tolerance of 1e-6 in whatever currency unit the
+    estimate carries. Double precision carries about 2.2e-16 of relative
+    error, so the float residue of a correct sum exceeds 1e-6 once the total
+    passes roughly 4.5e9 currency units, and the check then rejects arithmetic
+    that is right.
+
+    This is reachable at this project's scale in INR, not only at absurd ones.
+    Measured on a correct estimate totalling 2.835e10 INR (about 0.34 billion
+    USD at 83 INR per USD), with the components summed in a different but
+    equally valid order from the stored total: the absolute residual is
+    3.815e-06, which fails a 1e-6 test, while the RELATIVE residual is
+    1.345e-16, which is pure rounding.
+
+    The reason it had not bitten is that estimate_capex computes the total as
+    installed + indirect + contingency and reconciles recomputes that same
+    expression in that same order, so the two are bit-identical and the
+    residual is exactly 0.0. Measured over 400 randomised estimate_capex
+    builds spanning item counts 1 to 6, costs to 1e9, location factors 0.3 to
+    2.5 and index ratios, reconciles() returned False zero times. So the check
+    as used inside estimate_capex is a tautology, and the only caller that can
+    ever see a non-zero residual is one that builds a CapexEstimate directly,
+    which is exactly where a real reconciliation error would come from.
+    """
+    # 2.2e-16 relative on 4.5e9 is about 1e-6, the point where an absolute
+    # 1e-6 tolerance starts rejecting correct sums.
+    assert 2.2e-16 * 4.5e9 == pytest.approx(1e-6, rel=0.05)
+
+    # mag is the scale of the three components, not the total: 2.835e10 is the
+    # TOTAL they sum to. A first draft set mag = 8.3e10, whose total of
+    # 4.707e10 happens to sum bit-exactly in both orders and so has a zero
+    # residual, and the test failed at "Obtained: 47069264069.26407".
+    mag = 5.0e10
+    inst = Q_(mag / 3.0, "INR")
+    ind = Q_(mag / 7.0, "INR")
+    cont = Q_(mag / 11.0, "INR")
+    # Same value, summed in a different order, as an independent build would.
+    total = Q_((mag / 11.0 + mag / 7.0) + mag / 3.0, "INR")
+    est = CapexEstimate(
+        equipment=[], total_purchased=Q_(0.0, "INR"), total_installed=inst,
+        indirect_cost=ind, contingency=cont, total_project_cost=total,
+        location_factor=1.0, index_ratio=1.0, currency="INR",
+    )
+    absolute_residual = abs(((inst + ind + cont) - total).magnitude)
+    relative_residual = absolute_residual / total.magnitude
+    assert total.magnitude == pytest.approx(2.835e10, rel=1e-3)
+    assert absolute_residual == pytest.approx(3.815e-06, rel=1e-3)
+    assert relative_residual == pytest.approx(1.345e-16, rel=1e-2)
+    assert absolute_residual > 1e-6, "this fixture must exceed the old tolerance"
+
+    # The estimate is correct, so it must reconcile.
+    assert est.reconciles(), (
+        f"a correct {total.magnitude:.3e} INR estimate was rejected: absolute "
+        f"residual {absolute_residual:.3e} against a relative "
+        f"{relative_residual:.3e}"
+    )
+
+    # A REAL discrepancy is still caught: one part in 1e4 of the total.
+    wrong = CapexEstimate(
+        equipment=[], total_purchased=Q_(0.0, "INR"), total_installed=inst,
+        indirect_cost=ind, contingency=cont,
+        total_project_cost=total * 1.0001,
+        location_factor=1.0, index_ratio=1.0, currency="INR",
+    )
+    assert not wrong.reconciles()
+    # And at small scale too, where the absolute tolerance used to work: a
+    # 1.0 USD error on a 1e6 USD total.
+    small_wrong = CapexEstimate(
+        equipment=[], total_purchased=Q_(0.0, "USD"),
+        total_installed=Q_(1.0e6, "USD"), indirect_cost=Q_(3.0e5, "USD"),
+        contingency=Q_(2.0e5, "USD"),
+        total_project_cost=Q_(1.5e6 + 1.0, "USD"),
+        location_factor=1.0, index_ratio=1.0, currency="USD",
+    )
+    assert not small_wrong.reconciles()
+
+    # The tautology claim, measured rather than asserted from memory: over 400
+    # randomised estimate_capex builds the residual is identically zero,
+    # because estimate_capex and reconciles evaluate the same expression in
+    # the same order.
+    import random
+    rng = random.Random(0)
+    residuals = []
+    for _ in range(400):
+        items = [
+            Equipment(name=f"i{j}",
+                      purchased_cost=Value(quantity=Q_(rng.uniform(1.0, 1e9), "USD"),
+                                           tag=Tag.ASSUMED, basis="sweep"),
+                      installation_factor=rng.uniform(1.0, 6.0))
+            for j in range(rng.randint(1, 6))
+        ]
+        e = estimate_capex(
+            items, site(cci=rng.uniform(0.3, 2.5)),
+            indirect_factor=rng.uniform(0.0, 1.0),
+            contingency_fraction=rng.uniform(0.0, 1.0),
+            base_index=rng.uniform(50.0, 900.0),
+            target_index=rng.uniform(50.0, 900.0),
+        )
+        residuals.append(abs(float(
+            ((e.total_installed + e.indirect_cost + e.contingency)
+             - e.total_project_cost).magnitude)))
+        assert e.reconciles()
+    assert len(residuals) == 400
+    assert max(residuals) == 0.0, (
+        f"estimate_capex residuals are not identically zero (max "
+        f"{max(residuals):.3e}), so reconciles() is not a tautology there "
+        f"after all and this docstring needs correcting"
+    )
+
+    # The INR fixture in USD terms, at the rate stated in the docstring.
+    assert 2.835e10 / 83e9 == pytest.approx(0.34, abs=0.005)

@@ -387,10 +387,42 @@ class CapexEstimate:
                       if e.purchased_cost.tag == Tag.ASSUMED)
         return float(assumed) / raw_total
 
-    def reconciles(self, tol: float = 1e-6) -> bool:
-        """The components must sum to the total."""
+    def reconciles(self, tol: float = 1e-9) -> bool:
+        """The components must sum to the total, to a RELATIVE tolerance.
+
+        ``tol`` was an ABSOLUTE 1e-6 in whatever currency unit the estimate
+        carries, which rejects correct arithmetic at scale: double precision
+        gives about 2.2e-16 of relative error, so the float residue of a
+        correct sum passes 1e-6 once the total passes roughly 4.5e9 currency
+        units. Measured on a correct estimate totalling 2.835e10 INR (about
+        0.34 billion USD at 83 INR per USD) with the components summed in a
+        different order from the stored total, the absolute residual is
+        3.815e-06 and the relative residual is 1.345e-16: the absolute test
+        fails and the relative test passes. INR totals of that size are
+        ordinary for this project, so the defect was reachable rather than
+        theoretical.
+
+        It had not bitten because :func:`estimate_capex` computes the total as
+        ``installed + indirect + contingency`` and this method recomputes that
+        same expression in the same order, so the two are bit-identical and
+        the residual is exactly 0.0. Over 400 randomised ``estimate_capex``
+        builds (1 to 6 items, costs to 1e9, location factors 0.3 to 2.5,
+        escalation indices 50 to 900) it returned False zero times. Inside
+        ``estimate_capex`` the check is therefore a tautology, and the callers
+        that can see a non-zero residual are the ones that construct a
+        CapexEstimate directly, which is where a real reconciliation error
+        would arise.
+
+        1e-9 relative is seven orders above the float noise and small enough
+        to catch any discrepancy an estimate could have: on a 1e10 total it is
+        10 currency units.
+        """
         total = (self.total_installed + self.indirect_cost + self.contingency)
-        return abs(float((total - self.total_project_cost).magnitude)) < tol
+        residual = abs(float((total - self.total_project_cost).magnitude))
+        scale = abs(float(self.total_project_cost.magnitude))
+        if scale <= 0:
+            return residual < tol
+        return residual / scale < tol
 
     def to_records(self) -> list[dict[str, object]]:
         rows: list[dict[str, object]] = []
