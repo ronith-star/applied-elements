@@ -204,11 +204,23 @@ def test_memo_reproduction_block_lists_every_script_that_writes_the_csv():
         assert (ROOT / "scripts" / script).exists(), f"{script} does not exist"
 
 
-def test_memo_quoted_test_count_matches_the_files_it_names():
-    """The memo quotes a pytest total. It went stale once; this catches that."""
+def test_memo_quotes_no_pytest_wall_time():
+    """A wall time cannot be guarded, so quoting one invites fabrication.
+
+    The memo once read "quoted from the run: `24 passed in 1.06s`" when no run
+    had produced that string: the count 24 came from a guard failure, and the
+    runtime was typed beside it. Counts are checkable; runtimes are not.
+    """
     text = MEMO.read_text()
-    m = re.search(r"`(\d+) passed in [\d.]+s`", text)
-    assert m, "memo must quote a measured pytest result"
+    hits = re.findall(r"\d+ (?:passed|failed) in [\d.]+\s*s", text)
+    assert not hits, f"memo quotes unguardable pytest wall times: {hits}"
+
+
+def test_memo_quoted_test_count_matches_the_files_it_names():
+    """The memo quotes a pytest total. It went stale twice; this catches that."""
+    text = MEMO.read_text()
+    m = re.search(r"`(\d+) passed`", text)
+    assert m, "memo must quote a measured pytest count as `N passed`"
     claimed = int(m.group(1))
     counted = 0
     for f in ("test_memo_numbers.py", "test_memo_traceability.py",

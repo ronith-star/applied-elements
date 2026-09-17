@@ -385,11 +385,17 @@ with a tag and a basis note), `docs/memo_numbers.json`,
 `docs/memo_evpi_ceiling.json`, `docs/memo_falsification.json`, and
 `docs/figures/`.
 
-Measured test result, quoted from the run: `34 passed in 1.60s`, being 9 in
-`tests/test_memo_numbers.py`, 15 in `tests/test_memo_traceability.py`, and 10
-in `tests/test_memo_pdf.py`. One of those checks this very sentence: it counts
-the test functions across all three files and fails if the number quoted here
-drifts from them, which it did twice already.
+Measured test result: `35 passed`, being 9 in `tests/test_memo_numbers.py`, 16
+in `tests/test_memo_traceability.py`, and 10 in `tests/test_memo_pdf.py`.
+
+The count is quoted without a wall time deliberately. An earlier version of this
+line paired a count taken from a guard failure with a runtime that no run had
+produced, which I typed because it looked plausible. A count is a property of
+the suite and is checked by a test that counts test functions across all three
+files (it caught a drift in this sentence three times). A wall time is a
+property of the machine, varies run to run, and cannot be guarded, so quoting
+one in a durable document invites exactly that error. A test now fails if any
+pytest wall time appears in this memo at all.
 
 The guards were verified by control in both directions, each time by
 reintroducing the defect, observing the named test fail, then restoring and
@@ -474,7 +480,15 @@ After each restoration the suite returned to passing.
    had written. The terminator set and the collection start are both fixed, and
    a cursor-advance assertion now covers every branch, so a future non-consuming
    branch raises with a line number instead of hanging.
-10. Table column widths mid-word-wrapped "SOURCED" as "SOURC ED", which reads as
+10. This memo quoted a pytest line as verbatim run output when no run had
+    produced it. The count was taken from a guard failure and the wall time
+    beside it was typed because it looked plausible. That is fabrication of a
+    measured result inside the deliverable, which is the error this whole
+    document is structured to prevent. Both the count and the runtime are now
+    handled by tests: one counts test functions across the three files and
+    fails if the quoted count drifts, the other fails if any pytest wall time
+    appears in this memo at all.
+11. Table column widths mid-word-wrapped "SOURCED" as "SOURC ED", which reads as
     a different provenance tag. The first fix estimated 4.0 pt per character,
     which understates 6.8 pt Helvetica by 20 percent ("SOURCED" measures
     34.00 pt, not 28.0), so the floor never bound. The second used measured
